@@ -1,14 +1,17 @@
 SH = SphericalHarmonics()
-Spl = BSplines(0.0:0.01:1)
-S = SH ⊗ Spl
+CS = CubicSplines(0.0:0.01:1)
+QS = QuadraticSplines(0.0:0.01:1)
+LS = LinearSplines(0.0:0.01:1)
+S = SH ⊗ CS
 
 λ = @. -(1:∞)*((1:∞) +1)
 L = BlockDiagonal(Diagonal.(Fill.(λ,1:2:∞))) # create a Block matrix with growing block sizes
 Δ_s = Mul(SH, L, inv(SH)) # the Laplace–Boltrami operator
-D_r = Mul(Spl, SymTridiagonal(...), inv(Spl))
-R = Mul(Spl, Diagonal(Spl.points), inv(Spl))
+D_r = Mul(QS, SymTridiagonal(...), inv(CS))
+R = Mul(QS, Banded(...), inv(QS)) # Diagonal(Spl.points)
+D̃_r = Mul(LS, SymTridiagonal(...), inv(QS))
 
-Δ = I ⊗ (D_r*R^2*D_r) + Δ_s ⊗ I # creates Laplacian as a Mul(S, ..., inv(S)) operator
+Δ = I ⊗ (D̃_r*R^2*D_r) + Δ_s ⊗ I # creates Laplacian as a Mul(S, ..., inv(S)) operator
 
 # finite_dimensional case
 N = 100
@@ -31,4 +34,8 @@ MPI_f = Mul(S_N, BlockVector{Float64,MPIVector{Float64}}(undef, blocklengths(bac
 MPI_f .= f # automatically generates data remotely, via MPI version of FastTransforms
 
 MPI_v = similar(MPI_f)
+
+C = Mul(SH ⊗ QS, I ⊗ (QS' * LS), inv(SH ⊗ LS))
+MPI_C = ...
+
 MPI_v .= Mul(MPI_Δ_N, MPI_f) # applies the Laplacian and fills in missing information.
