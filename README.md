@@ -1,2 +1,2 @@
-# FunctionSpaces.jl
-A package for representing function spaces
+# ContinuumArrays.jl
+A package for representing continuum arrays
