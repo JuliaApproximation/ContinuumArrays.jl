@@ -148,3 +148,107 @@ typeof(B)
 
 
 factorize(B)
+
+
+## Option 3 ContinuumArrays.jl
+
+using LinearAlgebra, IntervalSets, FillArrays, LazyArrays
+import Base: size, getindex, show, +, *, -, convert, copyto!, length, axes, parent, eltype
+import LinearAlgebra: adjoint, SymTridiagonal
+import InfiniteArrays: Infinity
+import LazyArrays: MemoryLayout
+
+abstract type ContinuumArray{T, N} end
+const ContinuumVector{T} = ContinuumArray{T, 1}
+const ContinuumMatrix{T} = ContinuumArray{T, 2}
+
+eltype(::Type{<:ContinuumArray{T}}) where T = T
+eltype(::ContinuumArray{T}) where T = T
+
+struct ℵ₀ <: Number end
+_length(::AbstractInterval) = ℵ₀
+_length(d) = length(d)
+
+size(A::ContinuumArray) = _length.(axes(A))
+axes(A::ContinuumArray, j::Int) = axes(A)[j]
+size(A::ContinuumArray, j::Int) = size(A)[j]
+
+struct ContinuumLayout <: MemoryLayout end
+MemoryLayout(::ContinuumArray) = ContinuumLayout()
+
+getindex(B::ContinuumMatrix, K::AbstractVector, j::Real) =
+    [B[k, j] for k in K]
+
+getindex(B::ContinuumMatrix, k::Real, J::AbstractVector) =
+    [B[k, j] for j in J]
+
+getindex(B::ContinuumMatrix, K::AbstractVector, J::AbstractVector) =
+    [B[k, j] for k in K, j in J]
+
+getindex(B::ContinuumMatrix, ::Colon, ::Colon) = copy(B)
+getindex(B::ContinuumMatrix, ::Colon, J) = B[:, J]
+getindex(B::ContinuumMatrix, K, ::Colon) = B[K, axes(B,2)]
+
+
+# use lazy multiplication
+materialize(M::Mul) = M
+*(A::ContinuumArray, B::ContinuumArray) = materialize(Mul(A,B))
+
+struct CAdjoint{T,PAR} <: ContinuumMatrix{T}
+    parent::PAR
+end
+
+CAdjoint(A::ContinuumArray{T}) where T = CAdjoint{T, typeof(A)}(A)
+
+parent(A::CAdjoint) = A.parent
+
+axes(A::CAdjoint) = reverse(axes(parent(A)))
+adjoint(A::ContinuumArray) = CAdjoint(A)
+getindex(A::CAdjoint, k::Real, j::Real) = adjoint(parent(A)[j,k])
+
+
+
+struct LinearSpline{T} <: ContinuumMatrix{T}
+    points::Vector{T}
+end
+
+LinearSpline(p::Vector{T}) where T = LinearSpline{float(T)}(p)
+
+axes(B::LinearSpline) = (first(B.points)..last(B.points), Base.OneTo(length(B.points)))
+
+function getindex(B::LinearSpline{T}, x::Real, k::Int) where T
+    x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)|| throw(BoundsError())
+
+    p = B.points
+    n = length(p)
+
+    k > 1 && x ≤ p[k-1] && return zero(T)
+    k < n && x ≥ p[k+1] && return zero(T)
+    x == p[k] && return one(T)
+    x < p[k] && return (x-p[k-1])/(p[k]-p[k-1])
+    return (x-p[k+1])/(p[k]-p[k+1]) # x ≥ p[k]
+end
+
+getindex(B::LinearSpline, ::Colon, k::Int) = Mul(B, [Zeros{Int}(k-1); 1; Zeros{Int}(size(B,2)-k)])
+
+function convert(::Type{SymTridiagonal}, AB::Mul{<:Any,<:Any,<:Any,<:CAdjoint{<:Any,<:LinearSpline},<:LinearSpline})
+    Ac,B = AB.A, AB.B
+    A = parent(Ac)
+    @assert A.points == B.points
+    x = A.points
+    SymTridiagonal(x, x/2) # TODO fix
+end
+
+materialize(M::Mul{<:Any,<:Any,<:Any,<:CAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
+    convert(SymTridiagonal, M)
+
+## tests
+
+B = LinearSpline([1,2,3])
+
+using Plots
+x = range(1, stop=3, length=1000)
+plot(B[x,:])
+
+
+@test B'B isa SymTridiagonal
