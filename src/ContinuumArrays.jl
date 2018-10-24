@@ -1,30 +1,27 @@
 module ContinuumArrays
-using Base, LinearAlgebra, IntervalSets
-import Base: getindex, size, axes, length, ==, isequal, iterate, CartesianIndices, LinearIndices,
-                Indices, IndexStyle, getindex, setindex!, parent, vec, convert, similar, zero,
-                map, eachindex
-import Base: @_inline_meta, DimOrInd, OneTo, @_propagate_inbounds_meta, @_noinline_meta,
-                DimsInteger, error_if_canonical_getindex, @propagate_inbounds, _return_type, _default_type,
-                _maybetail, tail, _getindex, _maybe_reshape, index_ndims, _unsafe_getindex,
-                index_shape, to_shape, unsafe_length, @nloops, @ncall
+include("axisarrays/AbstractAxisArrays.jl")
+using .AbstractAxisArrays
 
 
-import LinearAlgebra: transpose, adjoint
+####
+# Interval indexing support
+####
 
-abstract type AbstractAxisArray{T,N} end
-AbstractAxisVector{T} = AbstractAxisArray{T,1}
-AbstractAxisMatrix{T} = AbstractAxisArray{T,2}
-AbstractAxisVecOrMat{T} = Union{AbstractAxisVector{T}, AbstractAxisMatrix{T}}
+using IntervalSets
+import .AbstractAxisArrays: _length, checkindex, Adjoint, Transpose
+import Base: @_inline_meta
 
 struct ℵ₀ <: Number end
 _length(::AbstractInterval) = ℵ₀
-_length(d) = length(d)
 
-size(A::AbstractAxisArray) = _length.(axes(A))
-axes(A::AbstractAxisArray) = error("Override axes for $(typeof(A))")
+checkindex(::Type{Bool}, inds::AbstractInterval, i::Real) = (leftendpoint(inds) <= i) & (i <= rightendpoint(inds))
+function checkindex(::Type{Bool}, inds::AbstractInterval, I::AbstractArray)
+    @_inline_meta
+    b = true
+    for i in I
+        b &= checkindex(Bool, inds, i)
+    end
+    b
+end
 
-include("indices.jl")
-include("abstractaxisarray.jl")
-include("adjtrans.jl")
-include("multidimensional.jl")
 end

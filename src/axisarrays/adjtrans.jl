@@ -105,12 +105,12 @@ axes(v::AdjOrTransAbsVec) = (Base.OneTo(1), axes(v.parent)...)
 axes(A::AdjOrTransAbsMat) = reverse(axes(A.parent))
 IndexStyle(::Type{<:AdjOrTransAbsVec}) = IndexLinear()
 IndexStyle(::Type{<:AdjOrTransAbsMat}) = IndexCartesian()
-@propagate_inbounds getindex(v::AdjOrTransAbsVec, i::Int) = wrapperop(v)(v.parent[i-1+first(axes(v.parent)[1])])
-@propagate_inbounds getindex(A::AdjOrTransAbsMat, i::Int, j::Int) = wrapperop(A)(A.parent[j, i])
-@propagate_inbounds setindex!(v::AdjOrTransAbsVec, x, i::Int) = (setindex!(v.parent, wrapperop(v)(x), i-1+first(axes(v.parent)[1])); v)
-@propagate_inbounds setindex!(A::AdjOrTransAbsMat, x, i::Int, j::Int) = (setindex!(A.parent, wrapperop(A)(x), j, i); A)
+@propagate_inbounds getindex(v::AdjOrTransAbsVec, i::Real) = wrapperop(v)(v.parent[i-1+first(axes(v.parent)[1])])
+@propagate_inbounds getindex(A::AdjOrTransAbsMat, i::Real, j::Real) = wrapperop(A)(A.parent[j, i])
+@propagate_inbounds setindex!(v::AdjOrTransAbsVec, x, i::Real) = (setindex!(v.parent, wrapperop(v)(x), i-1+first(axes(v.parent)[1])); v)
+@propagate_inbounds setindex!(A::AdjOrTransAbsMat, x, i::Real, j::Real) = (setindex!(A.parent, wrapperop(A)(x), j, i); A)
 # AbstractAxisArray interface, additional definitions to retain wrapper over vectors where appropriate
-@propagate_inbounds getindex(v::AdjOrTransAbsVec, ::Colon, is::AbstractArray{Int}) = wrapperop(v)(v.parent[is])
+@propagate_inbounds getindex(v::AdjOrTransAbsVec, ::Colon, is::AbstractArray{<:Real}) = wrapperop(v)(v.parent[is])
 @propagate_inbounds getindex(v::AdjOrTransAbsVec, ::Colon, ::Colon) = wrapperop(v)(v.parent[:])
 
 # conversion of underlying storage

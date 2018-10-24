@@ -307,15 +307,7 @@ throw_boundserror(A, I) = (@_noinline_meta; throw(BoundsError(A, I)))
 
 # check along a single dimension
 checkindex(::Type{Bool}, inds, i) = Base.checkindex(Bool, inds, i)
-checkindex(::Type{Bool}, inds::AbstractInterval, i::Real) = (leftendpoint(inds) <= i) & (i <= rightendpoint(inds))
-function checkindex(::Type{Bool}, inds::AbstractInterval, I::AbstractArray)
-    @_inline_meta
-    b = true
-    for i in I
-        b &= checkindex(Bool, inds, i)
-    end
-    b
-end
+
 
 # See also specializations in multidimensional
 
