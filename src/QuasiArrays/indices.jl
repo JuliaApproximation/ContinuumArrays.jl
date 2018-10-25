@@ -1,16 +1,16 @@
 # This file is a part of Julia. License is MIT: https://julialang.org/license
 
 
-IndexStyle(A::AbstractAxisArray) = IndexStyle(typeof(A))
-IndexStyle(::Type{<:AbstractAxisArray}) = IndexCartesian()
+IndexStyle(A::AbstractQuasiArray) = IndexStyle(typeof(A))
+IndexStyle(::Type{<:AbstractQuasiArray}) = IndexCartesian()
 
-IndexStyle(A::AbstractAxisArray, B::AbstractAxisArray) = IndexStyle(IndexStyle(A), IndexStyle(B))
-IndexStyle(A::AbstractArray, B::AbstractAxisArray) = IndexStyle(IndexStyle(A), IndexStyle(B))
-IndexStyle(A::AbstractAxisArray, B::AbstractArray) = IndexStyle(IndexStyle(A), IndexStyle(B))
-IndexStyle(A::AbstractAxisArray, B::AbstractAxisArray...) = IndexStyle(IndexStyle(A), IndexStyle(B...))
-IndexStyle(A::AbstractAxisArray, B::AbstractArray...) = IndexStyle(IndexStyle(A), IndexStyle(B...))
+IndexStyle(A::AbstractQuasiArray, B::AbstractQuasiArray) = IndexStyle(IndexStyle(A), IndexStyle(B))
+IndexStyle(A::AbstractArray, B::AbstractQuasiArray) = IndexStyle(IndexStyle(A), IndexStyle(B))
+IndexStyle(A::AbstractQuasiArray, B::AbstractArray) = IndexStyle(IndexStyle(A), IndexStyle(B))
+IndexStyle(A::AbstractQuasiArray, B::AbstractQuasiArray...) = IndexStyle(IndexStyle(A), IndexStyle(B...))
+IndexStyle(A::AbstractQuasiArray, B::AbstractArray...) = IndexStyle(IndexStyle(A), IndexStyle(B...))
 
-function promote_shape(a::AbstractAxisArray, b::AbstractAxisArray)
+function promote_shape(a::AbstractQuasiArray, b::AbstractQuasiArray)
     promote_shape(axes(a), axes(b))
 end
 
@@ -76,12 +76,12 @@ to_indices(A, inds, ::Tuple{}) = ()
 to_indices(A, inds, I::Tuple{Any, Vararg{Any}}) =
     (@_inline_meta; (to_index(A, I[1]), to_indices(A, _maybetail(inds), tail(I))...))
 
-# check for valid sizes in A[I...] = X where X <: AbstractAxisArray
+# check for valid sizes in A[I...] = X where X <: AbstractQuasiArray
 # we want to allow dimensions that are equal up to permutation, but only
 # for permutations that leave array elements in the same linear order.
 # those are the permutations that preserve the order of the non-singleton
 # dimensions.
-function setindex_shape_check(X::AbstractAxisArray, I::Integer...)
+function setindex_shape_check(X::AbstractQuasiArray, I::Integer...)
     li = ndims(X)
     lj = length(I)
     i = j = 1
@@ -115,19 +115,19 @@ function setindex_shape_check(X::AbstractAxisArray, I::Integer...)
     end
 end
 
-setindex_shape_check(X::AbstractAxisArray) =
+setindex_shape_check(X::AbstractQuasiArray) =
     (length(X)==1 || throw_setindex_mismatch(X,()))
 
-setindex_shape_check(X::AbstractAxisArray, i::Integer) =
+setindex_shape_check(X::AbstractQuasiArray, i::Integer) =
     (length(X)==i || throw_setindex_mismatch(X, (i,)))
 
-setindex_shape_check(X::AbstractAxisArray{<:Any,1}, i::Integer) =
+setindex_shape_check(X::AbstractQuasiArray{<:Any,1}, i::Integer) =
     (length(X)==i || throw_setindex_mismatch(X, (i,)))
 
-setindex_shape_check(X::AbstractAxisArray{<:Any,1}, i::Integer, j::Integer) =
+setindex_shape_check(X::AbstractQuasiArray{<:Any,1}, i::Integer, j::Integer) =
     (length(X)==i*j || throw_setindex_mismatch(X, (i,j)))
 
-function setindex_shape_check(X::AbstractAxisArray{<:Any,2}, i::Integer, j::Integer)
+function setindex_shape_check(X::AbstractQuasiArray{<:Any,2}, i::Integer, j::Integer)
     if length(X) != i*j
         throw_setindex_mismatch(X, (i,j))
     end
@@ -138,9 +138,9 @@ function setindex_shape_check(X::AbstractAxisArray{<:Any,2}, i::Integer, j::Inte
 end
 
 
-to_index(I::AbstractAxisArray{Bool}) = LogicalIndex(I)
-to_index(I::AbstractAxisArray) = I
-to_index(I::AbstractAxisArray{<:Union{AbstractArray, Colon}}) =
+to_index(I::AbstractQuasiArray{Bool}) = LogicalIndex(I)
+to_index(I::AbstractQuasiArray) = I
+to_index(I::AbstractQuasiArray{<:Union{AbstractArray, Colon}}) =
     throw(ArgumentError("invalid index: $I of type $(typeof(I))"))
 
-LinearIndices(A::AbstractAxisArray) = LinearIndices(axes(A))
+LinearIndices(A::AbstractQuasiArray) = LinearIndices(axes(A))

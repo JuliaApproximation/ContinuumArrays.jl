@@ -5,20 +5,20 @@
 ## Basic functions ##
 
 """
-    AbstractAxisArray{T,N}
+    AbstractQuasiArray{T,N}
 
 Supertype for `N`-dimensional arrays (or array-like types) with elements of type `T`.
 [`Array`](@ref) and other types are subtypes of this. See the manual section on the
-[`AbstractAxisArray` interface](@ref man-interface-array).
+[`AbstractQuasiArray` interface](@ref man-interface-array).
 """
-AbstractAxisArray
+AbstractQuasiArray
 
-convert(::Type{T}, a::T) where {T<:AbstractAxisArray} = a
-convert(::Type{AbstractAxisArray{T}}, a::AbstractAxisArray) where {T} = AbstractAxisArray{T}(a)
-convert(::Type{AbstractAxisArray{T,N}}, a::AbstractAxisArray{<:Any,N}) where {T,N} = AbstractAxisArray{T,N}(a)
+convert(::Type{T}, a::T) where {T<:AbstractQuasiArray} = a
+convert(::Type{AbstractQuasiArray{T}}, a::AbstractQuasiArray) where {T} = AbstractQuasiArray{T}(a)
+convert(::Type{AbstractQuasiArray{T,N}}, a::AbstractQuasiArray{<:Any,N}) where {T,N} = AbstractQuasiArray{T,N}(a)
 
 """
-    size(A::AbstractAxisArray, [dim])
+    size(A::AbstractQuasiArray, [dim])
 
 Return a tuple containing the dimensions of `A`. Optionally you can specify a
 dimension to just get the length of that dimension.
@@ -37,7 +37,7 @@ julia> size(A, 2)
 3
 ```
 """
-size(t::AbstractAxisArray{T,N}, d) where {T,N} = d <= N ? size(t)[d] : 1
+size(t::AbstractQuasiArray{T,N}, d) where {T,N} = d <= N ? size(t)[d] : 1
 
 """
     axes(A, d)
@@ -54,7 +54,7 @@ julia> axes(A, 2)
 Base.OneTo(6)
 ```
 """
-function axes(A::AbstractAxisArray{T,N}, d) where {T,N}
+function axes(A::AbstractQuasiArray{T,N}, d) where {T,N}
     @_inline_meta
     d <= N ? axes(A)[d] : OneTo(1)
 end
@@ -63,18 +63,18 @@ end
 # Performance optimization: get rid of a branch on `d` in `axes(A, d)`
 # for d=1. 1d arrays are heavily used, and the first dimension comes up
 # in other applications.
-axes1(A::AbstractAxisArray{<:Any,0}) = OneTo(1)
-axes1(A::AbstractAxisArray) = (@_inline_meta; axes(A)[1])
+axes1(A::AbstractQuasiArray{<:Any,0}) = OneTo(1)
+axes1(A::AbstractQuasiArray) = (@_inline_meta; axes(A)[1])
 
-keys(a::AbstractAxisArray) = CartesianIndices(axes(a))
-keys(a::AbstractAxisVector) = LinearIndices(a)
+keys(a::AbstractQuasiArray) = CartesianIndices(axes(a))
+keys(a::AbstractQuasiVector) = LinearIndices(a)
 
 
-eltype(::Type{<:AbstractAxisArray{E}}) where {E} = @isdefined(E) ? E : Any
-elsize(A::AbstractAxisArray) = elsize(typeof(A))
+eltype(::Type{<:AbstractQuasiArray{E}}) where {E} = @isdefined(E) ? E : Any
+elsize(A::AbstractQuasiArray) = elsize(typeof(A))
 
 """
-    ndims(A::AbstractAxisArray) -> Integer
+    ndims(A::AbstractQuasiArray) -> Integer
 
 Return the number of dimensions of `A`.
 
@@ -86,8 +86,8 @@ julia> ndims(A)
 3
 ```
 """
-ndims(::AbstractAxisArray{T,N}) where {T,N} = N
-ndims(::Type{<:AbstractAxisArray{T,N}}) where {T,N} = N
+ndims(::AbstractQuasiArray{T,N}) where {T,N} = N
+ndims(::Type{<:AbstractQuasiArray{T,N}}) where {T,N} = N
 
 """
     length(collection) -> Integer
@@ -111,7 +111,7 @@ julia> length([1 2; 3 4])
 length
 
 """
-    length(A::AbstractAxisArray)
+    length(A::AbstractQuasiArray)
 
 Return the number of elements in the array, defaults to `prod(size(A))`.
 
@@ -124,22 +124,22 @@ julia> length([1 2; 3 4])
 4
 ```
 """
-length(t::AbstractAxisArray) = (@_inline_meta; prod(size(t)))
+length(t::AbstractQuasiArray) = (@_inline_meta; prod(size(t)))
 
 # eachindex iterates over all indices. IndexCartesian definitions are later.
-eachindex(A::AbstractAxisVector) = (@_inline_meta(); axes1(A))
+eachindex(A::AbstractQuasiVector) = (@_inline_meta(); axes1(A))
 
 """
     eachindex(A...)
 
-Create an iterable object for visiting each index of an `AbstractAxisArray` `A` in an efficient
+Create an iterable object for visiting each index of an `AbstractQuasiArray` `A` in an efficient
 manner. For array types that have opted into fast linear indexing (like `Array`), this is
 simply the range `1:length(A)`. For other array types, return a specialized Cartesian
 range to efficiently index into the array with indices specified for every dimension. For
 other iterables, including strings and dictionaries, return an iterator object
 supporting arbitrary index types (e.g. unevenly spaced or non-integer indices).
 
-If you supply more than one `AbstractAxisArray` argument, `eachindex` will create an
+If you supply more than one `AbstractQuasiArray` argument, `eachindex` will create an
 iterable object that is fast for all arguments (a [`UnitRange`](@ref)
 if all inputs have fast linear indexing, a [`CartesianIndices`](@ref)
 otherwise).
@@ -165,19 +165,19 @@ CartesianIndex(1, 1)
 CartesianIndex(2, 1)
 ```
 """
-eachindex(A::AbstractAxisArray) = (@_inline_meta(); eachindex(IndexStyle(A), A))
+eachindex(A::AbstractQuasiArray) = (@_inline_meta(); eachindex(IndexStyle(A), A))
 
-function eachindex(A::AbstractAxisArray, B::AbstractAxisArray)
+function eachindex(A::AbstractQuasiArray, B::AbstractQuasiArray)
     @_inline_meta
     eachindex(IndexStyle(A,B), A, B)
 end
-function eachindex(A::AbstractAxisArray, B::AbstractAxisArray...)
+function eachindex(A::AbstractQuasiArray, B::AbstractQuasiArray...)
     @_inline_meta
     eachindex(IndexStyle(A,B...), A, B...)
 end
-eachindex(::IndexLinear, A::AbstractAxisArray) = (@_inline_meta; OneTo(length(A)))
-eachindex(::IndexLinear, A::AbstractAxisVector) = (@_inline_meta; axes1(A))
-function eachindex(::IndexLinear, A::AbstractAxisArray, B::AbstractAxisArray...)
+eachindex(::IndexLinear, A::AbstractQuasiArray) = (@_inline_meta; OneTo(length(A)))
+eachindex(::IndexLinear, A::AbstractQuasiVector) = (@_inline_meta; axes1(A))
+function eachindex(::IndexLinear, A::AbstractQuasiArray, B::AbstractQuasiArray...)
     @_inline_meta
     indsA = eachindex(IndexLinear(), A)
     _all_match_first(X->eachindex(IndexLinear(), X), indsA, B...) ||
@@ -187,7 +187,7 @@ end
 
 
 # keys with an IndexStyle
-keys(s::IndexStyle, A::AbstractAxisArray, B::AbstractAxisArray...) = eachindex(s, A, B...)
+keys(s::IndexStyle, A::AbstractQuasiArray, B::AbstractQuasiArray...) = eachindex(s, A, B...)
 
 """
     lastindex(collection) -> Real
@@ -207,8 +207,8 @@ julia> lastindex(rand(3,4,5), 2)
 4
 ```
 """
-lastindex(a::AbstractAxisArray) = (@_inline_meta; last(eachindex(IndexLinear(), a)))
-lastindex(a::AbstractAxisArray, d) = (@_inline_meta; last(axes(a, d)))
+lastindex(a::AbstractQuasiArray) = (@_inline_meta; last(eachindex(IndexLinear(), a)))
+lastindex(a::AbstractQuasiArray, d) = (@_inline_meta; last(axes(a, d)))
 
 """
     firstindex(collection) -> Real
@@ -225,13 +225,13 @@ julia> firstindex(rand(3,4,5), 2)
 1
 ```
 """
-firstindex(a::AbstractAxisArray) = (@_inline_meta; first(eachindex(IndexLinear(), a)))
-firstindex(a::AbstractAxisArray, d) = (@_inline_meta; first(axes(a, d)))
+firstindex(a::AbstractQuasiArray) = (@_inline_meta; first(eachindex(IndexLinear(), a)))
+firstindex(a::AbstractQuasiArray, d) = (@_inline_meta; first(axes(a, d)))
 
-first(a::AbstractAxisArray) = a[first(eachindex(a))]
-stride(A::AbstractAxisArray, k::Integer) = strides(A)[k]
+first(a::AbstractQuasiArray) = a[first(eachindex(a))]
+stride(A::AbstractQuasiArray, k::Integer) = strides(A)[k]
 
-function isassigned(a::AbstractAxisArray, i::Real...)
+function isassigned(a::AbstractQuasiArray, i::Real...)
     try
         a[i...]
         true
@@ -244,18 +244,18 @@ function isassigned(a::AbstractAxisArray, i::Real...)
     end
 end
 
-function checkbounds(::Type{Bool}, A::AbstractAxisArray, I...)
+function checkbounds(::Type{Bool}, A::AbstractQuasiArray, I...)
     @_inline_meta
     checkbounds_indices(Bool, axes(A), I)
 end
 
 # Linear indexing is explicitly allowed when there is only one (non-cartesian) index
-function checkbounds(::Type{Bool}, A::AbstractAxisArray, i)
+function checkbounds(::Type{Bool}, A::AbstractQuasiArray, i)
     @_inline_meta
     checkindex(Bool, eachindex(IndexLinear(), A), i)
 end
 # As a special extension, allow using logical arrays that match the source array exactly
-function checkbounds(::Type{Bool}, A::AbstractAxisArray{<:Any,N}, I::AbstractAxisArray{Bool,N}) where N
+function checkbounds(::Type{Bool}, A::AbstractQuasiArray{<:Any,N}, I::AbstractQuasiArray{Bool,N}) where N
     @_inline_meta
     axes(A) == axes(I)
 end
@@ -265,7 +265,7 @@ end
 
 Throw an error if the specified indices `I` are not in bounds for the given array `A`.
 """
-function checkbounds(A::AbstractAxisArray, I...)
+function checkbounds(A::AbstractQuasiArray, I...)
     @_inline_meta
     checkbounds(Bool, A, I...) || throw_boundserror(A, I)
     nothing
@@ -322,7 +322,7 @@ given source array. The second and third arguments are both optional, defaulting
 given array's `eltype` and `size`. The dimensions may be specified either as a single tuple
 argument or as a series of integer arguments.
 
-Custom AbstractAxisArray subtypes may choose which specific array type is best-suited to return
+Custom AbstractQuasiArray subtypes may choose which specific array type is best-suited to return
 for the given element type and dimensionality. If they do not specialize this method, the
 default is an `Array{element_type}(undef, dims...)`.
 
@@ -356,19 +356,19 @@ julia> similar(falses(10), Float64, 2, 4)
 ```
 
 """
-similar(a::AbstractAxisArray{T}) where {T}                             = similar(a, T)
-similar(a::AbstractAxisArray, ::Type{T}) where {T}                     = similar(a, T, to_shape(axes(a)))
-similar(a::AbstractAxisArray{T}, dims::Tuple) where {T}                = similar(a, T, to_shape(dims))
-similar(a::AbstractAxisArray{T}, dims::DimOrInd...) where {T}          = similar(a, T, to_shape(dims))
-similar(a::AbstractAxisArray, ::Type{T}, dims::DimOrInd...) where {T}  = similar(a, T, to_shape(dims))
+similar(a::AbstractQuasiArray{T}) where {T}                             = similar(a, T)
+similar(a::AbstractQuasiArray, ::Type{T}) where {T}                     = similar(a, T, to_shape(axes(a)))
+similar(a::AbstractQuasiArray{T}, dims::Tuple) where {T}                = similar(a, T, to_shape(dims))
+similar(a::AbstractQuasiArray{T}, dims::DimOrInd...) where {T}          = similar(a, T, to_shape(dims))
+similar(a::AbstractQuasiArray, ::Type{T}, dims::DimOrInd...) where {T}  = similar(a, T, to_shape(dims))
 # Similar supports specifying dims as either Integers or AbstractUnitRanges or any mixed combination
 # thereof. Ideally, we'd just convert Integers to OneTos and then call a canonical method with the axes,
-# but we don't want to require all AbstractAxisArray subtypes to dispatch on Base.OneTo. So instead we
+# but we don't want to require all AbstractQuasiArray subtypes to dispatch on Base.OneTo. So instead we
 # define this method to convert supported axes to Ints, with the expectation that an offset array
 # package will define a method with dims::Tuple{Union{Integer, UnitRange}, Vararg{Union{Integer, UnitRange}}}
-similar(a::AbstractAxisArray, ::Type{T}, dims::Tuple{Union{Integer, OneTo}, Vararg{Union{Integer, OneTo}}}) where {T} = similar(a, T, to_shape(dims))
+similar(a::AbstractQuasiArray, ::Type{T}, dims::Tuple{Union{Integer, OneTo}, Vararg{Union{Integer, OneTo}}}) where {T} = similar(a, T, to_shape(dims))
 # similar creates an Array by default
-similar(a::AbstractAxisArray, ::Type{T}, dims::Dims{N}) where {T,N}    = Array{T,N}(undef, dims)
+similar(a::AbstractQuasiArray, ::Type{T}, dims::Dims{N}) where {T,N}    = Array{T,N}(undef, dims)
 
 """
     similar(storagetype, axes)
@@ -392,12 +392,12 @@ indices of the result will match `A`.
 would create a 1-dimensional logical array whose indices match those
 of the columns of `A`.
 """
-similar(::Type{T}, dims::DimOrInd...) where {T<:AbstractAxisArray} = similar(T, dims)
-similar(::Type{T}, shape::Tuple{Union{Integer, OneTo}, Vararg{Union{Integer, OneTo}}}) where {T<:AbstractAxisArray} = similar(T, to_shape(shape))
-similar(::Type{T}, dims::Dims) where {T<:AbstractAxisArray} = T(undef, dims)
+similar(::Type{T}, dims::DimOrInd...) where {T<:AbstractQuasiArray} = similar(T, dims)
+similar(::Type{T}, shape::Tuple{Union{Integer, OneTo}, Vararg{Union{Integer, OneTo}}}) where {T<:AbstractQuasiArray} = similar(T, to_shape(shape))
+similar(::Type{T}, dims::Dims) where {T<:AbstractQuasiArray} = T(undef, dims)
 
 """
-    empty(v::AbstractAxisVector, [eltype])
+    empty(v::AbstractQuasiVector, [eltype])
 
 Create an empty vector similar to `v`, optionally changing the `eltype`.
 
@@ -411,14 +411,14 @@ julia> empty([1.0, 2.0, 3.0], String)
 0-element Array{String,1}
 ```
 """
-empty(a::AbstractAxisVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
+empty(a::AbstractQuasiVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
 
 # like empty, but should return a mutable collection, a Vector by default
-emptymutable(a::AbstractAxisVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
+emptymutable(a::AbstractQuasiVector{T}, ::Type{U}=T) where {T,U} = Vector{U}()
 
 ## from general iterable to any array
 
-function copyto!(dest::AbstractAxisArray, src)
+function copyto!(dest::AbstractQuasiArray, src)
     destiter = eachindex(dest)
     y = iterate(destiter)
     for x in src
@@ -433,10 +433,10 @@ end
 ## copy between abstract arrays - generally more efficient
 ## since a single index variable can be used.
 
-copyto!(dest::AbstractAxisArray, src::AbstractAxisArray) =
+copyto!(dest::AbstractQuasiArray, src::AbstractQuasiArray) =
     copyto!(IndexStyle(dest), dest, IndexStyle(src), src)
 
-function copyto!(::IndexStyle, dest::AbstractAxisArray, ::IndexStyle, src::AbstractAxisArray)
+function copyto!(::IndexStyle, dest::AbstractQuasiArray, ::IndexStyle, src::AbstractQuasiArray)
     destinds, srcinds = LinearIndices(dest), LinearIndices(src)
     isempty(srcinds) || (checkbounds(Bool, destinds, first(srcinds)) && checkbounds(Bool, destinds, last(srcinds))) ||
         throw(BoundsError(dest, srcinds))
@@ -446,7 +446,7 @@ function copyto!(::IndexStyle, dest::AbstractAxisArray, ::IndexStyle, src::Abstr
     return dest
 end
 
-function copyto!(::IndexStyle, dest::AbstractAxisArray, ::IndexCartesian, src::AbstractAxisArray)
+function copyto!(::IndexStyle, dest::AbstractQuasiArray, ::IndexCartesian, src::AbstractQuasiArray)
     destinds, srcinds = LinearIndices(dest), LinearIndices(src)
     isempty(srcinds) || (checkbounds(Bool, destinds, first(srcinds)) && checkbounds(Bool, destinds, last(srcinds))) ||
         throw(BoundsError(dest, srcinds))
@@ -457,7 +457,7 @@ function copyto!(::IndexStyle, dest::AbstractAxisArray, ::IndexCartesian, src::A
     return dest
 end
 
-function copy(a::AbstractAxisArray)
+function copy(a::AbstractQuasiArray)
     @_propagate_inbounds_meta
     copymutable(a)
 end
@@ -483,12 +483,12 @@ julia> Base.copymutable(tup)
  3
 ```
 """
-function copymutable(a::AbstractAxisArray)
+function copymutable(a::AbstractQuasiArray)
     @_propagate_inbounds_meta
     copyto!(similar(a), a)
 end
 
-zero(x::AbstractAxisArray{T}) where {T} = fill!(similar(x), zero(T))
+zero(x::AbstractQuasiArray{T}) where {T} = fill!(similar(x), zero(T))
 
 ## iteration support for arrays by iterating over `eachindex` in the array ##
 # Allows fast iteration by default for both IndexLinear and IndexCartesian arrays
@@ -496,19 +496,19 @@ zero(x::AbstractAxisArray{T}) where {T} = fill!(similar(x), zero(T))
 # While the definitions for IndexLinear are all simple enough to inline on their
 # own, IndexCartesian's CartesianIndices is more complicated and requires explicit
 # inlining.
-function iterate(A::AbstractAxisArray, state=(eachindex(A),))
+function iterate(A::AbstractQuasiArray, state=(eachindex(A),))
     y = iterate(state...)
     y === nothing && return nothing
     A[y[1]], (state[1], tail(y)...)
 end
 
-isempty(a::AbstractAxisArray) = (length(a) == 0)
+isempty(a::AbstractQuasiArray) = (length(a) == 0)
 
 ## Approach:
 # We only define one fallback method on getindex for all argument types.
 # That dispatches to an (inlined) internal _getindex function, where the goal is
 # to transform the indices such that we can call the only getindex method that
-# we require the type A{T,N} <: AbstractAxisArray{T,N} to define; either:
+# we require the type A{T,N} <: AbstractQuasiArray{T,N} to define; either:
 #       getindex(::A, ::Real) # if IndexStyle(A) == IndexLinear() OR
 #       getindex(::A{T,N}, ::Vararg{Int, N}) where {T,N} # if IndexCartesian()
 # If the subtype hasn't defined the required method, it falls back to the
@@ -542,69 +542,69 @@ julia> getindex(A, 2:4)
  4
 ```
 """
-function getindex(A::AbstractAxisArray, I...)
+function getindex(A::AbstractQuasiArray, I...)
     @_propagate_inbounds_meta
     error_if_canonical_getindex(IndexStyle(A), A, I...)
     _getindex(IndexStyle(A), A, to_indices(A, I)...)
 end
-function unsafe_getindex(A::AbstractAxisArray, I...)
+function unsafe_getindex(A::AbstractQuasiArray, I...)
     @_inline_meta
     @inbounds r = getindex(A, I...)
     r
 end
 
-error_if_canonical_getindex(::IndexLinear, A::AbstractAxisArray, ::Real) =
+error_if_canonical_getindex(::IndexLinear, A::AbstractQuasiArray, ::Real) =
     error("getindex not defined for ", typeof(A))
-error_if_canonical_getindex(::IndexCartesian, A::AbstractAxisArray{T,N}, ::Vararg{Real,N}) where {T,N} =
+error_if_canonical_getindex(::IndexCartesian, A::AbstractQuasiArray{T,N}, ::Vararg{Real,N}) where {T,N} =
     error("getindex not defined for ", typeof(A))
-error_if_canonical_getindex(::IndexStyle, ::AbstractAxisArray, ::Any...) = nothing
+error_if_canonical_getindex(::IndexStyle, ::AbstractQuasiArray, ::Any...) = nothing
 
 ## Internal definitions
-_getindex(::IndexStyle, A::AbstractAxisArray, I...) =
+_getindex(::IndexStyle, A::AbstractQuasiArray, I...) =
     error("getindex for $(typeof(A)) with types $(typeof(I)) is not supported")
 
 ## IndexLinear Scalar indexing: canonical method is one Int
-_getindex(::IndexLinear, A::AbstractAxisArray, i::Real) = (@_propagate_inbounds_meta; getindex(A, i))
-function _getindex(::IndexLinear, A::AbstractAxisArray, I::Vararg{Real,M}) where M
+_getindex(::IndexLinear, A::AbstractQuasiArray, i::Real) = (@_propagate_inbounds_meta; getindex(A, i))
+function _getindex(::IndexLinear, A::AbstractQuasiArray, I::Vararg{Real,M}) where M
     @_inline_meta
     @boundscheck checkbounds(A, I...) # generally _to_linear_index requires bounds checking
     @inbounds r = getindex(A, _to_linear_index(A, I...))
     r
 end
-_to_linear_index(A::AbstractAxisArray, i::Real) = i
-_to_linear_index(A::AbstractAxisVector, i::Real, I::Real...) = i
-_to_linear_index(A::AbstractAxisArray) = 1
-_to_linear_index(A::AbstractAxisArray, I::Real...) = (@_inline_meta; _sub2ind(A, I...))
+_to_linear_index(A::AbstractQuasiArray, i::Real) = i
+_to_linear_index(A::AbstractQuasiVector, i::Real, I::Real...) = i
+_to_linear_index(A::AbstractQuasiArray) = 1
+_to_linear_index(A::AbstractQuasiArray, I::Real...) = (@_inline_meta; _sub2ind(A, I...))
 
 ## IndexCartesian Scalar indexing: Canonical method is full dimensionality of Reals
-function _getindex(::IndexCartesian, A::AbstractAxisArray, I::Vararg{Real,M}) where M
+function _getindex(::IndexCartesian, A::AbstractQuasiArray, I::Vararg{Real,M}) where M
     @_inline_meta
     @boundscheck checkbounds(A, I...) # generally _to_subscript_indices requires bounds checking
     @inbounds r = getindex(A, _to_subscript_indices(A, I...)...)
     r
 end
-function _getindex(::IndexCartesian, A::AbstractAxisArray{T,N}, I::Vararg{Real, N}) where {T,N}
+function _getindex(::IndexCartesian, A::AbstractQuasiArray{T,N}, I::Vararg{Real, N}) where {T,N}
     @_propagate_inbounds_meta
     getindex(A, I...)
 end
-_to_subscript_indices(A::AbstractAxisArray, i::Real) = (@_inline_meta; _unsafe_ind2sub(A, i))
-_to_subscript_indices(A::AbstractAxisArray{T,N}) where {T,N} = (@_inline_meta; fill_to_length((), 1, Val(N)))
-_to_subscript_indices(A::AbstractAxisArray{T,0}) where {T} = ()
-_to_subscript_indices(A::AbstractAxisArray{T,0}, i::Real) where {T} = ()
-_to_subscript_indices(A::AbstractAxisArray{T,0}, I::Real...) where {T} = ()
-function _to_subscript_indices(A::AbstractAxisArray{T,N}, I::Real...) where {T,N}
+_to_subscript_indices(A::AbstractQuasiArray, i::Real) = (@_inline_meta; _unsafe_ind2sub(A, i))
+_to_subscript_indices(A::AbstractQuasiArray{T,N}) where {T,N} = (@_inline_meta; fill_to_length((), 1, Val(N)))
+_to_subscript_indices(A::AbstractQuasiArray{T,0}) where {T} = ()
+_to_subscript_indices(A::AbstractQuasiArray{T,0}, i::Real) where {T} = ()
+_to_subscript_indices(A::AbstractQuasiArray{T,0}, I::Real...) where {T} = ()
+function _to_subscript_indices(A::AbstractQuasiArray{T,N}, I::Real...) where {T,N}
     @_inline_meta
     J, Jrem = IteratorsMD.split(I, Val(N))
     _to_subscript_indices(A, J, Jrem)
 end
-_to_subscript_indices(A::AbstractAxisArray, J::Tuple, Jrem::Tuple{}) =
+_to_subscript_indices(A::AbstractQuasiArray, J::Tuple, Jrem::Tuple{}) =
     __to_subscript_indices(A, axes(A), J, Jrem)
-function __to_subscript_indices(A::AbstractAxisArray,
+function __to_subscript_indices(A::AbstractQuasiArray,
         ::Tuple{AbstractUnitRange,Vararg{AbstractUnitRange}}, J::Tuple, Jrem::Tuple{})
     @_inline_meta
     (J..., map(first, tail(_remaining_size(J, axes(A))))...)
 end
-_to_subscript_indices(A::AbstractAxisArray{T,N}, I::Vararg{Real,N}) where {T,N} = I
+_to_subscript_indices(A::AbstractQuasiArray{T,N}, I::Vararg{Real,N}) where {T,N} = I
 
 ## Setindex! is defined similarly. We first dispatch to an internal _setindex!
 # function that allows dispatch on array storage
@@ -630,30 +630,30 @@ julia> A
  20.0  40.0
 ```
 """
-function setindex!(A::AbstractAxisArray, v, I...)
+function setindex!(A::AbstractQuasiArray, v, I...)
     @_propagate_inbounds_meta
     error_if_canonical_setindex(IndexStyle(A), A, I...)
     _setindex!(IndexStyle(A), A, v, to_indices(A, I)...)
 end
-function unsafe_setindex!(A::AbstractAxisArray, v, I...)
+function unsafe_setindex!(A::AbstractQuasiArray, v, I...)
     @_inline_meta
     @inbounds r = setindex!(A, v, I...)
     r
 end
 
-error_if_canonical_setindex(::IndexLinear, A::AbstractAxisArray, ::Real) =
+error_if_canonical_setindex(::IndexLinear, A::AbstractQuasiArray, ::Real) =
     error("setindex! not defined for ", typeof(A))
-error_if_canonical_setindex(::IndexCartesian, A::AbstractAxisArray{T,N}, ::Vararg{Real,N}) where {T,N} =
+error_if_canonical_setindex(::IndexCartesian, A::AbstractQuasiArray{T,N}, ::Vararg{Real,N}) where {T,N} =
     error("setindex! not defined for ", typeof(A))
-error_if_canonical_setindex(::IndexStyle, ::AbstractAxisArray, ::Any...) = nothing
+error_if_canonical_setindex(::IndexStyle, ::AbstractQuasiArray, ::Any...) = nothing
 
 ## Internal definitions
-_setindex!(::IndexStyle, A::AbstractAxisArray, v, I...) =
+_setindex!(::IndexStyle, A::AbstractQuasiArray, v, I...) =
     error("setindex! for $(typeof(A)) with types $(typeof(I)) is not supported")
 
 ## IndexLinear Scalar indexing
-_setindex!(::IndexLinear, A::AbstractAxisArray, v, i::Real) = (@_propagate_inbounds_meta; setindex!(A, v, i))
-function _setindex!(::IndexLinear, A::AbstractAxisArray, v, I::Vararg{Real,M}) where M
+_setindex!(::IndexLinear, A::AbstractQuasiArray, v, i::Real) = (@_propagate_inbounds_meta; setindex!(A, v, i))
+function _setindex!(::IndexLinear, A::AbstractQuasiArray, v, I::Vararg{Real,M}) where M
     @_inline_meta
     @boundscheck checkbounds(A, I...)
     @inbounds r = setindex!(A, v, _to_linear_index(A, I...))
@@ -661,11 +661,11 @@ function _setindex!(::IndexLinear, A::AbstractAxisArray, v, I::Vararg{Real,M}) w
 end
 
 # IndexCartesian Scalar indexing
-function _setindex!(::IndexCartesian, A::AbstractAxisArray{T,N}, v, I::Vararg{Real, N}) where {T,N}
+function _setindex!(::IndexCartesian, A::AbstractQuasiArray{T,N}, v, I::Vararg{Real, N}) where {T,N}
     @_propagate_inbounds_meta
     setindex!(A, v, I...)
 end
-function _setindex!(::IndexCartesian, A::AbstractAxisArray, v, I::Vararg{Real,M}) where M
+function _setindex!(::IndexCartesian, A::AbstractQuasiArray, v, I::Vararg{Real,M}) where M
     @_inline_meta
     @boundscheck checkbounds(A, I...)
     @inbounds r = setindex!(A, v, _to_subscript_indices(A, I...)...)
@@ -673,24 +673,24 @@ function _setindex!(::IndexCartesian, A::AbstractAxisArray, v, I::Vararg{Real,M}
 end
 
 
-parent(a::AbstractAxisArray) = a
+parent(a::AbstractQuasiArray) = a
 
 
-unalias(dest, A::AbstractAxisArray) = mightalias(dest, A) ? unaliascopy(A) : A
-unaliascopy(A::AbstractAxisArray)::typeof(A) = (@_noinline_meta; _unaliascopy(A, copy(A)))
+unalias(dest, A::AbstractQuasiArray) = mightalias(dest, A) ? unaliascopy(A) : A
+unaliascopy(A::AbstractQuasiArray)::typeof(A) = (@_noinline_meta; _unaliascopy(A, copy(A)))
 
 """
-    Base.mightalias(A::AbstractAxisArray, B::AbstractAxisArray)
+    Base.mightalias(A::AbstractQuasiArray, B::AbstractQuasiArray)
 
 Perform a conservative test to check if arrays `A` and `B` might share the same memory.
 
 By default, this simply checks if either of the arrays reference the same memory
 regions, as identified by their [`Base.dataids`](@ref).
 """
-mightalias(A::AbstractAxisArray, B::AbstractAxisArray) = !_isdisjoint(dataids(A), dataids(B))
+mightalias(A::AbstractQuasiArray, B::AbstractQuasiArray) = !_isdisjoint(dataids(A), dataids(B))
 
 """
-    Base.dataids(A::AbstractAxisArray)
+    Base.dataids(A::AbstractQuasiArray)
 
 Return a tuple of `UInt`s that represent the mutable data segments of an array.
 
@@ -699,20 +699,20 @@ parts can specialize this method to return the concatenation of the `dataids` of
 their component parts.  A typical definition for an array that wraps a parent is
 `Base.dataids(C::CustomArray) = dataids(C.parent)`.
 """
-dataids(A::AbstractAxisArray) = (UInt(objectid(A)),)
+dataids(A::AbstractQuasiArray) = (UInt(objectid(A)),)
 
 
 ## structured matrix methods ##
-replace_in_print_matrix(A::AbstractAxisMatrix,i::Real,j::Real,s::AbstractString) = s
-replace_in_print_matrix(A::AbstractAxisVector,i::Real,j::Real,s::AbstractString) = s
+replace_in_print_matrix(A::AbstractQuasiMatrix,i::Real,j::Real,s::AbstractString) = s
+replace_in_print_matrix(A::AbstractQuasiVector,i::Real,j::Real,s::AbstractString) = s
 
 ## Concatenation ##
-eltypeof(x::AbstractAxisArray) = eltype(x)
+eltypeof(x::AbstractQuasiArray) = eltype(x)
 
 
 ## Reductions and accumulates ##
 
-function isequal(A::AbstractAxisArray, B::AbstractAxisArray)
+function isequal(A::AbstractQuasiArray, B::AbstractQuasiArray)
     if A === B return true end
     if axes(A) != axes(B)
         return false
@@ -725,7 +725,7 @@ function isequal(A::AbstractAxisArray, B::AbstractAxisArray)
     return true
 end
 
-function cmp(A::AbstractAxisVector, B::AbstractAxisVector)
+function cmp(A::AbstractQuasiVector, B::AbstractQuasiVector)
     for (a, b) in zip(A, B)
         if !isequal(a, b)
             return isless(a, b) ? -1 : 1
@@ -734,9 +734,9 @@ function cmp(A::AbstractAxisVector, B::AbstractAxisVector)
     return cmp(length(A), length(B))
 end
 
-isless(A::AbstractAxisVector, B::AbstractAxisVector) = cmp(A, B) < 0
+isless(A::AbstractQuasiVector, B::AbstractQuasiVector) = cmp(A, B) < 0
 
-function (==)(A::AbstractAxisArray, B::AbstractAxisArray)
+function (==)(A::AbstractQuasiArray, B::AbstractQuasiArray)
     if axes(A) != axes(B)
         return false
     end
@@ -754,25 +754,25 @@ end
 
 # _sub2ind and _ind2sub
 # fallbacks
-function _sub2ind(A::AbstractAxisArray, I...)
+function _sub2ind(A::AbstractQuasiArray, I...)
     @_inline_meta
     _sub2ind(axes(A), I...)
 end
 
-function _ind2sub(A::AbstractAxisArray, ind)
+function _ind2sub(A::AbstractQuasiArray, ind)
     @_inline_meta
     _ind2sub(axes(A), ind)
 end
 
 # Vectorized forms
-function _sub2ind(inds::Indices{1}, I1::AbstractAxisVector{T}, I::AbstractAxisVector{T}...) where T<:Real
+function _sub2ind(inds::Indices{1}, I1::AbstractQuasiVector{T}, I::AbstractQuasiVector{T}...) where T<:Real
     throw(ArgumentError("Linear indexing is not defined for one-dimensional arrays"))
 end
-_sub2ind(inds::Tuple{OneTo}, I1::AbstractAxisVector{T}, I::AbstractAxisVector{T}...) where {T<:Real} =
+_sub2ind(inds::Tuple{OneTo}, I1::AbstractQuasiVector{T}, I::AbstractQuasiVector{T}...) where {T<:Real} =
     _sub2ind_vecs(inds, I1, I...)
-_sub2ind(inds::Union{DimsInteger,Indices}, I1::AbstractAxisVector{T}, I::AbstractAxisVector{T}...) where {T<:Real} =
+_sub2ind(inds::Union{DimsInteger,Indices}, I1::AbstractQuasiVector{T}, I::AbstractQuasiVector{T}...) where {T<:Real} =
     _sub2ind_vecs(inds, I1, I...)
-function _sub2ind_vecs(inds, I::AbstractAxisVector...)
+function _sub2ind_vecs(inds, I::AbstractQuasiVector...)
     I1 = I[1]
     Iinds = axes1(I1)
     for j = 2:length(I)
@@ -783,7 +783,7 @@ function _sub2ind_vecs(inds, I::AbstractAxisVector...)
     Iout
 end
 
-function _ind2sub(inds::Union{DimsInteger{N},Indices{N}}, ind::AbstractAxisVector{<:Real}) where N
+function _ind2sub(inds::Union{DimsInteger{N},Indices{N}}, ind::AbstractQuasiVector{<:Real}) where N
     M = length(ind)
     t = ntuple(n->similar(ind),Val(N))
     for (i,idx) in pairs(IndexLinear(), ind)
@@ -845,11 +845,11 @@ julia> mapslices(sum, a, dims = [1,2])
  58
 ```
 """
-function mapslices(f, A::AbstractAxisArray; dims)
+function mapslices(f, A::AbstractQuasiArray; dims)
     if isempty(dims)
         return map(f,A)
     end
-    if !isa(dims, AbstractAxisVector)
+    if !isa(dims, AbstractQuasiVector)
         dims = [dims...]
     end
 
@@ -873,12 +873,12 @@ function mapslices(f, A::AbstractAxisArray; dims)
     # any mutable containers. The following errs on the side of being overly
     # strict (#18570 & #21123).
     safe_for_reuse = isa(Aslice, StridedArray) &&
-                     (isa(r1, Number) || (isa(r1, AbstractAxisArray) && eltype(r1) <: Number))
+                     (isa(r1, Number) || (isa(r1, AbstractQuasiArray) && eltype(r1) <: Number))
 
     # determine result size and allocate
     Rsize = copy(dimsA)
     # TODO: maybe support removing dimensions
-    if !isa(r1, AbstractAxisArray) || ndims(r1) == 0
+    if !isa(r1, AbstractQuasiArray) || ndims(r1) == 0
         # If the result of f on a single slice is a scalar then we add singleton
         # dimensions. When adding the dimensions, we have to respect the
         # index type of the input array (e.g. in the case of OffsetArrays)
@@ -906,11 +906,11 @@ function mapslices(f, A::AbstractAxisArray; dims)
     inner_mapslices!(safe_for_reuse, indices, nidx, idx, otherdims, ridx, Aslice, A, f, R)
 end
 
-concatenate_setindex!(R, X::AbstractAxisArray, I...) = (R[I...] = X)
+concatenate_setindex!(R, X::AbstractQuasiArray, I...) = (R[I...] = X)
 
 ## 1 argument
 
-function map!(f::F, dest::AbstractAxisArray, A::AbstractAxisArray) where F
+function map!(f::F, dest::AbstractQuasiArray, A::AbstractQuasiArray) where F
     for (i,j) in zip(eachindex(dest),eachindex(A))
         dest[i] = f(A[j])
     end
@@ -918,10 +918,10 @@ function map!(f::F, dest::AbstractAxisArray, A::AbstractAxisArray) where F
 end
 
 # map on collections
-map(f, A::AbstractAxisArray) = collect_similar(A, Generator(f,A))
+map(f, A::AbstractQuasiArray) = collect_similar(A, Generator(f,A))
 
 ## 2 argument
-function map!(f::F, dest::AbstractAxisArray, A::AbstractAxisArray, B::AbstractAxisArray) where F
+function map!(f::F, dest::AbstractQuasiArray, A::AbstractQuasiArray, B::AbstractQuasiArray) where F
     for (i, j, k) in zip(eachindex(dest), eachindex(A), eachindex(B))
         dest[i] = f(A[j], B[k])
     end
@@ -929,7 +929,7 @@ function map!(f::F, dest::AbstractAxisArray, A::AbstractAxisArray, B::AbstractAx
 end
 
 
-function map_n!(f::F, dest::AbstractAxisArray, As) where F
+function map_n!(f::F, dest::AbstractQuasiArray, As) where F
     for i = LinearIndices(As[1])
         dest[i] = f(ith_all(i, As)...)
     end
@@ -955,14 +955,14 @@ julia> x
  6.0
 ```
 """
-map!(f::F, dest::AbstractAxisArray, As::AbstractAxisArray...) where {F} = map_n!(f, dest, As)
+map!(f::F, dest::AbstractQuasiArray, As::AbstractQuasiArray...) where {F} = map_n!(f, dest, As)
 
 
-## hashing AbstractAxisArray ##
+## hashing AbstractQuasiArray ##
 
-function hash(A::AbstractAxisArray, h::UInt)
-    h = hash(AbstractAxisArray, h)
-    # Axes are themselves AbstractAxisArrays, so hashing them directly would stack overflow
+function hash(A::AbstractQuasiArray, h::UInt)
+    h = hash(AbstractQuasiArray, h)
+    # Axes are themselves AbstractQuasiArrays, so hashing them directly would stack overflow
     # Instead hash the tuple of firsts and lasts along each dimension
     h = hash(map(first, axes(A)), h)
     h = hash(map(last, axes(A)), h)

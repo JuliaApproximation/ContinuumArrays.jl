@@ -1,18 +1,26 @@
 module ContinuumArrays
-include("axisarrays/AbstractAxisArrays.jl")
-using .AbstractAxisArrays
+using IntervalSets, LinearAlgebra, LazyArrays
+import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
+                IndexStyle, IndexLinear
+import Base.Broadcast: materialize
 
+include("QuasiArrays/QuasiArrays.jl")
+using .QuasiArrays
+import .QuasiArrays: _length, checkindex, Adjoint, Transpose
+
+export Spline, LinearSpline, HeavisideSpline, DiracDelta
 
 ####
 # Interval indexing support
 ####
+struct AlephInfinity{N} <: Integer end
 
-using IntervalSets
-import .AbstractAxisArrays: _length, checkindex, Adjoint, Transpose
-import Base: @_inline_meta
+const ℵ₁ = AlephInfinity{1}()
 
-struct ℵ₀ <: Number end
-_length(::AbstractInterval) = ℵ₀
+
+_length(::AbstractInterval) = ℵ₁
+*(ℵ::AlephInfinity) = ℵ
+
 
 checkindex(::Type{Bool}, inds::AbstractInterval, i::Real) = (leftendpoint(inds) <= i) & (i <= rightendpoint(inds))
 function checkindex(::Type{Bool}, inds::AbstractInterval, I::AbstractArray)
@@ -23,5 +31,8 @@ function checkindex(::Type{Bool}, inds::AbstractInterval, I::AbstractArray)
     end
     b
 end
+
+include("operators.jl")
+include("bases/bases.jl")
 
 end

@@ -7,14 +7,14 @@
 # note that Adjoint and Transpose must be able to wrap not only vectors and matrices
 # but also factorizations, rotations, and other linear algebra objects, including
 # user-defined such objects. so do not restrict the wrapped type.
-struct Adjoint{T,S} <: AbstractAxisMatrix{T}
+struct Adjoint{T,S} <: AbstractQuasiMatrix{T}
     parent::S
     function Adjoint{T,S}(A::S) where {T,S}
         checkeltype_adjoint(T, eltype(A))
         new(A)
     end
 end
-struct Transpose{T,S} <: AbstractAxisMatrix{T}
+struct Transpose{T,S} <: AbstractQuasiMatrix{T}
     parent::S
     function Transpose{T,S}(A::S) where {T,S}
         checkeltype_transpose(T, eltype(A))
@@ -52,7 +52,7 @@ julia> adjoint(A)
  9-2im  4-6im
 ```
 """
-adjoint(A::AbstractAxisVecOrMat) = Adjoint(A)
+adjoint(A::AbstractQuasiVecOrMat) = Adjoint(A)
 
 """
     transpose(A)
@@ -77,7 +77,7 @@ julia> transpose(A)
  9+2im  4+6im
 ```
 """
-transpose(A::AbstractAxisVecOrMat) = Transpose(A)
+transpose(A::AbstractQuasiVecOrMat) = Transpose(A)
 
 # unwrapping lowercase quasi-constructors
 adjoint(A::Adjoint) = A.parent
@@ -88,16 +88,16 @@ transpose(A::Adjoint{<:Real}) = A.parent
 
 # some aliases for internal convenience use
 const AdjOrTrans{T,S} = Union{Adjoint{T,S},Transpose{T,S}} where {T,S}
-const AdjointAbsVec{T} = Adjoint{T,<:AbstractAxisVector}
-const TransposeAbsVec{T} = Transpose{T,<:AbstractAxisVector}
-const AdjOrTransAbsVec{T} = AdjOrTrans{T,<:AbstractAxisVector}
-const AdjOrTransAbsMat{T} = AdjOrTrans{T,<:AbstractAxisMatrix}
+const AdjointAbsVec{T} = Adjoint{T,<:AbstractQuasiVector}
+const TransposeAbsVec{T} = Transpose{T,<:AbstractQuasiVector}
+const AdjOrTransAbsVec{T} = AdjOrTrans{T,<:AbstractQuasiVector}
+const AdjOrTransAbsMat{T} = AdjOrTrans{T,<:AbstractQuasiMatrix}
 
 # for internal use below
 wrapperop(A::Adjoint) = adjoint
 wrapperop(A::Transpose) = transpose
 
-# AbstractAxisArray interface, basic definitions
+# AbstractQuasiArray interface, basic definitions
 length(A::AdjOrTrans) = length(A.parent)
 size(v::AdjOrTransAbsVec) = (1, length(v.parent))
 size(A::AdjOrTransAbsMat) = reverse(size(A.parent))
@@ -109,7 +109,7 @@ IndexStyle(::Type{<:AdjOrTransAbsMat}) = IndexCartesian()
 @propagate_inbounds getindex(A::AdjOrTransAbsMat, i::Real, j::Real) = wrapperop(A)(A.parent[j, i])
 @propagate_inbounds setindex!(v::AdjOrTransAbsVec, x, i::Real) = (setindex!(v.parent, wrapperop(v)(x), i-1+first(axes(v.parent)[1])); v)
 @propagate_inbounds setindex!(A::AdjOrTransAbsMat, x, i::Real, j::Real) = (setindex!(A.parent, wrapperop(A)(x), j, i); A)
-# AbstractAxisArray interface, additional definitions to retain wrapper over vectors where appropriate
+# AbstractQuasiArray interface, additional definitions to retain wrapper over vectors where appropriate
 @propagate_inbounds getindex(v::AdjOrTransAbsVec, ::Colon, is::AbstractArray{<:Real}) = wrapperop(v)(v.parent[is])
 @propagate_inbounds getindex(v::AdjOrTransAbsVec, ::Colon, ::Colon) = wrapperop(v)(v.parent[:])
 
@@ -169,15 +169,15 @@ map(f, tvs::TransposeAbsVec...) = transpose(map((xs...) -> transpose(f(transpose
 ## multiplication *
 
 # Adjoint/Transpose-vector * vector
-*(u::AdjointAbsVec, v::AbstractAxisVector) = dot(u.parent, v)
-*(u::TransposeAbsVec{T}, v::AbstractAxisVector{T}) where {T<:Real} = dot(u.parent, v)
-function *(u::TransposeAbsVec, v::AbstractAxisVector)
+*(u::AdjointAbsVec, v::AbstractQuasiVector) = dot(u.parent, v)
+*(u::TransposeAbsVec{T}, v::AbstractQuasiVector{T}) where {T<:Real} = dot(u.parent, v)
+function *(u::TransposeAbsVec, v::AbstractQuasiVector)
     @assert !has_offset_axes(u, v)
     @boundscheck length(u) == length(v) || throw(DimensionMismatch())
     return sum(@inbounds(u[k]*v[k]) for k in 1:length(u))
 end
 # vector * Adjoint/Transpose-vector
-*(u::AbstractAxisVector, v::AdjOrTransAbsVec) = broadcast(*, u, v)
+*(u::AbstractQuasiVector, v::AdjOrTransAbsVec) = broadcast(*, u, v)
 # Adjoint/Transpose-vector * Adjoint/Transpose-vector
 # (necessary for disambiguation with fallback methods in linalg/matmul)
 *(u::AdjointAbsVec, v::AdjointAbsVec) = throw(MethodError(*, (u, v)))
@@ -204,7 +204,7 @@ pinv(v::TransposeAbsVec, tol::Real = 0) = pinv(conj(v.parent)).parent
 
 
 ## right-division \
-/(u::AdjointAbsVec, A::AbstractAxisMatrix) = adjoint(adjoint(A) \ u.parent)
-/(u::TransposeAbsVec, A::AbstractAxisMatrix) = transpose(transpose(A) \ u.parent)
-/(u::AdjointAbsVec, A::Transpose{<:Any,<:AbstractAxisMatrix}) = adjoint(conj(A.parent) \ u.parent) # technically should be adjoint(copy(adjoint(copy(A))) \ u.parent)
-/(u::TransposeAbsVec, A::Adjoint{<:Any,<:AbstractAxisMatrix}) = transpose(conj(A.parent) \ u.parent) # technically should be transpose(copy(transpose(copy(A))) \ u.parent)
+/(u::AdjointAbsVec, A::AbstractQuasiMatrix) = adjoint(adjoint(A) \ u.parent)
+/(u::TransposeAbsVec, A::AbstractQuasiMatrix) = transpose(transpose(A) \ u.parent)
+/(u::AdjointAbsVec, A::Transpose{<:Any,<:AbstractQuasiMatrix}) = adjoint(conj(A.parent) \ u.parent) # technically should be adjoint(copy(adjoint(copy(A))) \ u.parent)
+/(u::TransposeAbsVec, A::Adjoint{<:Any,<:AbstractQuasiMatrix}) = transpose(conj(A.parent) \ u.parent) # technically should be transpose(copy(transpose(copy(A))) \ u.parent)
