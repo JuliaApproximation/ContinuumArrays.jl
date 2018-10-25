@@ -1,14 +1,16 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays
+using IntervalSets, LinearAlgebra, LazyArrays, BandedMatrices
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear
 import Base.Broadcast: materialize
+import LazyArrays: Mul2
+import BandedMatrices: AbstractBandedLayout
 
 include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
 import .QuasiArrays: _length, checkindex, Adjoint, Transpose
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative
 
 ####
 # Interval indexing support

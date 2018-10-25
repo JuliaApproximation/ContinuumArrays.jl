@@ -17,14 +17,23 @@ function getindex(δ::DiracDelta{T}, x::Real) where T
 end
 
 
-function materialize(M::Mul{<:Any,<:Any,<:Any,<:QuasiArrays.Adjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
+function materialize(M::Mul2{<:Any,<:Any,<:QuasiArrays.Adjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
     A, B = M.A, M.B
     axes(A,2) == axes(A,1) || throw(DimensionMismatch())
     B[parent(A).x]
 end
 
-function materialize(M::Mul{<:Any,<:Any,<:Any,<:QuasiArrays.Adjoint{<:Any,<:DiracDelta},<:AbstractQuasiMatrix})
-    A, B = M.A, M.B
+function materialize(M::Mul2{<:Any,<:Any,<:QuasiArrays.Adjoint{<:Any,<:DiracDelta},<:AbstractQuasiMatrix})
+    A, B = M.factors
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     B[parent(A).x,:]
 end
+
+struct Derivative{T,A} <: AbstractQuasiVector{T}
+    axis::A
+end
+
+Derivative{T}(axis::A) where {T,A} = Derivative{T,A}(axis)
+Derivative(axis) = Derivative{Float64}(axis)
+
+axes(D::Derivative) = (D.axis, D.axis)

@@ -10,8 +10,6 @@ using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, Test
     @test Base.IndexStyle(δ) === Base.IndexLinear()
 end
 
-
-
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
     @test axes(H) === (axes(H,1),axes(H,2)) === (1.0..3.0, Base.OneTo(2))
@@ -69,9 +67,15 @@ end
     L = LinearSpline([1,2,3])
     @test δ'L ≈ [0.8, 0.2, 0.0]
 
+    @test L'L == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
 end
 
+@testset "Derivative" begin
+    L = LinearSpline([1,2,3])
+    f = L*[1,2,4]
+    D = Derivative(axes(L,1))
+    fp = D*f
 
-
-
-@test L'L == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
+    @test fp[1.1] ≈ 1
+    @test fp[2.2] ≈ 2
+end
