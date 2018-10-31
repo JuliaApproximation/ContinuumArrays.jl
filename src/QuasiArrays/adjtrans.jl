@@ -208,3 +208,13 @@ pinv(v::TransposeAbsVec, tol::Real = 0) = pinv(conj(v.parent)).parent
 /(u::TransposeAbsVec, A::AbstractQuasiMatrix) = transpose(transpose(A) \ u.parent)
 /(u::AdjointAbsVec, A::Transpose{<:Any,<:AbstractQuasiMatrix}) = adjoint(conj(A.parent) \ u.parent) # technically should be adjoint(copy(adjoint(copy(A))) \ u.parent)
 /(u::TransposeAbsVec, A::Adjoint{<:Any,<:AbstractQuasiMatrix}) = transpose(conj(A.parent) \ u.parent) # technically should be transpose(copy(transpose(copy(A))) \ u.parent)
+
+
+function materialize(M::Mul2{<:Any,<:Any,<:Adjoint,<:Adjoint})
+    Ac,Bc = M.factors
+    materialize(Mul(parent(Bc),parent(Ac)))'
+end
+
+function adjoint(M::Mul)
+    Mul(reverse(adjoint.(M.factors))...)
+end

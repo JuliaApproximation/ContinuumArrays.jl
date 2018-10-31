@@ -79,3 +79,24 @@ end
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
 end
+
+
+
+
+L = LinearSpline([1,2,3])
+f = L*[1,2,4]
+D = Derivative(axes(L,1))
+
+H = HeavisideSpline([1,2,3])
+
+D*L
+M = (L'D')*(D*L)
+
+
+*(M.factors...)
+
+
+
+LazyArrays.MemoryLayout(Diagonal(randn(5)))
+
+M.factors[2] * M.factors[3]
