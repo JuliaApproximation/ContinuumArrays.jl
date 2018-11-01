@@ -20,8 +20,8 @@ end
 
 
 function materialize(M::Mul2{<:Any,<:Any,<:QuasiArrays.Adjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
-    A, B = M.A, M.B
-    axes(A,2) == axes(A,1) || throw(DimensionMismatch())
+    A, B = M.factors
+    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     B[parent(A).x]
 end
 
@@ -31,7 +31,7 @@ function materialize(M::Mul2{<:Any,<:Any,<:QuasiArrays.Adjoint{<:Any,<:DiracDelt
     B[parent(A).x,:]
 end
 
-struct Derivative{T,A} <: AbstractQuasiVector{T}
+struct Derivative{T,A} <: AbstractQuasiMatrix{T}
     axis::A
 end
 
@@ -40,3 +40,11 @@ Derivative(axis) = Derivative{Float64}(axis)
 
 axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis
+
+
+function materialize(M::Mul2{<:Any,<:Any,<:Derivative,<:SubQuasiArray})
+    A, B = M.factors
+    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
+    P = parent(B)
+    (Derivative(axes(P,1))*P)[parentindices(B)...]
+end

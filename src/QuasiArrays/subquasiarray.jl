@@ -33,7 +33,7 @@ check_parent_index_match(parent::AbstractQuasiArray{T,N}, ::NTuple{N, Bool}) whe
 viewindexing(I::Tuple{AbstractQuasiArray, Vararg{Any}}) = IndexCartesian()
 
 # Simple utilities
-size(V::SubQuasiArray) = (@_inline_meta; map(n->unsafe_length(n), axes(V)))
+size(V::SubQuasiArray) = (@_inline_meta; map(n->cardinality(n), axes(V)))
 
 similar(V::SubQuasiArray, T::Type, dims::Dims) = similar(V.parent, T, dims)
 
@@ -84,6 +84,22 @@ end
 unsafe_view(V::SubQuasiArray, I::Vararg{ViewIndex,N}) where {N} =
     (@_inline_meta; _maybe_reindex(V, I))
 
+_maybe_reindex(V, I) = (@_inline_meta; _maybe_reindex(V, I, I))
+# _maybe_reindex(V, I, ::Tuple{AbstractArray{<:AbstractCartesianIndex}, Vararg{Any}}) =
+#     (@_inline_meta; SubArray(V, I))
+# # But allow arrays of CartesianIndex{1}; they behave just like arrays of Ints
+# _maybe_reindex(V, I, A::Tuple{AbstractArray{<:AbstractCartesianIndex{1}}, Vararg{Any}}) =
+#     (@_inline_meta; _maybe_reindex(V, I, tail(A)))
+_maybe_reindex(V, I, A::Tuple{Any, Vararg{Any}}) = (@_inline_meta; _maybe_reindex(V, I, tail(A)))
+
+_subarray(A::AbstractArray, idxs) = SubArray(A, idxs)
+_subarray(A::AbstractQuasiArray, idxs) = SubQuasiArray(A, idxs)
+
+function _maybe_reindex(V, I, ::Tuple{})
+    @_inline_meta
+    @inbounds idxs = to_indices(V.parent, reindex(V, V.indices, I))
+    _subarray(V.parent, idxs)
+end
 ## Re-indexing is the heart of a view, transforming A[i, j][x, y] to A[i[x], j[y]]
 #
 # Recursively look through the heads of the parent- and sub-indices, considering
@@ -115,7 +131,7 @@ end
 
 # In general, we simply re-index the parent indices by the provided ones
 SlowSubQuasiArray{T,N,P,I} = SubQuasiArray{T,N,P,I,false}
-function getindex(V::SlowSubQuasiArray{T,N}, I::Vararg{Int,N}) where {T,N}
+function getindex(V::SlowSubQuasiArray{T,N}, I::Vararg{Real,N}) where {T,N}
     @_inline_meta
     @boundscheck checkbounds(V, I...)
     @inbounds r = V.parent[reindex(V, V.indices, I)...]
@@ -123,7 +139,7 @@ function getindex(V::SlowSubQuasiArray{T,N}, I::Vararg{Int,N}) where {T,N}
 end
 
 FastSubQuasiArray{T,N,P,I} = SubQuasiArray{T,N,P,I,true}
-function getindex(V::FastSubQuasiArray, i::Int)
+function getindex(V::FastSubQuasiArray, i::Real)
     @_inline_meta
     @boundscheck checkbounds(V, i)
     @inbounds r = V.parent[V.offset1 + V.stride1*i]
@@ -131,26 +147,26 @@ function getindex(V::FastSubQuasiArray, i::Int)
 end
 # We can avoid a multiplication if the first parent index is a Colon or AbstractUnitRange
 FastContiguousSubQuasiArray{T,N,P,I<:Tuple{Union{Slice, AbstractUnitRange}, Vararg{Any}}} = SubQuasiArray{T,N,P,I,true}
-function getindex(V::FastContiguousSubQuasiArray, i::Int)
+function getindex(V::FastContiguousSubQuasiArray, i::Real)
     @_inline_meta
     @boundscheck checkbounds(V, i)
     @inbounds r = V.parent[V.offset1 + i]
     r
 end
 
-function setindex!(V::SlowSubQuasiArray{T,N}, x, I::Vararg{Int,N}) where {T,N}
+function setindex!(V::SlowSubQuasiArray{T,N}, x, I::Vararg{Real,N}) where {T,N}
     @_inline_meta
     @boundscheck checkbounds(V, I...)
     @inbounds V.parent[reindex(V, V.indices, I)...] = x
     V
 end
-function setindex!(V::FastSubQuasiArray, x, i::Int)
+function setindex!(V::FastSubQuasiArray, x, i::Real)
     @_inline_meta
     @boundscheck checkbounds(V, i)
     @inbounds V.parent[V.offset1 + V.stride1*i] = x
     V
 end
-function setindex!(V::FastContiguousSubQuasiArray, x, i::Int)
+function setindex!(V::FastContiguousSubQuasiArray, x, i::Real)
     @_inline_meta
     @boundscheck checkbounds(V, i)
     @inbounds V.parent[V.offset1 + i] = x
@@ -239,7 +255,7 @@ _pointer(V::SubQuasiArray, i::Int) = pointer(V, Base._ind2sub(axes(V), i))
 axes(S::SubQuasiArray) = (@_inline_meta; _indices_sub(S, S.indices...))
 _indices_sub(S::SubQuasiArray) = ()
 _indices_sub(S::SubQuasiArray, ::Real, I...) = (@_inline_meta; _indices_sub(S, I...))
-function _indices_sub(S::SubQuasiArray, i1::AbstractQuasiArray, I...)
+function _indices_sub(S::SubQuasiArray, i1::Union{AbstractQuasiArray,AbstractArray}, I...)
     @_inline_meta
     (unsafe_indices(i1)..., _indices_sub(S, I...)...)
 end

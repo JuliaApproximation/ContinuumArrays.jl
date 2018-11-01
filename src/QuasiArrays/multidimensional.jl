@@ -7,6 +7,11 @@ end
 @inline to_indices(A, inds, I::Tuple{Colon, Vararg{Any}}) =
     (uncolon(inds, I), to_indices(A, _maybetail(inds), tail(I))...)
 
+@inline index_dimsum(::AbstractQuasiArray{Bool}, I...) = (true, index_dimsum(I...)...)
+@inline function index_dimsum(::AbstractQuasiArray{<:Any,N}, I...) where N
+    (ntuple(x->true, Val(N))..., index_dimsum(I...)...)
+end
+
 slice(d::AbstractVector) = Slice(d)
 slice(d) = QSlice(d)
 

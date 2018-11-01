@@ -1,5 +1,6 @@
 using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test
     import ContinuumArrays: ℵ₁, materialize
+    import ContinuumArrays.QuasiArrays: SubQuasiArray
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)
@@ -30,7 +31,6 @@ end
     @test all(H[[1.1,2.1], 1:2] .=== [1.0 0.0; 0.0 1.0])
 
     @test_throws BoundsError H[[0.1,2.1], 1]
-
 
     f = H*[1,2]
     @test axes(f) == (1.0..3.0,)
@@ -89,11 +89,11 @@ end
     DL = D*L
     @test M.factors == tuple(D', (D*L).factors...)
 
-    @test materialize(Mul(L', D', D, L)) == materialize(L'D'*D*L) ==
+    @test materialize(Mul(L', D', D, L)) == (L'D'*D*L) ==
         [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
 
     @test materialize(Mul(L', D', D, L)) isa BandedMatrix
-    @test materialize(L'D'*D*L) isa BandedMatrix
+    @test (L'D'*D*L) isa BandedMatrix
 
     @test bandwidths(materialize(L'D'*D*L)) == (1,1)
 end
@@ -101,6 +101,95 @@ end
 @testset "Views" begin
     L = LinearSpline(0:2)
     @test view(L,0.1,1)[1] == L[0.1,1]
+
+    L = LinearSpline(0:2)
+    B1 = L[:,1]
+    @test B1 isa SubQuasiArray{Float64,1}
+    @test size(B1) == (ℵ₁,)
+    @test B1[0.1] == L[0.1,1]
+    @test_throws BoundsError B1[2.2]
+
+    B = L[:,1:2]
+    @test B isa SubQuasiArray{Float64,2}
+    @test B[0.1,:] == L[0.1,1:2]
+
+    B = L[:,2:end-1]
+    @test B[0.1,:] == [0.1]
 end
-L = LinearSpline(0:2)
-L[:,1]
+
+A = randn(4,4)
+@which lastindex(A,2)
+
+@time begin
+L = LinearSpline(range(0,stop=1,length=10))[:,2:end-1]
+D = Derivative(axes(L,1))
+
+D*L
+
+Derivative(0..1)*parent(L)
+
+
+
+
+M = Mul(D,L)
+A, B = M.factors
+axes(A,2) == axes(B,1) || throw(DimensionMismatch())
+P = parent(B)
+(Derivative(axes(P,1))*P)[parentindices(P)...]
+
+@which axes(D,2)
+
+axes(D,2)
+D*L
+A = -(L'D'D*L)
+f = L*exp.(L.points)
+
+A \ (L'f)
+
+u = A[2:end-1,2:end-1] \ (L'f)[2:end-1]
+
+cond(A[2:end-1,2:end-1])
+
+A[2:end-1,2:end-1] *u - (L'f)[2:end-1]
+
+v = L*[0; u; 0]
+
+
+v[0.2]
+using Plots
+plot(0:0.01:1,getindex.(Ref(v),0:0.01:1))
+    plot!(u1)
+ui
+
+using ApproxFun
+
+x = Fun(0..1)
+    u1 = [Dirichlet(Chebyshev(0..1)); ApproxFun.Derivative()^2] \ [[0,0], exp(x)]
+
+plot(u1)
+
+u_ex = L*u1.(L.points)
+
+xx = 0:0.01:1;
+    plot(xx,getindex.(Ref(D*u_ex),xx))
+
+getindex.(Ref(D*u_ex),xx)
+plot!(u1')
+
+f[0.1]-exp(0.1)
+
+(D*v)'*(D*v)
+
+
+
+L'f
+
+
+
+
+
+(L'f)
+
+(L'f)
+
+end

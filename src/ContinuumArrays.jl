@@ -8,7 +8,7 @@ import BandedMatrices: AbstractBandedLayout
 
 include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
-import .QuasiArrays: _length, checkindex, Adjoint, Transpose, slice, QSlice
+import .QuasiArrays: cardinality, checkindex, Adjoint, Transpose, slice, QSlice, SubQuasiArray
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative
 
@@ -20,7 +20,7 @@ struct AlephInfinity{N} <: Integer end
 const ℵ₁ = AlephInfinity{1}()
 
 
-_length(::AbstractInterval) = ℵ₁
+cardinality(::AbstractInterval) = ℵ₁
 *(ℵ::AlephInfinity) = ℵ
 
 

@@ -157,6 +157,7 @@ struct QSlice{T,AX} <: AbstractQuasiVector{T}
 end
 QSlice(axis) = QSlice{eltype(axis),typeof(axis)}(axis)
 QSlice(S::QSlice) = S
+==(A::QSlice, B::QSlice) = A.axis == B.axis
 axes(S::QSlice) = (S,)
 unsafe_indices(S::QSlice) = (S,)
 axes1(S::QSlice) = S
@@ -169,7 +170,10 @@ last(S::QSlice) = last(S.axis)
 size(S::QSlice) = (length(S.axis),)
 length(S::QSlice) = length(S.axis)
 unsafe_length(S::QSlice) = unsafe_length(S.axis)
+cardinality(S::QSlice) = cardinality(S.axis)
 getindex(S::QSlice, i::Real) = (@_inline_meta; @boundscheck checkbounds(S, i); i)
 getindex(S::QSlice, i::AbstractVector{<:Real}) = (@_inline_meta; @boundscheck checkbounds(S, i); i)
 show(io::IO, r::QSlice) = print(io, "QSlice(", r.axis, ")")
 iterate(S::QSlice, s...) = iterate(S.axis, s...)
+
+checkindex(::Type{Bool}, inds::QSlice, i::Real) = i ∈ inds.axis

@@ -86,8 +86,8 @@ function copyto!(dest::Mul2{<:Any,<:Any,<:HeavisideSpline},
     bandwidths(A) == (0,1) || throw(ArgumentError("Not implemented"))
 
     d = diff(x)
-    A[band(0)] .= (-).(d)
-    A[band(1)] .= d
+    A[band(0)] .= inv.((-).(d))
+    A[band(1)] .= inv.(d)
 
     dest
 end
