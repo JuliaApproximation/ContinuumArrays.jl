@@ -7,8 +7,11 @@ end
 @inline to_indices(A, inds, I::Tuple{Colon, Vararg{Any}}) =
     (uncolon(inds, I), to_indices(A, _maybetail(inds), tail(I))...)
 
-uncolon(inds::Tuple{},    I::Tuple{Colon, Vararg{Any}}) = Slice(OneTo(1))
-uncolon(inds::Tuple,      I::Tuple{Colon, Vararg{Any}}) = Slice(inds[1])
+slice(d::AbstractVector) = Slice(d)
+slice(d) = QSlice(d)
+
+uncolon(inds::Tuple{},    I::Tuple{Colon, Vararg{Any}}) = slice(OneTo(1))
+uncolon(inds::Tuple,      I::Tuple{Colon, Vararg{Any}}) = slice(inds[1])
 
 
 _maybe_reshape(::IndexLinear, A::AbstractQuasiArray, I...) = A

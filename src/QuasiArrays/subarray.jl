@@ -69,7 +69,9 @@ function view(A::AbstractQuasiArray, I::Vararg{Any,N}) where {N}
     unsafe_view(_maybe_reshape_parent(A, index_ndims(J...)), J...)
 end
 
-function unsafe_view(A::AbstractQuasiArray, I::Vararg{ViewIndex,N}) where {N}
+const QViewIndex = Union{ViewIndex,AbstractQuasiArray}
+
+function unsafe_view(A::AbstractQuasiArray, I::Vararg{QViewIndex,N}) where {N}
     @_inline_meta
     SubQuasiArray(A, I)
 end

@@ -218,3 +218,5 @@ end
 function adjoint(M::Mul)
     Mul(reverse(adjoint.(M.factors))...)
 end
+
+==(A::Adjoint, B::Adjoint) = parent(A) == parent(B)

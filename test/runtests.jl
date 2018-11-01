@@ -1,5 +1,5 @@
-using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, Test
-    import ContinuumArrays: ℵ₁
+using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test
+    import ContinuumArrays: ℵ₁, materialize
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)
@@ -80,23 +80,27 @@ end
     @test fp[2.2] ≈ 2
 end
 
+@testset "Weak Laplacian" begin
+    H = HeavisideSpline(0:2)
+    L = LinearSpline(0:2)
 
+    D = Derivative(axes(L,1))
+    M = materialize(Mul(D',D,L))
+    DL = D*L
+    @test M.factors == tuple(D', (D*L).factors...)
 
+    @test materialize(Mul(L', D', D, L)) == materialize(L'D'*D*L) ==
+        [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
 
-L = LinearSpline([1,2,3])
-f = L*[1,2,4]
-D = Derivative(axes(L,1))
+    @test materialize(Mul(L', D', D, L)) isa BandedMatrix
+    @test materialize(L'D'*D*L) isa BandedMatrix
 
-H = HeavisideSpline([1,2,3])
+    @test bandwidths(materialize(L'D'*D*L)) == (1,1)
+end
 
-D*L
-M = (L'D')*(D*L)
-
-
-*(M.factors...)
-
-
-
-LazyArrays.MemoryLayout(Diagonal(randn(5)))
-
-M.factors[2] * M.factors[3]
+@testset "Views" begin
+    L = LinearSpline(0:2)
+    @test view(L,0.1,1)[1] == L[0.1,1]
+end
+L = LinearSpline(0:2)
+L[:,1]

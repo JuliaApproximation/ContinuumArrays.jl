@@ -560,8 +560,9 @@ error_if_canonical_getindex(::IndexCartesian, A::AbstractQuasiArray{T,N}, ::Vara
 error_if_canonical_getindex(::IndexStyle, ::AbstractQuasiArray, ::Any...) = nothing
 
 ## Internal definitions
-_getindex(::IndexStyle, A::AbstractQuasiArray, I...) =
-    error("getindex for $(typeof(A)) with types $(typeof(I)) is not supported")
+function _getindex(::IndexStyle, A::AbstractQuasiArray, I...)
+    materialize(view(A, I...))
+end
 
 ## IndexLinear Scalar indexing: canonical method is one Int
 _getindex(::IndexLinear, A::AbstractQuasiArray, i::Real) = (@_propagate_inbounds_meta; getindex(A, i))

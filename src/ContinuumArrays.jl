@@ -1,14 +1,14 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, BandedMatrices
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
-                IndexStyle, IndexLinear
+                IndexStyle, IndexLinear, ==
 import Base.Broadcast: materialize
 import LazyArrays: Mul2
 import BandedMatrices: AbstractBandedLayout
 
 include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
-import .QuasiArrays: _length, checkindex, Adjoint, Transpose
+import .QuasiArrays: _length, checkindex, Adjoint, Transpose, slice, QSlice
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative
 
@@ -25,6 +25,7 @@ _length(::AbstractInterval) = ℵ₁
 
 
 checkindex(::Type{Bool}, inds::AbstractInterval, i::Real) = (leftendpoint(inds) <= i) & (i <= rightendpoint(inds))
+checkindex(::Type{Bool}, inds::AbstractInterval, i::QSlice) = i.axis ⊆ inds
 function checkindex(::Type{Bool}, inds::AbstractInterval, I::AbstractArray)
     @_inline_meta
     b = true

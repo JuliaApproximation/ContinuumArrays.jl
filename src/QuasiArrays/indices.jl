@@ -144,3 +144,32 @@ to_index(I::AbstractQuasiArray{<:Union{AbstractArray, Colon}}) =
     throw(ArgumentError("invalid index: $I of type $(typeof(I))"))
 
 LinearIndices(A::AbstractQuasiArray) = LinearIndices(axes(A))
+
+
+
+"""
+   QSlice(indices)
+
+Represent an axis as a quasi-vector that returns itself.
+"""
+struct QSlice{T,AX} <: AbstractQuasiVector{T}
+    axis::AX
+end
+QSlice(axis) = QSlice{eltype(axis),typeof(axis)}(axis)
+QSlice(S::QSlice) = S
+axes(S::QSlice) = (S,)
+unsafe_indices(S::QSlice) = (S,)
+axes1(S::QSlice) = S
+axes(S::QSlice{<:OneTo}) = (S.axis,)
+unsafe_indices(S::QSlice{<:OneTo}) = (S.axis,)
+axes1(S::QSlice{<:OneTo}) = S.axis
+
+first(S::QSlice) = first(S.axis)
+last(S::QSlice) = last(S.axis)
+size(S::QSlice) = (length(S.axis),)
+length(S::QSlice) = length(S.axis)
+unsafe_length(S::QSlice) = unsafe_length(S.axis)
+getindex(S::QSlice, i::Real) = (@_inline_meta; @boundscheck checkbounds(S, i); i)
+getindex(S::QSlice, i::AbstractVector{<:Real}) = (@_inline_meta; @boundscheck checkbounds(S, i); i)
+show(io::IO, r::QSlice) = print(io, "QSlice(", r.axis, ")")
+iterate(S::QSlice, s...) = iterate(S.axis, s...)
