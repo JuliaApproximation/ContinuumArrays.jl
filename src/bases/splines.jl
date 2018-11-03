@@ -57,6 +57,17 @@ function copyto!(dest::SymTridiagonal, AB::Mul2{<:Any,<:Any,<:Adjoint{<:Any,<:Li
     dest
 end
 
+## Sub-bases
+# we represent as a Mul with a banded matrix
+function materialize(V::SubQuasiArray{<:Any,2,<:Spline,<:Tuple{<:QSlice,<:AbstractUnitRange}})
+    A = parent(V)
+    _,jr = parentindices(V)
+    first(jr) ≥ 1 || throw(BoundsError())
+    P = BandedMatrix((1-first(jr) => Ones{Int}(length(jr)),), (size(A,2), length(jr)))
+    A*P
+end
+
+
 ## Mass matrix
 function similar(AB::Mul2{<:Any,<:Any,<:Adjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
     n = size(AB,1)

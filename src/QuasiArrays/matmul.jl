@@ -23,7 +23,7 @@ function getindex(M::QuasiMatMulVec, k::AbstractArray)
     A,B = M.factors
     ret = zeros(eltype(M),length(k))
     @inbounds for j = 1:size(A,2)
-        ret .+= Mul(view(A,k,j) , B[j])
+        ret .+= view(A,k,j) .* B[j]
     end
     ret
 end

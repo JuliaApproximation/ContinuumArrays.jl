@@ -103,93 +103,68 @@ end
     @test view(L,0.1,1)[1] == L[0.1,1]
 
     L = LinearSpline(0:2)
-    B1 = L[:,1]
+    B1 = view(L,:,1)
     @test B1 isa SubQuasiArray{Float64,1}
     @test size(B1) == (ℵ₁,)
     @test B1[0.1] == L[0.1,1]
     @test_throws BoundsError B1[2.2]
 
-    B = L[:,1:2]
+    B = view(L,:,1:2)
     @test B isa SubQuasiArray{Float64,2}
     @test B[0.1,:] == L[0.1,1:2]
 
-    B = L[:,2:end-1]
+    B = @view L[:,2:end-1]
     @test B[0.1,:] == [0.1]
 end
 
-A = randn(4,4)
-@which lastindex(A,2)
 
-@time begin
-L = LinearSpline(range(0,stop=1,length=10))[:,2:end-1]
-D = Derivative(axes(L,1))
-
-D*L
-
-Derivative(0..1)*parent(L)
-
-
-
-
-M = Mul(D,L)
-A, B = M.factors
-axes(A,2) == axes(B,1) || throw(DimensionMismatch())
-P = parent(B)
-(Derivative(axes(P,1))*P)[parentindices(P)...]
-
-@which axes(D,2)
-
-axes(D,2)
-D*L
-A = -(L'D'D*L)
-f = L*exp.(L.points)
-
-A \ (L'f)
-
-u = A[2:end-1,2:end-1] \ (L'f)[2:end-1]
-
-cond(A[2:end-1,2:end-1])
-
-A[2:end-1,2:end-1] *u - (L'f)[2:end-1]
-
-v = L*[0; u; 0]
-
-
-v[0.2]
-using Plots
-plot(0:0.01:1,getindex.(Ref(v),0:0.01:1))
-    plot!(u1)
-ui
-
-using ApproxFun
-
-x = Fun(0..1)
-    u1 = [Dirichlet(Chebyshev(0..1)); ApproxFun.Derivative()^2] \ [[0,0], exp(x)]
-
-plot(u1)
-
-u_ex = L*u1.(L.points)
-
-xx = 0:0.01:1;
-    plot(xx,getindex.(Ref(D*u_ex),xx))
-
-getindex.(Ref(D*u_ex),xx)
-plot!(u1')
-
-f[0.1]-exp(0.1)
-
-(D*v)'*(D*v)
-
-
-
-L'f
-
-
-
-
-
-(L'f)
-
-(L'f)
-
+@testset "Subindex of splines" begin
+    L = LinearSpline(range(0,stop=1,length=10))
+    @test L[:,2:end-1] isa Mul
+    @test_broken L[:,2:end-1][0.1,1] == L[0.1,2]
+    v = randn(8)
+    f = L[:,2:end-1] * v
+    @test f[0.1] ≈ (L*[0; v; 0])[0.1]
 end
+
+@testset "Poisson" begin
+    L = LinearSpline(range(0,stop=1,length=10))
+    B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
+    D = Derivative(axes(L,1))
+    Δ = -(B'D'D*B) # Weak Laplacian
+
+    f = L*exp.(L.points) # project exp(x)
+    u = B * (Δ \ (B'f))
+
+    @test u[0.1] ≈ -0.06612902692412974
+end
+
+
+@testset "Helmholtz" begin
+    L = LinearSpline(range(0,stop=1,length=10))
+    B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
+    D = Derivative(axes(L,1))
+    A = -(B'D'D*B) + 100^2*B'B # Weak Laplacian
+
+    f = L*exp.(L.points) # project exp(x)
+    u = B * (A \ (B'f))
+
+    @test u[0.1] ≈ 0.00012678835289369413
+end
+
+
+L = LinearSpline(range(0,stop=1,length=20_000_000))
+B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
+
+k = 10_000
+@time A = -(B'D'D*B) + k^2*B'B # Weak Helmholtz, 9s
+@time f = L*exp.(L.points) # project exp(x), 0.3s
+@time u = B * (A \ (B'f)) # solution, 4s
+
+
+# Compare with "exact" solution
+using Plots, ApproxFun
+
+x = Fun(axes(L,1))
+u_ex = [Dirichlet(Chebyshev(0..1)); ApproxFun.Derivative()^2 + k^2*I] \ [[0,0], exp(x)]
+@test u[0.1] ≈ u_ex(0.1) rtol = 1E-3
