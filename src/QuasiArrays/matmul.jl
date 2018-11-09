@@ -36,6 +36,7 @@ QuasiMatMulQuasiMat{styleA, styleB, T, V} = QuasiArrayMulQuasiArray{styleA, styl
 *(A::AbstractQuasiArray, B::AbstractQuasiArray) = materialize(Mul(A,B))
 *(A::AbstractQuasiArray, B::AbstractArray) = materialize(Mul(A,B))
 *(A::AbstractArray, B::AbstractQuasiArray) = materialize(Mul(A,B))
+pinv(A::AbstractQuasiArray) = materialize(PInv(A))
 inv(A::AbstractQuasiArray) = materialize(Inv(A))
 
 *(A::AbstractQuasiArray, B::Mul) = materialize(Mul(A, B.factors...))
