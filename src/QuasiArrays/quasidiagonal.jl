@@ -6,7 +6,6 @@ struct QuasiDiagonal{T,V<:AbstractQuasiVector{T}} <: AbstractQuasiMatrix{T}
     diag::V
 
     function QuasiDiagonal{T,V}(diag) where {T,V<:AbstractQuasiVector{T}}
-        @assert !has_offset_axes(diag)
         new{T,V}(diag)
     end
 end

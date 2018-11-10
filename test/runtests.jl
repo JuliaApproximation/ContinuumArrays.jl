@@ -1,4 +1,5 @@
-using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test
+using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test,
+    InfiniteArrays
     import ContinuumArrays: ℵ₁, materialize
     import ContinuumArrays.QuasiArrays: SubQuasiArray
 
@@ -151,3 +152,51 @@ end
 
     @test u[0.1] ≈ 0.00012678835289369413
 end
+
+
+S = Jacobi(true,true)
+W = Diagonal(JacobiWeight(true,true))
+D = Derivative(axes(W,1))
+D*S
+
+D*S[:,1:10]
+
+materialize(D*W*S)
+
+J = Jacobi(false,false)
+J'J
+
+
+S'W'W*S
+
+N = 10
+L = D*W*S[:,1:N]
+    # temporary work around to force 3-term materialize
+    L = *(L.factors[1:3]...) * L.factors[4]
+
+Δ = L'L # weak second derivative
+
+f = Legendre() * Vcat(1:10, Zeros(∞))
+
+
+L'f
+
+axes(L')
+
+Legendre()'f
+
+A = Diagonal(1:∞)
+x = Vcat(1:10, Zeros(∞))
+
+@which A*x
+
+B = BandedMatrices._BandedMatrix((1:∞)', ∞, -1,1)
+
+B*x
+
+N = 100000; @time B[1:N,1:N]
+
+
+
+import LazyArrays: MemoryLayout
+MemoryLayout.(x.arrays)
