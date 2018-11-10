@@ -1,5 +1,5 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, BandedMatrices
+using IntervalSets, LinearAlgebra, LazyArrays, BandedMatrices, InfiniteArrays, DomainSets
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==
 import Base.Broadcast: materialize
@@ -8,7 +8,7 @@ import BandedMatrices: AbstractBandedLayout
 
 include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
-import .QuasiArrays: cardinality, checkindex, Adjoint, Transpose, slice, QSlice, SubQuasiArray
+import .QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slice, QSlice, SubQuasiArray
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative
 

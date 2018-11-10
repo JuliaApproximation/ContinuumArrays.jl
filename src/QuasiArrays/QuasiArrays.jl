@@ -11,10 +11,17 @@ import Base: ViewIndex, Slice, ScalarIndex, RangeIndex, view, viewindexing, ensu
                 check_parent_index_match, reindex, _isdisjoint, unsafe_indices,
                 parentindices
 import Base: *, /, \, +, -, inv
+import Base: exp, log, sqrt,
+          cos, sin, tan, csc, sec, cot,
+          cosh, sinh, tanh, csch, sech, coth,
+          acos, asin, atan, acsc, asec, acot,
+          acosh, asinh, atanh, acsch, asech, acoth
+import Base: Array, Matrix, Vector
 
 import Base.Broadcast: materialize
 
-import LinearAlgebra: transpose, adjoint, checkeltype_adjoint, checkeltype_transpose
+import LinearAlgebra: transpose, adjoint, checkeltype_adjoint, checkeltype_transpose, Diagonal,
+                        AbstractTriangular
 
 import LazyArrays: MemoryLayout, UnknownLayout, Mul2
 
@@ -37,6 +44,7 @@ include("multidimensional.jl")
 include("subquasiarray.jl")
 include("matmul.jl")
 
-include("adjtrans.jl")
+include("quasiadjtrans.jl")
+include("quasidiagonal.jl")
 
 end

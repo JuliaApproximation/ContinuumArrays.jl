@@ -19,13 +19,13 @@ function getindex(δ::DiracDelta{T}, x::Real) where T
 end
 
 
-function materialize(M::Mul2{<:Any,<:Any,<:QuasiArrays.Adjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
+function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
     A, B = M.factors
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     B[parent(A).x]
 end
 
-function materialize(M::Mul2{<:Any,<:Any,<:QuasiArrays.Adjoint{<:Any,<:DiracDelta},<:AbstractQuasiMatrix})
+function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiMatrix})
     A, B = M.factors
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     B[parent(A).x,:]

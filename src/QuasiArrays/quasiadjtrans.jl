@@ -4,30 +4,30 @@
 
 ### basic definitions (types, aliases, constructors, abstractarray interface, sundry similar)
 
-# note that Adjoint and Transpose must be able to wrap not only vectors and matrices
+# note that QuasiAdjoint and QuasiTranspose must be able to wrap not only vectors and matrices
 # but also factorizations, rotations, and other linear algebra objects, including
 # user-defined such objects. so do not restrict the wrapped type.
-struct Adjoint{T,S} <: AbstractQuasiMatrix{T}
+struct QuasiAdjoint{T,S} <: AbstractQuasiMatrix{T}
     parent::S
-    function Adjoint{T,S}(A::S) where {T,S}
+    function QuasiAdjoint{T,S}(A::S) where {T,S}
         checkeltype_adjoint(T, eltype(A))
         new(A)
     end
 end
-struct Transpose{T,S} <: AbstractQuasiMatrix{T}
+struct QuasiTranspose{T,S} <: AbstractQuasiMatrix{T}
     parent::S
-    function Transpose{T,S}(A::S) where {T,S}
+    function QuasiTranspose{T,S}(A::S) where {T,S}
         checkeltype_transpose(T, eltype(A))
         new(A)
     end
 end
 
 # basic outer constructors
-Adjoint(A) = Adjoint{Base.promote_op(adjoint,eltype(A)),typeof(A)}(A)
-Transpose(A) = Transpose{Base.promote_op(transpose,eltype(A)),typeof(A)}(A)
+QuasiAdjoint(A) = QuasiAdjoint{Base.promote_op(adjoint,eltype(A)),typeof(A)}(A)
+QuasiTranspose(A) = QuasiTranspose{Base.promote_op(transpose,eltype(A)),typeof(A)}(A)
 
-Base.dataids(A::Union{Adjoint, Transpose}) = Base.dataids(A.parent)
-Base.unaliascopy(A::Union{Adjoint,Transpose}) = typeof(A)(Base.unaliascopy(A.parent))
+Base.dataids(A::Union{QuasiAdjoint, QuasiTranspose}) = Base.dataids(A.parent)
+Base.unaliascopy(A::Union{QuasiAdjoint,QuasiTranspose}) = typeof(A)(Base.unaliascopy(A.parent))
 
 # wrapping lowercase quasi-constructors
 """
@@ -47,18 +47,18 @@ julia> A = [3+2im 9+2im; 8+7im  4+6im]
  8+7im  4+6im
 
 julia> adjoint(A)
-2×2 Adjoint{Complex{Int64},Array{Complex{Int64},2}}:
+2×2 QuasiAdjoint{Complex{Int64},Array{Complex{Int64},2}}:
  3-2im  8-7im
  9-2im  4-6im
 ```
 """
-adjoint(A::AbstractQuasiVecOrMat) = Adjoint(A)
+adjoint(A::AbstractQuasiVecOrMat) = QuasiAdjoint(A)
 
 """
     transpose(A)
 
 Lazy transpose. Mutating the returned object should appropriately mutate `A`. Often,
-but not always, yields `Transpose(A)`, where `Transpose` is a lazy transpose wrapper. Note
+but not always, yields `QuasiTranspose(A)`, where `QuasiTranspose` is a lazy transpose wrapper. Note
 that this operation is recursive.
 
 This operation is intended for linear algebra usage - for general data manipulation see
@@ -72,30 +72,30 @@ julia> A = [3+2im 9+2im; 8+7im  4+6im]
  8+7im  4+6im
 
 julia> transpose(A)
-2×2 Transpose{Complex{Int64},Array{Complex{Int64},2}}:
+2×2 QuasiTranspose{Complex{Int64},Array{Complex{Int64},2}}:
  3+2im  8+7im
  9+2im  4+6im
 ```
 """
-transpose(A::AbstractQuasiVecOrMat) = Transpose(A)
+transpose(A::AbstractQuasiVecOrMat) = QuasiTranspose(A)
 
 # unwrapping lowercase quasi-constructors
-adjoint(A::Adjoint) = A.parent
-transpose(A::Transpose) = A.parent
-adjoint(A::Transpose{<:Real}) = A.parent
-transpose(A::Adjoint{<:Real}) = A.parent
+adjoint(A::QuasiAdjoint) = A.parent
+transpose(A::QuasiTranspose) = A.parent
+adjoint(A::QuasiTranspose{<:Real}) = A.parent
+transpose(A::QuasiAdjoint{<:Real}) = A.parent
 
 
 # some aliases for internal convenience use
-const AdjOrTrans{T,S} = Union{Adjoint{T,S},Transpose{T,S}} where {T,S}
-const AdjointAbsVec{T} = Adjoint{T,<:AbstractQuasiVector}
-const TransposeAbsVec{T} = Transpose{T,<:AbstractQuasiVector}
+const AdjOrTrans{T,S} = Union{QuasiAdjoint{T,S},QuasiTranspose{T,S}} where {T,S}
+const QuasiAdjointAbsVec{T} = QuasiAdjoint{T,<:AbstractQuasiVector}
+const QuasiTransposeAbsVec{T} = QuasiTranspose{T,<:AbstractQuasiVector}
 const AdjOrTransAbsVec{T} = AdjOrTrans{T,<:AbstractQuasiVector}
 const AdjOrTransAbsMat{T} = AdjOrTrans{T,<:AbstractQuasiMatrix}
 
 # for internal use below
-wrapperop(A::Adjoint) = adjoint
-wrapperop(A::Transpose) = transpose
+wrapperop(A::QuasiAdjoint) = adjoint
+wrapperop(A::QuasiTranspose) = transpose
 
 # AbstractQuasiArray interface, basic definitions
 length(A::AdjOrTrans) = length(A.parent)
@@ -114,8 +114,8 @@ IndexStyle(::Type{<:AdjOrTransAbsMat}) = IndexCartesian()
 @propagate_inbounds getindex(v::AdjOrTransAbsVec, ::Colon, ::Colon) = wrapperop(v)(v.parent[:])
 
 # conversion of underlying storage
-convert(::Type{Adjoint{T,S}}, A::Adjoint) where {T,S} = Adjoint{T,S}(convert(S, A.parent))
-convert(::Type{Transpose{T,S}}, A::Transpose) where {T,S} = Transpose{T,S}(convert(S, A.parent))
+convert(::Type{QuasiAdjoint{T,S}}, A::QuasiAdjoint) where {T,S} = QuasiAdjoint{T,S}(convert(S, A.parent))
+convert(::Type{QuasiTranspose{T,S}}, A::QuasiTranspose) where {T,S} = QuasiTranspose{T,S}(convert(S, A.parent))
 
 # for vectors, the semantics of the wrapped and unwrapped types differ
 # so attempt to maintain both the parent and wrapper type insofar as possible
@@ -135,68 +135,68 @@ cmp(A::AdjOrTransAbsVec, B::AdjOrTransAbsVec) = cmp(parent(A), parent(B))
 isless(A::AdjOrTransAbsVec, B::AdjOrTransAbsVec) = isless(parent(A), parent(B))
 
 ### concatenation
-# preserve Adjoint/Transpose wrapper around vectors
+# preserve QuasiAdjoint/QuasiTranspose wrapper around vectors
 # to retain the associated semantics post-concatenation
-hcat(avs::Union{Number,AdjointAbsVec}...) = _adjoint_hcat(avs...)
-hcat(tvs::Union{Number,TransposeAbsVec}...) = _transpose_hcat(tvs...)
-_adjoint_hcat(avs::Union{Number,AdjointAbsVec}...) = adjoint(vcat(map(adjoint, avs)...))
-_transpose_hcat(tvs::Union{Number,TransposeAbsVec}...) = transpose(vcat(map(transpose, tvs)...))
-typed_hcat(::Type{T}, avs::Union{Number,AdjointAbsVec}...) where {T} = adjoint(typed_vcat(T, map(adjoint, avs)...))
-typed_hcat(::Type{T}, tvs::Union{Number,TransposeAbsVec}...) where {T} = transpose(typed_vcat(T, map(transpose, tvs)...))
+hcat(avs::Union{Number,QuasiAdjointAbsVec}...) = _adjoint_hcat(avs...)
+hcat(tvs::Union{Number,QuasiTransposeAbsVec}...) = _transpose_hcat(tvs...)
+_adjoint_hcat(avs::Union{Number,QuasiAdjointAbsVec}...) = adjoint(vcat(map(adjoint, avs)...))
+_transpose_hcat(tvs::Union{Number,QuasiTransposeAbsVec}...) = transpose(vcat(map(transpose, tvs)...))
+typed_hcat(::Type{T}, avs::Union{Number,QuasiAdjointAbsVec}...) where {T} = adjoint(typed_vcat(T, map(adjoint, avs)...))
+typed_hcat(::Type{T}, tvs::Union{Number,QuasiTransposeAbsVec}...) where {T} = transpose(typed_vcat(T, map(transpose, tvs)...))
 # otherwise-redundant definitions necessary to prevent hitting the concat methods in sparse/sparsevector.jl
-hcat(avs::Adjoint{<:Any,<:Vector}...) = _adjoint_hcat(avs...)
-hcat(tvs::Transpose{<:Any,<:Vector}...) = _transpose_hcat(tvs...)
-hcat(avs::Adjoint{T,Vector{T}}...) where {T} = _adjoint_hcat(avs...)
-hcat(tvs::Transpose{T,Vector{T}}...) where {T} = _transpose_hcat(tvs...)
+hcat(avs::QuasiAdjoint{<:Any,<:Vector}...) = _adjoint_hcat(avs...)
+hcat(tvs::QuasiTranspose{<:Any,<:Vector}...) = _transpose_hcat(tvs...)
+hcat(avs::QuasiAdjoint{T,Vector{T}}...) where {T} = _adjoint_hcat(avs...)
+hcat(tvs::QuasiTranspose{T,Vector{T}}...) where {T} = _transpose_hcat(tvs...)
 # TODO unify and allow mixed combinations
 
 
 ### higher order functions
-# preserve Adjoint/Transpose wrapper around vectors
+# preserve QuasiAdjoint/QuasiTranspose wrapper around vectors
 # to retain the associated semantics post-map/broadcast
 #
 # note that the caller's operation f operates in the domain of the wrapped vectors' entries.
 # hence the adjoint->f->adjoint shenanigans applied to the parent vectors' entries.
-map(f, avs::AdjointAbsVec...) = adjoint(map((xs...) -> adjoint(f(adjoint.(xs)...)), parent.(avs)...))
-map(f, tvs::TransposeAbsVec...) = transpose(map((xs...) -> transpose(f(transpose.(xs)...)), parent.(tvs)...))
+map(f, avs::QuasiAdjointAbsVec...) = adjoint(map((xs...) -> adjoint(f(adjoint.(xs)...)), parent.(avs)...))
+map(f, tvs::QuasiTransposeAbsVec...) = transpose(map((xs...) -> transpose(f(transpose.(xs)...)), parent.(tvs)...))
 
 
 ### linear algebra
 
-(-)(A::Adjoint)   = Adjoint(  -A.parent)
-(-)(A::Transpose) = Transpose(-A.parent)
+(-)(A::QuasiAdjoint)   = QuasiAdjoint(  -A.parent)
+(-)(A::QuasiTranspose) = QuasiTranspose(-A.parent)
 
 ## multiplication *
 
-# Adjoint/Transpose-vector * vector
-*(u::AdjointAbsVec, v::AbstractQuasiVector) = dot(u.parent, v)
-*(u::TransposeAbsVec{T}, v::AbstractQuasiVector{T}) where {T<:Real} = dot(u.parent, v)
-function *(u::TransposeAbsVec, v::AbstractQuasiVector)
+# QuasiAdjoint/QuasiTranspose-vector * vector
+*(u::QuasiAdjointAbsVec, v::AbstractQuasiVector) = dot(u.parent, v)
+*(u::QuasiTransposeAbsVec{T}, v::AbstractQuasiVector{T}) where {T<:Real} = dot(u.parent, v)
+function *(u::QuasiTransposeAbsVec, v::AbstractQuasiVector)
     @assert !has_offset_axes(u, v)
     @boundscheck length(u) == length(v) || throw(DimensionMismatch())
     return sum(@inbounds(u[k]*v[k]) for k in 1:length(u))
 end
-# vector * Adjoint/Transpose-vector
+# vector * QuasiAdjoint/QuasiTranspose-vector
 *(u::AbstractQuasiVector, v::AdjOrTransAbsVec) = broadcast(*, u, v)
-# Adjoint/Transpose-vector * Adjoint/Transpose-vector
+# QuasiAdjoint/QuasiTranspose-vector * QuasiAdjoint/QuasiTranspose-vector
 # (necessary for disambiguation with fallback methods in linalg/matmul)
-*(u::AdjointAbsVec, v::AdjointAbsVec) = throw(MethodError(*, (u, v)))
-*(u::TransposeAbsVec, v::TransposeAbsVec) = throw(MethodError(*, (u, v)))
+*(u::QuasiAdjointAbsVec, v::QuasiAdjointAbsVec) = throw(MethodError(*, (u, v)))
+*(u::QuasiTransposeAbsVec, v::QuasiTransposeAbsVec) = throw(MethodError(*, (u, v)))
 
 # AdjOrTransAbsVec{<:Any,<:AdjOrTransAbsVec} is a lazy conj vectors
 # We need to expand the combinations to avoid ambiguities
-(*)(u::TransposeAbsVec, v::AdjointAbsVec{<:Any,<:TransposeAbsVec}) =
+(*)(u::QuasiTransposeAbsVec, v::QuasiAdjointAbsVec{<:Any,<:QuasiTransposeAbsVec}) =
     sum(uu*vv for (uu, vv) in zip(u, v))
-(*)(u::AdjointAbsVec,   v::AdjointAbsVec{<:Any,<:TransposeAbsVec}) =
+(*)(u::QuasiAdjointAbsVec,   v::QuasiAdjointAbsVec{<:Any,<:QuasiTransposeAbsVec}) =
     sum(uu*vv for (uu, vv) in zip(u, v))
-(*)(u::TransposeAbsVec, v::TransposeAbsVec{<:Any,<:AdjointAbsVec}) =
+(*)(u::QuasiTransposeAbsVec, v::QuasiTransposeAbsVec{<:Any,<:QuasiAdjointAbsVec}) =
     sum(uu*vv for (uu, vv) in zip(u, v))
-(*)(u::AdjointAbsVec,   v::TransposeAbsVec{<:Any,<:AdjointAbsVec}) =
+(*)(u::QuasiAdjointAbsVec,   v::QuasiTransposeAbsVec{<:Any,<:QuasiAdjointAbsVec}) =
     sum(uu*vv for (uu, vv) in zip(u, v))
 
 ## pseudoinversion
-pinv(v::AdjointAbsVec, tol::Real = 0) = pinv(v.parent, tol).parent
-pinv(v::TransposeAbsVec, tol::Real = 0) = pinv(conj(v.parent)).parent
+pinv(v::QuasiAdjointAbsVec, tol::Real = 0) = pinv(v.parent, tol).parent
+pinv(v::QuasiTransposeAbsVec, tol::Real = 0) = pinv(conj(v.parent)).parent
 
 
 ## left-division \
@@ -204,13 +204,13 @@ pinv(v::TransposeAbsVec, tol::Real = 0) = pinv(conj(v.parent)).parent
 
 
 ## right-division \
-/(u::AdjointAbsVec, A::AbstractQuasiMatrix) = adjoint(adjoint(A) \ u.parent)
-/(u::TransposeAbsVec, A::AbstractQuasiMatrix) = transpose(transpose(A) \ u.parent)
-/(u::AdjointAbsVec, A::Transpose{<:Any,<:AbstractQuasiMatrix}) = adjoint(conj(A.parent) \ u.parent) # technically should be adjoint(copy(adjoint(copy(A))) \ u.parent)
-/(u::TransposeAbsVec, A::Adjoint{<:Any,<:AbstractQuasiMatrix}) = transpose(conj(A.parent) \ u.parent) # technically should be transpose(copy(transpose(copy(A))) \ u.parent)
+/(u::QuasiAdjointAbsVec, A::AbstractQuasiMatrix) = adjoint(adjoint(A) \ u.parent)
+/(u::QuasiTransposeAbsVec, A::AbstractQuasiMatrix) = transpose(transpose(A) \ u.parent)
+/(u::QuasiAdjointAbsVec, A::QuasiTranspose{<:Any,<:AbstractQuasiMatrix}) = adjoint(conj(A.parent) \ u.parent) # technically should be adjoint(copy(adjoint(copy(A))) \ u.parent)
+/(u::QuasiTransposeAbsVec, A::QuasiAdjoint{<:Any,<:AbstractQuasiMatrix}) = transpose(conj(A.parent) \ u.parent) # technically should be transpose(copy(transpose(copy(A))) \ u.parent)
 
 
-function materialize(M::Mul2{<:Any,<:Any,<:Adjoint,<:Adjoint})
+function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint,<:QuasiAdjoint})
     Ac,Bc = M.factors
     materialize(Mul(parent(Bc),parent(Ac)))'
 end
@@ -219,4 +219,4 @@ function adjoint(M::Mul)
     Mul(reverse(adjoint.(M.factors))...)
 end
 
-==(A::Adjoint, B::Adjoint) = parent(A) == parent(B)
+==(A::QuasiAdjoint, B::QuasiAdjoint) = parent(A) == parent(B)

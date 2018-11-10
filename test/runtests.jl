@@ -151,20 +151,3 @@ end
 
     @test u[0.1] ≈ 0.00012678835289369413
 end
-
-
-L = LinearSpline(range(0,stop=1,length=20_000_000))
-B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
-
-k = 10_000
-@time A = -(B'D'D*B) + k^2*B'B # Weak Helmholtz, 9s
-@time f = L*exp.(L.points) # project exp(x), 0.3s
-@time u = B * (A \ (B'f)) # solution, 4s
-
-
-# Compare with "exact" solution
-using Plots, ApproxFun
-
-x = Fun(axes(L,1))
-u_ex = [Dirichlet(Chebyshev(0..1)); ApproxFun.Derivative()^2 + k^2*I] \ [[0,0], exp(x)]
-@test u[0.1] ≈ u_ex(0.1) rtol = 1E-3

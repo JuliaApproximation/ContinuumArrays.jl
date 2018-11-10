@@ -36,7 +36,7 @@ function getindex(B::HeavisideSpline{T}, x::Real, k::Int) where T
 end
 
 
-function copyto!(dest::SymTridiagonal, AB::Mul2{<:Any,<:Any,<:Adjoint{<:Any,<:LinearSpline},<:LinearSpline}) where T
+function copyto!(dest::SymTridiagonal, AB::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) where T
     Ac,B = AB.factors
     A = parent(Ac)
     A.points == B.points || throw(ArgumentError())
@@ -69,15 +69,15 @@ end
 
 
 ## Mass matrix
-function similar(AB::Mul2{<:Any,<:Any,<:Adjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
+function similar(AB::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
     n = size(AB,1)
     SymTridiagonal(Vector{T}(undef, n), Vector{T}(undef, n-1))
 end
 #
-materialize(M::Mul2{<:Any,<:Any,<:Adjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
+materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
     copyto!(similar(M, eltype(M)), M)
 
-function materialize(M::Mul2{<:Any,<:Any,<:Adjoint{<:Any,<:HeavisideSpline},<:HeavisideSpline})
+function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:HeavisideSpline},<:HeavisideSpline})
     Ac, B = M.factors
     axes(Ac,2) == axes(B,1) || throw(DimensionMismatch("axes must be same"))
     A = parent(Ac)
