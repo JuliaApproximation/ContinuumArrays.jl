@@ -157,14 +157,6 @@ end
 S = Jacobi(true,true)
 W = Diagonal(JacobiWeight(true,true))
 D = Derivative(axes(W,1))
-D*S
-
-D*S[:,1:10]
-
-materialize(D*W*S)
-
-J = Jacobi(false,false)
-J'J
 
 
 S'W'W*S
@@ -176,21 +168,59 @@ L = D*W*S[:,1:N]
 
 Δ = L'L # weak second derivative
 
-f = Legendre() * Vcat(1:10, Zeros(∞))
-
-
+f = Legendre() * Vcat(1:2, Zeros(∞))
 L'f
+
+A = (L').factors[2]*f.factors[1]
+
+A*f.factors[2]
 
 axes(L')
 
 Legendre()'f
 
 A = Diagonal(1:∞)
-x = Vcat(1:10, Zeros(∞))
+
 
 @which A*x
+1
+using InfiniteArrays, BandedMatrices, InteractiveUtils, Test
 
-B = BandedMatrices._BandedMatrix((1:∞)', ∞, -1,1)
+A = BandedMatrices._BandedMatrix((1:∞)', ∞, -1,1)
+x = Vcat(1:3, Zeros(∞))
+
+ Zeros(∞) ==  Zeros(∞)
+
+
+@test A*x == Vcat([4.0,9.0], Zeros(∞))
+
+y = similar(Mul
+
+y = Vcat(randn(9), Zeros(∞))
+copyto!(y , Mul(A,x))
+
+MemoryLayout(x)
+
+similar(Mul(A,x), Float64)
+
+
+typeof( Mul(B,x))
+
+Mul2{<:BandedColumnMajor,<:Any,<:AbstractMatrix,
+        <:Vcat{<:AbstractVector,<:Zeros}}
+
+
+
+
+
+typeof(V)
+V = view(bandeddata(B),1:1,3:∞)
+    _BandedMatrix(V, ∞, 2,-2)
+
+using InteractiveUtils
+
+B
+
 
 B*x
 
