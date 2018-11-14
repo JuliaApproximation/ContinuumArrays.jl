@@ -158,18 +158,52 @@ S = Jacobi(true,true)
 W = Diagonal(JacobiWeight(true,true))
 D = Derivative(axes(W,1))
 
-
 S'W'W*S
 
 N = 10
 L = D*W*S[:,1:N]
-    # temporary work around to force 3-term materialize
+# temporary work around to force 3-term materialize
     L = *(L.factors[1:3]...) * L.factors[4]
 
-Δ = L'L # weak second derivative
 
-f = Legendre() * Vcat(1:2, Zeros(∞))
-L'f
+*(L.factors[1:3]...)
+
+@test L.factors isa Tuple{<:Legendre,<:BandedMatrix,<:BandedMatrix}
+
+Δ = L'L # weak second derivative
+@test size(Δ) == (10,10)
+
+
+Vcat(1:2, Zeros(∞))
+import Base.Broadcast: broadcasted
+@which broadcasted(*, Fill(2,∞) , Vcat(1:2, Zeros(∞)))
+(1:∞) .* Vcat(1:2, Zeros(∞))
+
+(1:10) .* Zeros(10)
+A,B = (1:∞) , Vcat(1:2, Zeros(∞))
+
+kr = LazyArrays._vcat_axes(axes.(B.arrays)...)
+A_arrays = LazyArrays._vcat_getindex_eval(A,kr...)
+
+broadcast(*, A_arrays[1], B.arrays[1])
+
+A.*B
+
+_Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.arrays))
+
+f = Legendre() * Vcat(randn(20), Zeros(∞))
+@time L'f
+
+A,v=(L'f).factors[end-1:end]
+
+import LazyArrays: MemoryLayout
+@which MemoryLayout(v)
+
+
+v
+A*v
+
+LazyArrays.MemoryLayout(A)
 
 A = (L').factors[2]*f.factors[1]
 
@@ -187,9 +221,17 @@ A = Diagonal(1:∞)
 using InfiniteArrays, BandedMatrices, InteractiveUtils, Test
 
 A = BandedMatrices._BandedMatrix((1:∞)', ∞, -1,1)
-x = Vcat(1:3, Zeros(∞))
+D = Diagonal(1:∞)
+x = Vcat(randn(100000), Zeros(∞))
+@time A*x
+@time D*x
 
- Zeros(∞) ==  Zeros(∞)
+M = Mul(A,x)
+
+materialize(M)
+
+similar(M)
+
 
 
 @test A*x == Vcat([4.0,9.0], Zeros(∞))

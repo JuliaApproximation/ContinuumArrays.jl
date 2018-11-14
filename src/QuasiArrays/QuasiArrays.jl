@@ -9,7 +9,7 @@ import Base: @_inline_meta, DimOrInd, OneTo, @_propagate_inbounds_meta, @_noinli
                 index_shape, to_shape, unsafe_length, @nloops, @ncall, Slice, unalias
 import Base: ViewIndex, Slice, ScalarIndex, RangeIndex, view, viewindexing, ensure_indexable, index_dimsum,
                 check_parent_index_match, reindex, _isdisjoint, unsafe_indices,
-                parentindices
+                parentindices, reverse
 import Base: *, /, \, +, -, inv
 import Base: exp, log, sqrt,
           cos, sin, tan, csc, sec, cot,
@@ -43,6 +43,7 @@ include("abstractquasiarray.jl")
 include("multidimensional.jl")
 include("subquasiarray.jl")
 include("matmul.jl")
+include("abstractquasiarraymath.jl")
 
 include("quasiadjtrans.jl")
 include("quasidiagonal.jl")

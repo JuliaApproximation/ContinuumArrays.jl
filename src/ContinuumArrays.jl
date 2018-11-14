@@ -42,7 +42,7 @@ function materialize(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:QSlice,<:AbstractU
     A = parent(V)
     _,jr = parentindices(V)
     first(jr) ≥ 1 || throw(BoundsError())
-    P = BandedMatrix((1-first(jr) => Ones{Int}(length(jr)),), (size(A,2), length(jr)))
+    P = _BandedMatrix(Ones{Int}(1,length(jr)), axes(A,2), first(jr)-1,1-first(jr))
     A*P
 end
 
