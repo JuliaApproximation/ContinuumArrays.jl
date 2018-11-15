@@ -32,7 +32,7 @@ end
 QuasiMatMulMat{styleA, styleB, T, V} = QuasiArrayMulArray{styleA, styleB, 2, 2, T, V}
 QuasiMatMulQuasiMat{styleA, styleB, T, V} = QuasiArrayMulQuasiArray{styleA, styleB, 2, 2, T, V}
 
-*(A::AbstractQuasiArray, B::AbstractQuasiArray, C::AbstractQuasiArray) = materialize(Mul(A,B,C))
+*(A::AbstractQuasiArray, B::AbstractQuasiArray, C::AbstractQuasiArray, D::AbstractQuasiArray...) = materialize(Mul(A,B,C,D...))
 *(A::AbstractQuasiArray, B::AbstractQuasiArray) = materialize(Mul(A,B))
 *(A::AbstractQuasiArray, B::AbstractArray) = materialize(Mul(A,B))
 *(A::AbstractArray, B::AbstractQuasiArray) = materialize(Mul(A,B))

@@ -158,6 +158,82 @@ S = Jacobi(true,true)
 W = Diagonal(JacobiWeight(true,true))
 D = Derivative(axes(W,1))
 
+A = @inferred(PInv(Jacobi(2,2))*D*S)
+@test A isa BandedMatrix
+@test size(A) == (∞,∞)
+@test A[1:10,1:10] == diagm(1 => 1:0.5:5)
+
+M = @inferred(D*S)
+@test M isa Mul
+@test M.factors[1] == Jacobi(2,2)
+@test M.factors[2][1:10,1:10] == A[1:10,1:10]
+
+
+L = Diagonal(JacobiWeight(true,false))
+A = @inferred(PInv(Jacobi(false,true))*L*S)
+@test A isa BandedMatrix
+@test size(A) == (∞,∞)
+
+L = Diagonal(JacobiWeight(false,true))
+A = @inferred(PInv(Jacobi(true,false))*L*S)
+@test A isa BandedMatrix
+@test size(A) == (∞,∞)
+
+
+L = Diagonal(JacobiWeight(true,true))
+
+
+L = Legendre()
+
+A, B = (L'L),(PInv(L)*W*S)
+
+M = A*B
+    @which M.mul[1,1]
+
+@which materialize(Mul(A,B))
+
+M = LazyArrays.MulArray(Mul(A,B))
+    axes(M)
+
+@time A[1:100000,1:100000]
+@profiler A.data[:,1:10_000]
+
+V = view(A.data,:,1:100)
+
+N = 10_000; M = randn(3,N)
+
+A.data.arrays[2]
+
+@time begin
+    M[1,:] .= view(A.data.arrays[1]', 1:N)
+    M[2,:] .= view(A.data.arrays[2], 1, 1:N)
+    M[3,:] .= view(A.data.arrays[3]', 1:N)
+end
+M
+
+@which copyto!(M, V)
+
+@time
+
+typeof(V)
+
+using Profile
+Profile.clear()
+@time randn(3,10_000)
+
+W*S
+
+
+
+
+M = Mul(S',W',W,S)
+materialize(M)
+materialize(Mul(S',W',W))
+
+@which materialize(M)
+
+W*W
+
 S'W'W*S
 
 N = 10
@@ -192,7 +268,7 @@ A.*B
 _Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.arrays))
 
 f = Legendre() * Vcat(randn(20), Zeros(∞))
-@time L'f
+@time Vector(L'f)
 
 A,v=(L'f).factors[end-1:end]
 
