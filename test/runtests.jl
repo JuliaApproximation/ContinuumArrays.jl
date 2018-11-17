@@ -153,100 +153,78 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
+@testset "Jacobi" begin
+    S = Jacobi(true,true)
+    W = Diagonal(JacobiWeight(true,true))
+    D = Derivative(axes(W,1))
+    P = Legendre()
+
+    A = @inferred(PInv(Jacobi(2,2))*D*S)
+    @test A isa BandedMatrix
+    @test size(A) == (∞,∞)
+    @test A[1:10,1:10] == diagm(1 => 1:0.5:5)
+
+    M = @inferred(D*S)
+    @test M isa Mul
+    @test M.factors[1] == Jacobi(2,2)
+    @test M.factors[2][1:10,1:10] == A[1:10,1:10]
+
+    L = Diagonal(JacobiWeight(true,false))
+    A = @inferred(PInv(Jacobi(false,true))*L*S)
+    @test A isa BandedMatrix
+    @test size(A) == (∞,∞)
+
+    L = Diagonal(JacobiWeight(false,true))
+    A = @inferred(PInv(Jacobi(true,false))*L*S)
+    @test A isa BandedMatrix
+    @test size(A) == (∞,∞)
+
+    A,B = (P'P),(PInv(P)*W*S)
+
+    M = Mul(A,B)
+    @test M[1,1] == 4/3
+
+    M = MulMatrix{Float64}(A,B)
+    M̃ = M[1:10,1:10]
+    @test M̃ isa BandedMatrix
+    @test bandwidths(M̃) == (2,0)
+
+    @test A*B isa MulArray
+
+
+    A,B,C = (PInv(P)*W*S)',(P'P),(PInv(P)*W*S)
+    M = MulArray(A,B,C)
+    @test typeof(A*B*C) == typeof(M)
+    @test M[1,1] ≈  1+1/15
+end
 
 S = Jacobi(true,true)
 W = Diagonal(JacobiWeight(true,true))
 D = Derivative(axes(W,1))
+P = Legendre()
 
-A = @inferred(PInv(Jacobi(2,2))*D*S)
-@test A isa BandedMatrix
-@test size(A) == (∞,∞)
-@test A[1:10,1:10] == diagm(1 => 1:0.5:5)
+N = 10
+L = D*W*S[:,1:N]
+Δ = L'L # weak second derivative
 
-M = @inferred(D*S)
-@test M isa Mul
-@test M.factors[1] == Jacobi(2,2)
-@test M.factors[2][1:10,1:10] == A[1:10,1:10]
-
-
-L = Diagonal(JacobiWeight(true,false))
-A = @inferred(PInv(Jacobi(false,true))*L*S)
-@test A isa BandedMatrix
-@test size(A) == (∞,∞)
-
-L = Diagonal(JacobiWeight(false,true))
-A = @inferred(PInv(Jacobi(true,false))*L*S)
-@test A isa BandedMatrix
-@test size(A) == (∞,∞)
-
-
-L = Diagonal(JacobiWeight(true,true))
-
-
-L = Legendre()
-
-A, B = (L'L),(PInv(L)*W*S)
-
-M = A*B
-    @which M.mul[1,1]
-
-@which materialize(Mul(A,B))
-
-M = LazyArrays.MulArray(Mul(A,B))
-    axes(M)
-
-@time A[1:100000,1:100000]
-@profiler A.data[:,1:10_000]
-
-V = view(A.data,:,1:100)
-
-N = 10_000; M = randn(3,N)
-
-A.data.arrays[2]
-
-@time begin
-    M[1,:] .= view(A.data.arrays[1]', 1:N)
-    M[2,:] .= view(A.data.arrays[2], 1, 1:N)
-    M[3,:] .= view(A.data.arrays[3]', 1:N)
-end
-M
-
-@which copyto!(M, V)
-
-@time
-
-typeof(V)
-
-using Profile
-Profile.clear()
-@time randn(3,10_000)
-
-W*S
-
-
-
-
-M = Mul(S',W',W,S)
-materialize(M)
-materialize(Mul(S',W',W))
-
-@which materialize(M)
+M = Mul(Δ.factors[1:3])
+LazyArrays.fullmaterialize(M)
+P'*W*S
 
 W*W
 
 S'W'W*S
 
 N = 10
-L = D*W*S[:,1:N]
+B = S[:,1:N]
+L = D*W*
 # temporary work around to force 3-term materialize
     L = *(L.factors[1:3]...) * L.factors[4]
 
+M = (D*W*S)'*(D*W*S)
+M.factors[1].mul.factors
 
-*(L.factors[1:3]...)
 
-@test L.factors isa Tuple{<:Legendre,<:BandedMatrix,<:BandedMatrix}
-
-Δ = L'L # weak second derivative
 @test size(Δ) == (10,10)
 
 

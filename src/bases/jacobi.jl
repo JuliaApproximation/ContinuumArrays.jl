@@ -11,6 +11,8 @@ end
 
 abstract type AbstractJacobi{T} <: AbstractQuasiMatrix{T} end
 
+pinv(J::AbstractJacobi) = PInv(J)
+
 struct Legendre{T} <: AbstractJacobi{T} end
 Legendre() = Legendre{Float64}()
 

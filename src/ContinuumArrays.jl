@@ -4,6 +4,7 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo
 import Base.Broadcast: materialize
 import LazyArrays: Mul2
+import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 
 include("QuasiArrays/QuasiArrays.jl")
