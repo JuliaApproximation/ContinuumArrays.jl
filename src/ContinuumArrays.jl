@@ -10,7 +10,7 @@ import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
 import .QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slice, QSlice, SubQuasiArray,
-                    QuasiDiagonal
+                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre
 

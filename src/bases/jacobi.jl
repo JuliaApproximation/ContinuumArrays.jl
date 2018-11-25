@@ -42,7 +42,7 @@ end
 function materialize(M::Mul2{<:Any,<:Any,<:Derivative{<:Any,<:ChebyshevInterval},<:Jacobi})
     D, S = M.factors
     A = PInv(Jacobi(S.b+1,S.a+1))*D*S
-    Mul(Jacobi(S.b+1,S.a+1), A)
+    MulQuasiMatrix(Jacobi(S.b+1,S.a+1), A)
 end
 
 # pinv(Legendre())D*W*Jacobi(true,true)
@@ -62,7 +62,7 @@ function materialize(M::Mul{<:Tuple,<:Tuple{<:Derivative{<:Any,<:ChebyshevInterv
     w = parent(W)
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
     A = pinv(Legendre{eltype(M)}())*D*W*S
-    Mul(Legendre(), A)
+    MulQuasiMatrix(Legendre(), A)
 end
 
 function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Jacobi{Bool}},

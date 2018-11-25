@@ -9,7 +9,7 @@ import Base: @_inline_meta, DimOrInd, OneTo, @_propagate_inbounds_meta, @_noinli
                 index_shape, to_shape, unsafe_length, @nloops, @ncall, Slice, unalias
 import Base: ViewIndex, Slice, ScalarIndex, RangeIndex, view, viewindexing, ensure_indexable, index_dimsum,
                 check_parent_index_match, reindex, _isdisjoint, unsafe_indices,
-                parentindices, reverse
+                parentindices, reverse, ndims
 import Base: *, /, \, +, -, inv
 import Base: exp, log, sqrt,
           cos, sin, tan, csc, sec, cot,
@@ -23,7 +23,8 @@ import Base.Broadcast: materialize
 import LinearAlgebra: transpose, adjoint, checkeltype_adjoint, checkeltype_transpose, Diagonal,
                         AbstractTriangular
 
-import LazyArrays: MemoryLayout, UnknownLayout, Mul2
+import LazyArrays: MemoryLayout, UnknownLayout, Mul2, _materialize, MulLayout, ⋆, rmaterialize,
+                    _rmaterialize, _lmaterialize, flatten, _flatten
 
 export AbstractQuasiArray, AbstractQuasiMatrix, AbstractQuasiVector, materialize
 

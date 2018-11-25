@@ -78,10 +78,10 @@ function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:HeavisideSpline}
 end
 
 ## Derivative
-function copyto!(dest::Mul2{<:Any,<:Any,<:HeavisideSpline},
+function copyto!(dest::MulQuasiMatrix{<:Any,<:Mul2{<:Any,<:Any,<:HeavisideSpline}},
                  M::Mul2{<:Any,<:Any,<:Derivative,<:LinearSpline})
     D, L = M.factors
-    H, A = dest.factors
+    H, A = dest.mul.factors
     x = H.points
 
     axes(dest) == axes(M) || throw(DimensionMismatch("axes must be same"))
@@ -98,7 +98,7 @@ end
 function similar(M::Mul2{<:Any,<:Any,<:Derivative,<:LinearSpline}, ::Type{T}) where T
     D, B = M.factors
     n = size(B,2)
-    Mul(HeavisideSpline{T}(B.points),
+    MulQuasiMatrix(HeavisideSpline{T}(B.points),
         BandedMatrix{T}(undef, (n-1,n), (0,1)))
 end
 

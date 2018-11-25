@@ -1,7 +1,8 @@
 using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test,
     InfiniteArrays
     import ContinuumArrays: ℵ₁, materialize
-    import ContinuumArrays.QuasiArrays: SubQuasiArray
+    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec
+    import LazyArrays: rmaterialize, ⋆
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)
@@ -75,7 +76,16 @@ end
     L = LinearSpline([1,2,3])
     f = L*[1,2,4]
     D = Derivative(axes(L,1))
+    @test D*L isa MulQuasiMatrix
+
+    fp = (D*L)*[1,2,4]
+    @test fp isa Vec
+    @test length(fp.mul.factors) == 2
+    @test fp[1.1] ≈ 1
+    @test fp[2.2] ≈ 2
+
     fp = D*f
+    @test length(fp.mul.factors) == 2
 
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
@@ -86,17 +96,19 @@ end
     L = LinearSpline(0:2)
 
     D = Derivative(axes(L,1))
-    M = materialize(Mul(D',D,L))
-    DL = D*L
-    @test M.factors == tuple(D', (D*L).factors...)
+    M = rmaterialize(Mul(D',D*L))
+    @test length(M.mul.factors) == 3
+    @test last(M.mul.factors) isa BandedMatrix
 
-    @test materialize(Mul(L', D', D, L)) == (L'D'*D*L) ==
-        [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
+    @test M.mul.factors == rmaterialize(Mul(D',D,L)).mul.factors ==
+        ⋆(D',D,L).mul.factors == *(D',D,L).mul.factors
 
-    @test materialize(Mul(L', D', D, L)) isa BandedMatrix
-    @test (L'D'*D*L) isa BandedMatrix
+    @test (L'D') isa MulQuasiMatrix
+    A = (L'D') * (D*L)
+    @test A == (D*L)'*(D*L) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
 
-    @test bandwidths(materialize(L'D'*D*L)) == (1,1)
+    @test A isa MulArray
+    @test bandwidths(A) == (1,1)
 end
 
 @testset "Views" begin
@@ -121,7 +133,7 @@ end
 
 @testset "Subindex of splines" begin
     L = LinearSpline(range(0,stop=1,length=10))
-    @test L[:,2:end-1] isa Mul
+    @test L[:,2:end-1] isa MulQuasiMatrix
     @test_broken L[:,2:end-1][0.1,1] == L[0.1,2]
     v = randn(8)
     f = L[:,2:end-1] * v
@@ -132,7 +144,7 @@ end
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
     D = Derivative(axes(L,1))
-    Δ = -(B'D'D*B) # Weak Laplacian
+    Δ = -((B'D')*(D*B)) # Weak Laplacian
 
     f = L*exp.(L.points) # project exp(x)
     u = B * (Δ \ (B'f))
@@ -145,7 +157,8 @@ end
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
     D = Derivative(axes(L,1))
-    A = -(B'D'D*B) + 100^2*B'B # Weak Laplacian
+
+    A = -((B'D')*(D*B)) + 100^2*B'B # Weak Laplacian
 
     f = L*exp.(L.points) # project exp(x)
     u = B * (A \ (B'f))
@@ -159,7 +172,7 @@ end
     D = Derivative(axes(W,1))
     P = Legendre()
 
-    A = @inferred(PInv(Jacobi(2,2))*D*S)
+    A = @inferred(PInv(Jacobi(2,2))*(D*S))
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
     @test A[1:10,1:10] == diagm(1 => 1:0.5:5)
