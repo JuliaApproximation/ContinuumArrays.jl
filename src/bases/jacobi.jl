@@ -9,12 +9,12 @@ function getindex(w::JacobiWeight, x::Real)
     (1-x)^w.a * (1+x)^w.b
 end
 
-abstract type AbstractJacobi{T} <: AbstractQuasiMatrix{T} end
-
-pinv(J::AbstractJacobi) = PInv(J)
+abstract type AbstractJacobi{T} <: Basis{T} end
 
 struct Legendre{T} <: AbstractJacobi{T} end
 Legendre() = Legendre{Float64}()
+
+==(::Legendre, ::Legendre) = true
 
 struct Jacobi{T} <: AbstractJacobi{T}
     b::T

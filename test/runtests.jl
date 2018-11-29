@@ -2,7 +2,7 @@ using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, Band
     InfiniteArrays
     import ContinuumArrays: ℵ₁, materialize
     import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec
-    import LazyArrays: rmaterialize, ⋆
+    import LazyArrays: rmaterialize
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)
@@ -101,7 +101,7 @@ end
     @test last(M.mul.factors) isa BandedMatrix
 
     @test M.mul.factors == rmaterialize(Mul(D',D,L)).mul.factors ==
-        ⋆(D',D,L).mul.factors == *(D',D,L).mul.factors
+        *(D',D,L).mul.factors
 
     @test (L'D') isa MulQuasiMatrix
     A = (L'D') * (D*L)
@@ -172,27 +172,35 @@ end
     D = Derivative(axes(W,1))
     P = Legendre()
 
+    Bi = pinv(Jacobi(2,2))
+    @test Bi isa ContinuumArrays.QuasiArrays.PInvQuasiMatrix
+    @test PInv(P)*P === pinv(P)*P === Eye(∞)
+
     A = @inferred(PInv(Jacobi(2,2))*(D*S))
-    @test A isa BandedMatrix
+    @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
+
+    @test A isa MulMatrix
+    @test isbanded(A)
+    @test bandwidths(A) == (-1,1)
     @test size(A) == (∞,∞)
     @test A[1:10,1:10] == diagm(1 => 1:0.5:5)
 
     M = @inferred(D*S)
-    @test M isa Mul
-    @test M.factors[1] == Jacobi(2,2)
-    @test M.factors[2][1:10,1:10] == A[1:10,1:10]
+    @test M isa MulQuasiMatrix
+    @test M.mul.factors[1] == Jacobi(2,2)
+    @test M.mul.factors[2][1:10,1:10] == A[1:10,1:10]
 
     L = Diagonal(JacobiWeight(true,false))
-    A = @inferred(PInv(Jacobi(false,true))*L*S)
+    A = @inferred(pinv(Jacobi(false,true))*L*S)
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
 
     L = Diagonal(JacobiWeight(false,true))
-    A = @inferred(PInv(Jacobi(true,false))*L*S)
+    A = @inferred(pinv(Jacobi(true,false))*L*S)
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
 
-    A,B = (P'P),(PInv(P)*W*S)
+    A,B = (P'P),(pinv(P)*W*S)
 
     M = Mul(A,B)
     @test M[1,1] == 4/3
@@ -204,138 +212,27 @@ end
 
     @test A*B isa MulArray
 
-
-    A,B,C = (PInv(P)*W*S)',(P'P),(PInv(P)*W*S)
+    A,B,C = (pinv(P)*W*S)',(P'P),(pinv(P)*W*S)
     M = MulArray(A,B,C)
     @test typeof(A*B*C) == typeof(M)
     @test M[1,1] ≈  1+1/15
 end
 
-S = Jacobi(true,true)
-W = Diagonal(JacobiWeight(true,true))
-D = Derivative(axes(W,1))
-P = Legendre()
+@testset "P-FEM" begin
+    S = Jacobi(true,true)
+    W = Diagonal(JacobiWeight(true,true))
+    D = Derivative(axes(W,1))
+    P = Legendre()
+    N = 10
 
-N = 10
-L = D*W*S[:,1:N]
-Δ = L'L # weak second derivative
+    @test fullmaterialize(pinv(P)*(D*W)*S[:,1:N]) isa AbstractMatrix
 
-M = Mul(Δ.factors[1:3])
-LazyArrays.fullmaterialize(M)
-P'*W*S
+    L = fullmaterialize(D*W*S[:,1:N])
+    Δ = L'L
+    @test Δ isa MulMatrix
+    @test bandwidths(Δ) == (0,0)
 
-W*W
-
-S'W'W*S
-
-N = 10
-B = S[:,1:N]
-L = D*W*
-# temporary work around to force 3-term materialize
-    L = *(L.factors[1:3]...) * L.factors[4]
-
-M = (D*W*S)'*(D*W*S)
-M.factors[1].mul.factors
-
-
-@test size(Δ) == (10,10)
-
-
-Vcat(1:2, Zeros(∞))
-import Base.Broadcast: broadcasted
-@which broadcasted(*, Fill(2,∞) , Vcat(1:2, Zeros(∞)))
-(1:∞) .* Vcat(1:2, Zeros(∞))
-
-(1:10) .* Zeros(10)
-A,B = (1:∞) , Vcat(1:2, Zeros(∞))
-
-kr = LazyArrays._vcat_axes(axes.(B.arrays)...)
-A_arrays = LazyArrays._vcat_getindex_eval(A,kr...)
-
-broadcast(*, A_arrays[1], B.arrays[1])
-
-A.*B
-
-_Vcat(broadcast((a,b) -> broadcast(op,a,b), A_arrays, B.arrays))
-
-f = Legendre() * Vcat(randn(20), Zeros(∞))
-@time Vector(L'f)
-
-A,v=(L'f).factors[end-1:end]
-
-import LazyArrays: MemoryLayout
-@which MemoryLayout(v)
-
-
-v
-A*v
-
-LazyArrays.MemoryLayout(A)
-
-A = (L').factors[2]*f.factors[1]
-
-A*f.factors[2]
-
-axes(L')
-
-Legendre()'f
-
-A = Diagonal(1:∞)
-
-
-@which A*x
-1
-using InfiniteArrays, BandedMatrices, InteractiveUtils, Test
-
-A = BandedMatrices._BandedMatrix((1:∞)', ∞, -1,1)
-D = Diagonal(1:∞)
-x = Vcat(randn(100000), Zeros(∞))
-@time A*x
-@time D*x
-
-M = Mul(A,x)
-
-materialize(M)
-
-similar(M)
-
-
-
-@test A*x == Vcat([4.0,9.0], Zeros(∞))
-
-y = similar(Mul
-
-y = Vcat(randn(9), Zeros(∞))
-copyto!(y , Mul(A,x))
-
-MemoryLayout(x)
-
-similar(Mul(A,x), Float64)
-
-
-typeof( Mul(B,x))
-
-Mul2{<:BandedColumnMajor,<:Any,<:AbstractMatrix,
-        <:Vcat{<:AbstractVector,<:Zeros}}
-
-
-
-
-
-typeof(V)
-V = view(bandeddata(B),1:1,3:∞)
-    _BandedMatrix(V, ∞, 2,-2)
-
-using InteractiveUtils
-
-B
-
-
-B*x
-
-N = 100000; @time B[1:N,1:N]
-
-
-
-import LazyArrays: MemoryLayout
-MemoryLayout.(x.arrays)
+    L = (D*W*S[:,1:N])
+    Δ = fullmaterialize(L'L)
+    @test Δ isa Matrix
+end

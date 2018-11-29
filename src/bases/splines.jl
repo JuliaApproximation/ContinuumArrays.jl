@@ -1,5 +1,5 @@
 
-struct Spline{order,T} <: AbstractQuasiMatrix{T}
+struct Spline{order,T} <: Basis{T}
     points::Vector{T}
 end
 

@@ -1,18 +1,20 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, BandedMatrices, InfiniteArrays, DomainSets
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
-                IndexStyle, IndexLinear, ==, OneTo
+                IndexStyle, IndexLinear, ==, OneTo, tail
 import Base.Broadcast: materialize
-import LazyArrays: Mul2
+import LazyArrays: Mul2, MemoryLayout
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 
 include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
 import .QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slice, QSlice, SubQuasiArray,
-                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat
+                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
+                    _PInvQuasiMatrix
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre,
+            fullmaterialize
 
 ####
 # Interval indexing support
@@ -47,6 +49,43 @@ function materialize(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:QSlice,<:AbstractU
     A*P
 end
 
+
+
+
+most(a) = reverse(tail(reverse(a)))
+
+MulQuasiOrArray = Union{MulArray,MulQuasiArray}
+
+_factors(M::MulQuasiOrArray) = M.mul.factors
+_factors(M) = (M,)
+
+function fullmaterialize(M::MulQuasiOrArray)
+    M_mat = materialize(M.mul)
+    typeof(M_mat) <: MulQuasiOrArray || return M_mat
+    typeof(M_mat) == typeof(M) || return(fullmaterialize(M_mat))
+
+    ABC = M_mat.mul.factors
+    length(ABC) ≤ 2 && return M_mat
+
+    AB = most(ABC)
+    Mhead = fullmaterialize(Mul(AB...))
+
+    typeof(_factors(Mhead)) == typeof(AB) ||
+        return fullmaterialize(Mul(_factors(Mhead)..., last(ABC)))
+
+    BC = tail(ABC)
+    Mtail =  fullmaterialize(Mul(BC...))
+    typeof(_factors(Mtail)) == typeof(BC) ||
+        return fullmaterialize(Mul(first(ABC), _factors(Mtail)...))
+
+    first(ABC) * Mtail
+end
+
+fullmaterialize(M::Mul) = fullmaterialize(materialize(M))
+fullmaterialize(M) = M
+
+materialize(M::Mul{<:Tuple,<:Tuple{Vararg{<:Union{Adjoint,QuasiAdjoint,QuasiDiagonal}}}}) =
+    materialize(Mul(reverse(adjoint.(M.factors))))'
 
 include("operators.jl")
 include("bases/bases.jl")

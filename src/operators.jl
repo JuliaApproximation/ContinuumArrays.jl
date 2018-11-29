@@ -48,3 +48,7 @@ function materialize(M::Mul2{<:Any,<:Any,<:Derivative,<:SubQuasiArray})
     P = parent(B)
     (Derivative(axes(P,1))*P)[parentindices(B)...]
 end
+
+
+materialize(M::Mul2{<:Any,<:Any,<:Derivative}) = MulQuasiArray(M)
+materialize(M::Mul2{<:Any,<:Any,<:Any,<:Derivative}) = MulQuasiArray(M)

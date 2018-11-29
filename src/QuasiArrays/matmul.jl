@@ -35,15 +35,14 @@ end
 QuasiMatMulMat{styleA, styleB, T, V} = QuasiArrayMulArray{styleA, styleB, 2, 2, T, V}
 QuasiMatMulQuasiMat{styleA, styleB, T, V} = QuasiArrayMulQuasiArray{styleA, styleB, 2, 2, T, V}
 
-*(A::AbstractQuasiArray, B::AbstractQuasiArray, C::AbstractQuasiArray, D::AbstractQuasiArray...) = materialize(Mul(A,B,C,D...))
-*(A::AbstractQuasiArray, B::AbstractQuasiArray) = materialize(Mul(A,B))
-*(A::AbstractQuasiArray, B::AbstractArray) = materialize(Mul(A,B))
-*(A::AbstractArray, B::AbstractQuasiArray) = materialize(Mul(A,B))
+*(A::AbstractQuasiArray, B...) = materialize(Mul(A,B...))
+*(A::AbstractQuasiArray, B::AbstractQuasiArray, C...) = materialize(Mul(A,B,C...))
+*(A::AbstractArray, B::AbstractQuasiArray, C...) = materialize(Mul(A,B,C...))
 pinv(A::AbstractQuasiArray) = materialize(PInv(A))
 inv(A::AbstractQuasiArray) = materialize(Inv(A))
 
-*(A::AbstractQuasiArray, B::Mul) = materialize(Mul(A, B.factors...))
-*(A::Mul, B::AbstractQuasiArray) = materialize(Mul(A.factors..., B))
+*(A::AbstractQuasiArray, B::Mul, C...) = materialize(Mul(A, B.factors..., C...))
+*(A::Mul, B::AbstractQuasiArray, C...) = materialize(Mul(A.factors..., B, C...))
 
 
 ####
@@ -99,6 +98,31 @@ transpose(A::MulQuasiArray) = MulQuasiArray(reverse(transpose.(A.mul.factors))..
 MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.mul.factors))
 
 
+## PInvQuasiMatrix
+
+function _PInvQuasiMatrix end
+
+struct PInvQuasiMatrix{T, PINV<:AbstractPInv} <: AbstractQuasiMatrix{T}
+    pinv::PINV
+    global _PInvQuasiMatrix(pinv::PINV) where PINV = new{eltype(pinv), PINV}(pinv)
+end
+
+const InvQuasiMatrix{T, INV<:Inv} = PInvQuasiMatrix{T,INV}
+
+PInvQuasiMatrix(M) = _PInvQuasiMatrix(PInv(M))
+InvQuasiMatrix(M) = _PInvQuasiMatrix(Inv(M))
+
+axes(A::PInvQuasiMatrix) = axes(A.pinv)
+size(A::PInvQuasiMatrix) = map(length, axes(A))
+
+@propagate_inbounds getindex(A::PInvQuasiMatrix{T}, k::Int, j::Int) where T =
+    (A.pinv*[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
+
+MemoryLayout(M::PInvQuasiMatrix) = MemoryLayout(M.pinv)
+
+*(A::PInvQuasiMatrix, B::AbstractQuasiMatrix, C...) = *(A.pinv, B, C...)
+*(A::PInvQuasiMatrix, B::MulQuasiArray, C...) = *(A.pinv, B.mul, C...)
+
 
 ####
 # Matrix * Array
@@ -130,7 +154,7 @@ end
 
 function _materialize(M::Mul2{<:Any,<:Any,<:MulQuasiArray,<:AbstractQuasiArray}, _)
     As, B = M.factors
-    ⋆(As.mul.factors..., B)
+    rmaterialize(Mul(As.mul.factors..., B))
 end
 
 function _materialize(M::Mul2{<:Any,<:Any,<:AbstractQuasiArray,<:MulQuasiArray}, _)
@@ -141,7 +165,7 @@ end
 # A MulQuasiArray can't be materialized further left-to-right, so we do right-to-left
 function _materialize(M::Mul2{<:Any,<:Any,<:MulQuasiArray,<:AbstractArray}, _)
     As, B = M.factors
-    ⋆(As.mul.factors..., B)
+    rmaterialize(Mul(As.mul.factors..., B))
 end
 
 function _lmaterialize(A::MulQuasiArray, B, C...)
