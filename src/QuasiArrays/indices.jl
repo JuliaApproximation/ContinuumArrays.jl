@@ -148,32 +148,49 @@ LinearIndices(A::AbstractQuasiArray) = LinearIndices(axes(A))
 
 
 """
-   QSlice(indices)
+   Inclusion(domain)
 
-Represent an axis as a quasi-vector that returns itself.
+Represents the inclusion operator of a domain (that is, a type that overrides in)
+as an AbstractQuasiVector. That is, if `v = Inclusion(domain)`, then
+`v[x] == x` if `x in domain`, otherwise it throws a `DomainError`.
+
+Inclusions are useful for turning domains into axes. They also serve the same
+role as `Slice` does for offset arrays.
 """
-struct QSlice{T,AX} <: AbstractQuasiVector{T}
-    axis::AX
+struct Inclusion{T,AX} <: AbstractQuasiVector{T}
+    domain::AX
 end
-QSlice(axis) = QSlice{eltype(axis),typeof(axis)}(axis)
-QSlice(S::QSlice) = S
-==(A::QSlice, B::QSlice) = A.axis == B.axis
-axes(S::QSlice) = (S,)
-unsafe_indices(S::QSlice) = (S,)
-axes1(S::QSlice) = S
-axes(S::QSlice{<:OneTo}) = (S.axis,)
-unsafe_indices(S::QSlice{<:OneTo}) = (S.axis,)
-axes1(S::QSlice{<:OneTo}) = S.axis
+Inclusion(domain) = Inclusion{eltype(domain),typeof(domain)}(domain)
+Inclusion(S::Inclusion) = S
+==(A::Inclusion, B::Inclusion) = A.domain == B.domain
+axes(S::Inclusion) = (S,)
+unsafe_indices(S::Inclusion) = (S,)
+axes1(S::Inclusion) = S
+axes(S::Inclusion{<:Any,<:OneTo}) = (S.domain,)
+unsafe_indices(S::Inclusion{<:Any,<:OneTo}) = (S.domain,)
+axes1(S::Inclusion{<:Any,<:OneTo}) = S.domain
 
-first(S::QSlice) = first(S.axis)
-last(S::QSlice) = last(S.axis)
-size(S::QSlice) = (length(S.axis),)
-length(S::QSlice) = length(S.axis)
-unsafe_length(S::QSlice) = unsafe_length(S.axis)
-cardinality(S::QSlice) = cardinality(S.axis)
-getindex(S::QSlice, i::Real) = (@_inline_meta; @boundscheck checkbounds(S, i); i)
-getindex(S::QSlice, i::AbstractVector{<:Real}) = (@_inline_meta; @boundscheck checkbounds(S, i); i)
-show(io::IO, r::QSlice) = print(io, "QSlice(", r.axis, ")")
-iterate(S::QSlice, s...) = iterate(S.axis, s...)
+first(S::Inclusion) = first(S.domain)
+last(S::Inclusion) = last(S.domain)
+size(S::Inclusion) = (length(S.domain),)
+length(S::Inclusion) = length(S.domain)
+unsafe_length(S::Inclusion) = unsafe_length(S.domain)
+cardinality(S::Inclusion) = cardinality(S.domain)
+getindex(S::Inclusion, i::Real) = (@_inline_meta; @boundscheck checkbounds(S, i); i)
+getindex(S::Inclusion, i::AbstractVector{<:Real}) = (@_inline_meta; @boundscheck checkbounds(S, i); i)
+show(io::IO, r::Inclusion) = print(io, "Inclusion(", r.domain, ")")
+iterate(S::Inclusion, s...) = iterate(S.domain, s...)
 
-checkindex(::Type{Bool}, inds::QSlice, i::Real) = i ∈ inds.axis
+in(x, S::Inclusion) = x in S.domain
+
+checkindex(::Type{Bool}, inds::Inclusion, i::Real) = i ∈ inds.domain
+checkindex(::Type{Bool}, inds::Inclusion, ::Colon) = true
+checkindex(::Type{Bool}, inds::Inclusion, ::Inclusion) = true
+function checkindex(::Type{Bool}, inds::Inclusion, I::AbstractArray)
+    @_inline_meta
+    b = true
+    for i in I
+        b &= checkindex(Bool, inds, i)
+    end
+    b
+end

@@ -13,7 +13,7 @@ end
 end
 
 slice(d::AbstractVector) = Slice(d)
-slice(d) = QSlice(d)
+slice(d) = Inclusion(d)
 
 uncolon(inds::Tuple{},    I::Tuple{Colon, Vararg{Any}}) = slice(OneTo(1))
 uncolon(inds::Tuple,      I::Tuple{Colon, Vararg{Any}}) = slice(inds[1])

@@ -8,7 +8,8 @@ const HeavisideSpline{T} = Spline{0,T}
 
 Spline{o}(pts::AbstractVector{T}) where {o,T} = Spline{o,float(T)}(pts)
 
-axes(B::Spline{o}) where o = (first(B.points)..last(B.points), Base.OneTo(length(B.points)+o-1))
+axes(B::Spline{o}) where o =
+    (Inclusion(first(B.points)..last(B.points)), OneTo(length(B.points)+o-1))
 ==(A::Spline{o}, B::Spline{o}) where o = A.points == B.points
 
 function getindex(B::LinearSpline{T}, x::Real, k::Int) where T

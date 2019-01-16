@@ -3,10 +3,14 @@
 struct DiracDelta{T,A} <: AbstractQuasiVector{T}
     x::T
     axis::A
+    DiracDelta{T,A}(x, axis) where {T,A} = new{T,A}(x,axis)
 end
 
-DiracDelta{T}(x, axis::A) where {T,A} = DiracDelta{T,A}(x, axis)
-DiracDelta(axis) = DiracDelta(zero(float(eltype(axis))), axis)
+DiracDelta{T}(x, axis::A) where {T,A<:AbstractQuasiVector} = DiracDelta{T,A}(x, axis)
+DiracDelta{T}(x, domain) where T = DiracDelta{T}(x, Inclusion(domain))
+DiracDelta(x, domain) = DiracDelta{eltype(x)}(x, Inclusion(domain))
+DiracDelta(axis::AbstractQuasiVector) = DiracDelta(zero(float(eltype(axis))), axis)
+DiracDelta(domain) = DiracDelta(Inclusion(domain))
 
 axes(δ::DiracDelta) = (δ.axis,)
 IndexStyle(::Type{<:DiracDelta}) = IndexLinear()
@@ -35,7 +39,8 @@ struct Derivative{T,A} <: AbstractQuasiMatrix{T}
     axis::A
 end
 
-Derivative{T}(axis::A) where {T,A} = Derivative{T,A}(axis)
+Derivative{T}(axis::A) where {T,A<:AbstractQuasiVector} = Derivative{T,A}(axis)
+Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
 Derivative(axis) = Derivative{Float64}(axis)
 
 axes(D::Derivative) = (D.axis, D.axis)
@@ -52,3 +57,11 @@ end
 
 materialize(M::Mul2{<:Any,<:Any,<:Derivative}) = MulQuasiArray(M)
 materialize(M::Mul2{<:Any,<:Any,<:Any,<:Derivative}) = MulQuasiArray(M)
+
+# struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
+#     f::F
+#     axis::A
+# end
+
+
+const Identity{T,D} = QuasiDiagonal{T,Inclusion{T,D}}

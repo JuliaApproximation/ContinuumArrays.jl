@@ -3,7 +3,7 @@ struct JacobiWeight{T} <: AbstractQuasiVector{T}
     a::T
 end
 
-axes(::JacobiWeight) = (ChebyshevInterval(),)
+axes(::JacobiWeight) = (Inclusion(ChebyshevInterval()),)
 function getindex(w::JacobiWeight, x::Real)
     x ∈ axes(w,1) || throw(BoundsError())
     (1-x)^w.a * (1+x)^w.b
@@ -21,12 +21,36 @@ struct Jacobi{T} <: AbstractJacobi{T}
     a::T
 end
 
-axes(::AbstractJacobi) = (ChebyshevInterval(), OneTo(∞))
+axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 ==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
 
+########
+# Mass Matrix
+#########
 
 materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:Legendre},<:Legendre}) =
     Diagonal(2 ./ (2(0:∞) .+ 1))
+
+########
+# Jacobi Matrix
+########
+
+materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
+                                        <:Identity,
+                                        <:Legendre}}) =
+    _BandedMatrix(Vcat(((0:∞)./(1:2:∞))', Zeros(1,∞), ((1:∞)./(1:2:∞))'), ∞, 1,1)
+
+
+function materialize(M::Mul2{<:Any,<:Any,<:Identity,<:Legendre})
+    X, P = M.factors
+    MulQuasiMatrix(P, pinv(P)*X*P)
+end
+
+
+
+##########
+# Derivatives
+##########
 
 # pinv(Jacobi(b+1,a+1))D*W*Jacobi(a,b)
 function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Jacobi},

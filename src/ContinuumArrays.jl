@@ -9,7 +9,7 @@ import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 
 include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
-import .QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slice, QSlice, SubQuasiArray,
+import .QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slice, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     _PInvQuasiMatrix
 
@@ -29,7 +29,7 @@ cardinality(::AbstractInterval) = ℵ₁
 
 
 checkindex(::Type{Bool}, inds::AbstractInterval, i::Real) = (leftendpoint(inds) <= i) & (i <= rightendpoint(inds))
-checkindex(::Type{Bool}, inds::AbstractInterval, i::QSlice) = i.axis ⊆ inds
+checkindex(::Type{Bool}, inds::AbstractInterval, i::Inclusion) = i.axis ⊆ inds
 function checkindex(::Type{Bool}, inds::AbstractInterval, I::AbstractArray)
     @_inline_meta
     b = true
@@ -41,7 +41,7 @@ end
 
 
 # we represent as a Mul with a banded matrix
-function materialize(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:QSlice,<:AbstractUnitRange}})
+function materialize(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
     A = parent(V)
     _,jr = parentindices(V)
     first(jr) ≥ 1 || throw(BoundsError())

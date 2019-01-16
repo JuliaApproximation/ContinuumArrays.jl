@@ -1,12 +1,12 @@
 using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test,
     InfiniteArrays
     import ContinuumArrays: ℵ₁, materialize
-    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec
+    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion
     import LazyArrays: rmaterialize
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)
-    @test axes(δ) === (axes(δ,1),) === (-1..3,)
+    @test axes(δ) === (axes(δ,1),) === (Inclusion(-1..3),)
     @test size(δ) === (length(δ),) === (ℵ₁,)
     @test δ[1.1] === 0.0
     @test δ[0.0] === Inf
@@ -15,7 +15,7 @@ end
 
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
-    @test axes(H) === (axes(H,1),axes(H,2)) === (1.0..3.0, Base.OneTo(2))
+    @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1.0..3.0), Base.OneTo(2))
     @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
 
     @test_throws BoundsError H[0.1, 1]
@@ -35,7 +35,7 @@ end
     @test_throws BoundsError H[[0.1,2.1], 1]
 
     f = H*[1,2]
-    @test axes(f) == (1.0..3.0,)
+    @test axes(f) == (Inclusion(1.0..3.0),)
     @test f[1.1] ≈ 1
     @test f[2.1] ≈ 2
 
@@ -61,7 +61,7 @@ end
     @test_throws BoundsError L[[0.1,2.1], 1]
 
     f = L*[1,2,4]
-    @test axes(f) == (1.0..3.0,)
+    @test axes(f) == (Inclusion(1.0..3.0),)
     @test f[1.1] ≈ 1.1
     @test f[2.1] ≈ 2.2
 
