@@ -1,8 +1,16 @@
 using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test,
     InfiniteArrays
     import ContinuumArrays: ℵ₁, materialize
-    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion
+    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal
     import LazyArrays: rmaterialize
+
+
+@testset "Inclusion" begin
+    @test Inclusion(-1..1)[0.0] === 0
+    @test_throws InexactError Inclusion(-1..1)[0.1]
+    X = QuasiDiagonal(Inclusion(-1.0..1))
+    @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
+end
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)

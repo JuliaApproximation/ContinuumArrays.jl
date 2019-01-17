@@ -1,17 +1,13 @@
-using ContinuumArrays
+using ContinuumArrays, FillArrays, InfiniteArrays
 import ContinuumArrays.QuasiArrays: Inclusion, QuasiDiagonal
+
 P = Legendre()
-axes(P)
+X = QuasiDiagonal(Inclusion(-1..1))
 
-X = QuasiDiagonal(Inclusion(axes(P,1)))
-
-
+@test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
 
 axes(X)
-pinv(P)*X*P
+J = pinv(P)*X*P
 
-X*P
-QuasiDiagonal(axes(P,1))
-
-
-@which Base.Slice(Base.OneTo(5)) == Base.OneTo(5)
+J - I
+Vcat(Hcat(1, Zeros(1,∞)), J)
