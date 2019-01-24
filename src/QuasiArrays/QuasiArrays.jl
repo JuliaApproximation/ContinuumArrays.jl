@@ -24,7 +24,7 @@ import LinearAlgebra: transpose, adjoint, checkeltype_adjoint, checkeltype_trans
                         AbstractTriangular
 
 import LazyArrays: MemoryLayout, UnknownLayout, Mul2, _materialize, MulLayout, ⋆, rmaterialize,
-                    _rmaterialize, _lmaterialize, flatten, _flatten, AbstractPInv
+                    _rmaterialize, _lmaterialize, flatten, _flatten, InvOrPInv
 
 export AbstractQuasiArray, AbstractQuasiMatrix, AbstractQuasiVector, materialize
 

@@ -102,7 +102,7 @@ MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.mul.factors))
 
 function _PInvQuasiMatrix end
 
-struct PInvQuasiMatrix{T, PINV<:AbstractPInv} <: AbstractQuasiMatrix{T}
+struct PInvQuasiMatrix{T, PINV<:InvOrPInv} <: AbstractQuasiMatrix{T}
     pinv::PINV
     global _PInvQuasiMatrix(pinv::PINV) where PINV = new{eltype(pinv), PINV}(pinv)
 end
