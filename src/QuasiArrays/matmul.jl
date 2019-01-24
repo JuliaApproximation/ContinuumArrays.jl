@@ -94,6 +94,11 @@ IndexStyle(::MulQuasiArray{<:Any,1}) = IndexLinear()
 adjoint(A::MulQuasiArray) = MulQuasiArray(reverse(adjoint.(A.mul.factors))...)
 transpose(A::MulQuasiArray) = MulQuasiArray(reverse(transpose.(A.mul.factors))...)
 
+function similar(A::MulQuasiArray)
+    B,a = A.mul.factors
+    B*similar(a)
+end
+
 
 MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.mul.factors))
 
