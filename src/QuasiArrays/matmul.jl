@@ -14,7 +14,7 @@ const QuasiMatMulVec{styleA, styleB, T, V} = QuasiArrayMulArray{styleA, styleB, 
 
 
 function getindex(M::QuasiMatMulVec, k::Real)
-    A,B = M.factors
+    A,B = M.args
     ret = zero(eltype(M))
     @inbounds for j in axes(A,2)
         ret += A[k,j] * B[j]
@@ -23,7 +23,7 @@ function getindex(M::QuasiMatMulVec, k::Real)
 end
 
 function getindex(M::QuasiMatMulVec, k::AbstractArray)
-    A,B = M.factors
+    A,B = M.args
     ret = zeros(eltype(M),length(k))
     @inbounds for j in axes(A,2)
         ret .+= view(A,k,j) .* B[j]
@@ -41,8 +41,8 @@ QuasiMatMulQuasiMat{styleA, styleB, T, V} = QuasiArrayMulQuasiArray{styleA, styl
 pinv(A::AbstractQuasiArray) = materialize(PInv(A))
 inv(A::AbstractQuasiArray) = materialize(Inv(A))
 
-*(A::AbstractQuasiArray, B::Mul, C...) = materialize(Mul(A, B.factors..., C...))
-*(A::Mul, B::AbstractQuasiArray, C...) = materialize(Mul(A.factors..., B, C...))
+*(A::AbstractQuasiArray, B::Mul, C...) = materialize(Mul(A, B.args..., C...))
+*(A::Mul, B::AbstractQuasiArray, C...) = materialize(Mul(A.args..., B, C...))
 
 
 ####
@@ -91,16 +91,16 @@ IndexStyle(::MulQuasiArray{<:Any,1}) = IndexLinear()
 *(A::MulQuasiArray, B::AbstractArray) = A.mul * B
 *(A::AbstractArray, B::MulQuasiArray) = A * B.mul
 
-adjoint(A::MulQuasiArray) = MulQuasiArray(reverse(adjoint.(A.mul.factors))...)
-transpose(A::MulQuasiArray) = MulQuasiArray(reverse(transpose.(A.mul.factors))...)
+adjoint(A::MulQuasiArray) = MulQuasiArray(reverse(adjoint.(A.mul.args))...)
+transpose(A::MulQuasiArray) = MulQuasiArray(reverse(transpose.(A.mul.args))...)
 
 function similar(A::MulQuasiArray)
-    B,a = A.mul.factors
+    B,a = A.mul.args
     B*similar(a)
 end
 
 
-MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.mul.factors))
+MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.mul.args))
 
 
 ## PInvQuasiMatrix
@@ -133,8 +133,8 @@ MemoryLayout(M::PInvQuasiMatrix) = MemoryLayout(M.pinv)
 # Matrix * Array
 ####
 
-_flatten(A::MulQuasiArray, B...) = _flatten(A.mul.factors..., B...)
-flatten(A::MulQuasiArray) = MulQuasiArray(Mul(_flatten(A.mul.factors...)))
+_flatten(A::MulQuasiArray, B...) = _flatten(A.mul.args..., B...)
+flatten(A::MulQuasiArray) = MulQuasiArray(Mul(_flatten(A.mul.args...)))
 
 
 # the default is always Array
@@ -147,40 +147,40 @@ _materialize(M::QuasiArrayMulQuasiArray, _) = MulQuasiArray(M)
 
 # if multiplying two MulQuasiArrays simplifies the arguments, we materialize,
 # otherwise we leave it as a lazy object
-_mulquasi_join(As, M::MulQuasiArray, Cs) = MulQuasiArray(As..., M.mul.factors..., Cs...)
+_mulquasi_join(As, M::MulQuasiArray, Cs) = MulQuasiArray(As..., M.mul.args..., Cs...)
 _mulquasi_join(As, B, Cs) = *(As..., B, Cs...)
 
 
 function _materialize(M::Mul2{<:Any,<:Any,<:MulQuasiArray,<:MulQuasiArray}, _)
-    As, Bs = M.factors
+    As, Bs = M.args
     _mul_join(reverse(tail(reverse(As))), last(As) * first(Bs), tail(Bs))
 end
 
 
 function _materialize(M::Mul2{<:Any,<:Any,<:MulQuasiArray,<:AbstractQuasiArray}, _)
-    As, B = M.factors
-    rmaterialize(Mul(As.mul.factors..., B))
+    As, B = M.args
+    rmaterialize(Mul(As.mul.args..., B))
 end
 
 function _materialize(M::Mul2{<:Any,<:Any,<:AbstractQuasiArray,<:MulQuasiArray}, _)
-    A, Bs = M.factors
-    *(A, Bs.mul.factors...)
+    A, Bs = M.args
+    *(A, Bs.mul.args...)
 end
 
 # A MulQuasiArray can't be materialized further left-to-right, so we do right-to-left
 function _materialize(M::Mul2{<:Any,<:Any,<:MulQuasiArray,<:AbstractArray}, _)
-    As, B = M.factors
-    rmaterialize(Mul(As.mul.factors..., B))
+    As, B = M.args
+    rmaterialize(Mul(As.mul.args..., B))
 end
 
 function _lmaterialize(A::MulQuasiArray, B, C...)
-    As = A.mul.factors
+    As = A.mul.args
     flatten(_MulArray(reverse(tail(reverse(As)))..., _lmaterialize(last(As), B, C...)))
 end
 
 
 
 function _rmaterialize(Z::MulQuasiArray, Y, W...)
-    Zs = Z.mul.factors
+    Zs = Z.mul.args
     flatten(_MulArray(_rmaterialize(first(Zs), Y, W...), tail(Zs)...))
 end

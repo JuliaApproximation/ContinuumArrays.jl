@@ -24,13 +24,13 @@ end
 
 
 function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
-    A, B = M.factors
+    A, B = M.args
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     B[parent(A).x]
 end
 
 function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiMatrix})
-    A, B = M.factors
+    A, B = M.args
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     B[parent(A).x,:]
 end
@@ -48,7 +48,7 @@ axes(D::Derivative) = (D.axis, D.axis)
 
 
 function materialize(M::Mul2{<:Any,<:Any,<:Derivative,<:SubQuasiArray})
-    A, B = M.factors
+    A, B = M.args
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     P = parent(B)
     (Derivative(axes(P,1))*P)[parentindices(B)...]

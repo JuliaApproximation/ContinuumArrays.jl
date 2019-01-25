@@ -38,7 +38,7 @@ end
 
 
 function copyto!(dest::SymTridiagonal, AB::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) where T
-    Ac,B = AB.factors
+    Ac,B = AB.args
     A = parent(Ac)
     A.points == B.points || throw(ArgumentError())
     dv,ev = dest.dv,dest.ev
@@ -71,7 +71,7 @@ materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpl
     copyto!(similar(M, eltype(M)), M)
 
 function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:HeavisideSpline},<:HeavisideSpline})
-    Ac, B = M.factors
+    Ac, B = M.args
     axes(Ac,2) == axes(B,1) || throw(DimensionMismatch("axes must be same"))
     A = parent(Ac)
     A.points == B.points || throw(ArgumentError("Cannot multiply incompatible splines"))
@@ -81,8 +81,8 @@ end
 ## Derivative
 function copyto!(dest::MulQuasiMatrix{<:Any,<:Mul2{<:Any,<:Any,<:HeavisideSpline}},
                  M::Mul2{<:Any,<:Any,<:Derivative,<:LinearSpline})
-    D, L = M.factors
-    H, A = dest.mul.factors
+    D, L = M.args
+    H, A = dest.mul.args
     x = H.points
 
     axes(dest) == axes(M) || throw(DimensionMismatch("axes must be same"))
@@ -97,7 +97,7 @@ function copyto!(dest::MulQuasiMatrix{<:Any,<:Mul2{<:Any,<:Any,<:HeavisideSpline
 end
 
 function similar(M::Mul2{<:Any,<:Any,<:Derivative,<:LinearSpline}, ::Type{T}) where T
-    D, B = M.factors
+    D, B = M.args
     n = size(B,2)
     MulQuasiMatrix(HeavisideSpline{T}(B.points),
         BandedMatrix{T}(undef, (n-1,n), (0,1)))

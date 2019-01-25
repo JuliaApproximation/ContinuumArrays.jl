@@ -88,12 +88,12 @@ end
 
     fp = (D*L)*[1,2,4]
     @test fp isa Vec
-    @test length(fp.mul.factors) == 2
+    @test length(fp.mul.args) == 2
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
 
     fp = D*f
-    @test length(fp.mul.factors) == 2
+    @test length(fp.mul.args) == 2
 
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
@@ -105,11 +105,11 @@ end
 
     D = Derivative(axes(L,1))
     M = rmaterialize(Mul(D',D*L))
-    @test length(M.mul.factors) == 3
-    @test last(M.mul.factors) isa BandedMatrix
+    @test length(M.mul.args) == 3
+    @test last(M.mul.args) isa BandedMatrix
 
-    @test M.mul.factors == rmaterialize(Mul(D',D,L)).mul.factors ==
-        *(D',D,L).mul.factors
+    @test M.mul.args == rmaterialize(Mul(D',D,L)).mul.args ==
+        *(D',D,L).mul.args
 
     @test (L'D') isa MulQuasiMatrix
     A = (L'D') * (D*L)
@@ -195,8 +195,8 @@ end
 
     M = @inferred(D*S)
     @test M isa MulQuasiMatrix
-    @test M.mul.factors[1] == Jacobi(2,2)
-    @test M.mul.factors[2][1:10,1:10] == A[1:10,1:10]
+    @test M.mul.args[1] == Jacobi(2,2)
+    @test M.mul.args[2][1:10,1:10] == A[1:10,1:10]
 
     L = Diagonal(JacobiWeight(true,false))
     A = @inferred(pinv(Jacobi(false,true))*L*S)

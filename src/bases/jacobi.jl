@@ -42,7 +42,7 @@ materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
 
 
 function materialize(M::Mul2{<:Any,<:Any,<:Identity,<:Legendre})
-    X, P = M.factors
+    X, P = M.args
     MulQuasiMatrix(P, pinv(P)*X*P)
 end
 
@@ -56,7 +56,7 @@ end
 function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Jacobi},
                                         <:Derivative{<:Any,<:ChebyshevInterval},
                                         <:Jacobi}})
-    Ji, D, S = M.factors
+    Ji, D, S = M.args
     J = parent(Ji)
     (J.b == S.b+1 && J.a == S.a+1) || throw(ArgumentError())
     _BandedMatrix(((1:∞ .+ 1 .+ S.a .+ S.b)/2)', ∞, -1,1)
@@ -64,7 +64,7 @@ end
 
 
 function materialize(M::Mul2{<:Any,<:Any,<:Derivative{<:Any,<:ChebyshevInterval},<:Jacobi})
-    D, S = M.factors
+    D, S = M.args
     A = PInv(Jacobi(S.b+1,S.a+1))*D*S
     MulQuasiMatrix(Jacobi(S.b+1,S.a+1), A)
 end
@@ -73,7 +73,7 @@ end
 function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
                                         <:Derivative{<:Any,<:ChebyshevInterval},
                                         QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
-    Li, _, W, S = M.factors
+    Li, _, W, S = M.args
     w = parent(W)
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
     _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
@@ -82,7 +82,7 @@ end
 # reduce to Legendre
 function materialize(M::Mul{<:Tuple,<:Tuple{<:Derivative{<:Any,<:ChebyshevInterval},
                                         QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
-    D, W, S = M.factors
+    D, W, S = M.args
     w = parent(W)
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
     A = pinv(Legendre{eltype(M)}())*D*W*S
@@ -91,7 +91,7 @@ end
 
 function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Jacobi{Bool}},
                             QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
-    Ji, W, S = M.factors
+    Ji, W, S = M.args
     J,w = parent(Ji),parent(W)
     @assert  S.b && S.a
     if w.b && !w.a
@@ -107,7 +107,7 @@ end
 
 function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
                             QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
-    Li, W, S = M.factors
+    Li, W, S = M.args
     L,w = parent(Li),parent(W)
     if w.b && w.a
         @assert S.b && S.a
@@ -125,7 +125,7 @@ end
 
 function materialize(M::Mul{<:Tuple,<:Tuple{QuasiAdjoint{Bool,Jacobi{Bool}},
                                         QuasiDiagonal{Int,JacobiWeight{Int}},Jacobi{Bool}}})
-    St, W, S = M.factors
+    St, W, S = M.args
 
     w = parent(W)
     (w.b == 2 && S.b && w.a == 2 && S.a && parent(St) == S) || throw(ArgumentError())
