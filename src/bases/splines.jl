@@ -82,7 +82,7 @@ end
 function copyto!(dest::MulQuasiMatrix{<:Any,<:Mul2{<:Any,<:Any,<:HeavisideSpline}},
                  M::Mul2{<:Any,<:Any,<:Derivative,<:LinearSpline})
     D, L = M.args
-    H, A = dest.mul.args
+    H, A = dest.applied.args
     x = H.points
 
     axes(dest) == axes(M) || throw(DimensionMismatch("axes must be same"))

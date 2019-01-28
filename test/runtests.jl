@@ -2,7 +2,7 @@ using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, Band
     InfiniteArrays
     import ContinuumArrays: ℵ₁, materialize
     import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal
-    import LazyArrays: rmaterialize
+    import LazyArrays: rmaterialize, MemoryLayout
 
 
 @testset "Inclusion" begin
@@ -88,12 +88,12 @@ end
 
     fp = (D*L)*[1,2,4]
     @test fp isa Vec
-    @test length(fp.mul.args) == 2
+    @test length(fp.applied.args) == 2
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
 
     fp = D*f
-    @test length(fp.mul.args) == 2
+    @test length(fp.applied.args) == 2
 
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
@@ -105,11 +105,11 @@ end
 
     D = Derivative(axes(L,1))
     M = rmaterialize(Mul(D',D*L))
-    @test length(M.mul.args) == 3
-    @test last(M.mul.args) isa BandedMatrix
+    @test length(M.applied.args) == 3
+    @test last(M.applied.args) isa BandedMatrix
 
-    @test M.mul.args == rmaterialize(Mul(D',D,L)).mul.args ==
-        *(D',D,L).mul.args
+    @test M.applied.args == rmaterialize(Mul(D',D,L)).applied.args ==
+        *(D',D,L).applied.args
 
     @test (L'D') isa MulQuasiMatrix
     A = (L'D') * (D*L)
@@ -174,17 +174,36 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
+S = Jacobi(true,true)
+L = Ldiv(S, S)
+@test eltype(L) == Float64
+
+pinv(S)
+
+MemoryLayout(pinv(S))
+Mul(pinv(S) , S)
+
+@test (S\S) === materialize(L)
+
+P =
+
+@which pinv(P)
+typeof(S) |> supertype|>supertype|>supertype
+ContinuumArrays.QuasiArrays.ApplyStyle(pinv, S)
+
 @testset "Jacobi" begin
     S = Jacobi(true,true)
     W = Diagonal(JacobiWeight(true,true))
     D = Derivative(axes(W,1))
     P = Legendre()
 
+    @test pinv(pinv(S)) === S
+
     Bi = pinv(Jacobi(2,2))
     @test Bi isa ContinuumArrays.QuasiArrays.PInvQuasiMatrix
-    @test PInv(P)*P === pinv(P)*P === Eye(∞)
+    @test pinv(P)*P === Eye(∞)
 
-    A = @inferred(PInv(Jacobi(2,2))*(D*S))
+    A = @inferred(pinv(Jacobi(2,2))*(D*S))
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
 
     @test A isa MulMatrix
@@ -195,8 +214,8 @@ end
 
     M = @inferred(D*S)
     @test M isa MulQuasiMatrix
-    @test M.mul.args[1] == Jacobi(2,2)
-    @test M.mul.args[2][1:10,1:10] == A[1:10,1:10]
+    @test M.applied.args[1] == Jacobi(2,2)
+    @test M.applied.args[2][1:10,1:10] == A[1:10,1:10]
 
     L = Diagonal(JacobiWeight(true,false))
     A = @inferred(pinv(Jacobi(false,true))*L*S)

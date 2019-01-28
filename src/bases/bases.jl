@@ -4,7 +4,7 @@ struct BasisLayout <: MemoryLayout end
 MemoryLayout(::Basis) = BasisLayout()
 
 pinv(J::Basis) = materialize(PInv(J))
-materialize(P::PInv{BasisLayout}) = _PInvQuasiMatrix(P)
+materialize(P::PInv{BasisLayout}) = ApplyQuasiMatrix(pinv,parent(P))
 
 ==(A::Basis, B::Basis) = axes(A) ≠ axes(B) ||
     throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))

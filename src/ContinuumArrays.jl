@@ -11,7 +11,7 @@ include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
 import .QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slice, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
-                    _PInvQuasiMatrix
+                    ApplyQuasiArray, ApplyQuasiMatrix
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre,
             fullmaterialize
@@ -56,7 +56,7 @@ most(a) = reverse(tail(reverse(a)))
 
 MulQuasiOrArray = Union{MulArray,MulQuasiArray}
 
-_factors(M::MulQuasiOrArray) = M.mul.args
+_factors(M::MulQuasiOrArray) = M.applied.args
 _factors(M) = (M,)
 
 function fullmaterialize(M::MulQuasiOrArray)
@@ -64,7 +64,7 @@ function fullmaterialize(M::MulQuasiOrArray)
     typeof(M_mat) <: MulQuasiOrArray || return M_mat
     typeof(M_mat) == typeof(M) || return(fullmaterialize(M_mat))
 
-    ABC = M_mat.mul.args
+    ABC = M_mat.applied.args
     length(ABC) ≤ 2 && return M_mat
 
     AB = most(ABC)
@@ -85,7 +85,7 @@ fullmaterialize(M::Mul) = fullmaterialize(materialize(M))
 fullmaterialize(M) = M
 
 materialize(M::Mul{<:Tuple,<:Tuple{Vararg{<:Union{Adjoint,QuasiAdjoint,QuasiDiagonal}}}}) =
-    materialize(Mul(reverse(adjoint.(M.args))))'
+    materialize(Mul(reverse(adjoint.(M.args))...))'
 
 include("operators.jl")
 include("bases/bases.jl")
