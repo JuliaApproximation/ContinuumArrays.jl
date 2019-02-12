@@ -23,13 +23,13 @@ function getindex(δ::DiracDelta{T}, x::Real) where T
 end
 
 
-function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
+function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
     A, B = M.args
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     B[parent(A).x]
 end
 
-function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiMatrix})
+function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiMatrix})
     A, B = M.args
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     B[parent(A).x,:]
@@ -47,7 +47,7 @@ axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis
 
 
-function materialize(M::Mul2{<:Any,<:Any,<:Derivative,<:SubQuasiArray})
+function materialize(M::QMul2{<:Derivative,<:SubQuasiArray})
     A, B = M.args
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     P = parent(B)
@@ -55,8 +55,8 @@ function materialize(M::Mul2{<:Any,<:Any,<:Derivative,<:SubQuasiArray})
 end
 
 
-materialize(M::Mul2{<:Any,<:Any,<:Derivative}) = MulQuasiArray(M)
-materialize(M::Mul2{<:Any,<:Any,<:Any,<:Derivative}) = MulQuasiArray(M)
+materialize(M::QMul2{<:Derivative,<:Any}) = MulQuasiArray(M)
+materialize(M::QMul2{<:Any,<:Derivative}) = MulQuasiArray(M)
 
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
 #     f::F

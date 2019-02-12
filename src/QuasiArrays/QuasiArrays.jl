@@ -23,8 +23,8 @@ import Base.Broadcast: materialize
 import LinearAlgebra: transpose, adjoint, checkeltype_adjoint, checkeltype_transpose, Diagonal,
                         AbstractTriangular, pinv, inv
 
-import LazyArrays: MemoryLayout, UnknownLayout, Mul2, _materialize, MulLayout, ⋆, rmaterialize,
-                    _rmaterialize, _lmaterialize, flatten, _flatten, InvOrPInv, ApplyStyle,
+import LazyArrays: MemoryLayout, UnknownLayout, Mul2, _materialize, MulLayout, ⋆, 
+                    _lmaterialize, InvOrPInv, ApplyStyle,
                     LayoutApplyStyle, Applied
 
 export AbstractQuasiArray, AbstractQuasiMatrix, AbstractQuasiVector, materialize

@@ -3,7 +3,7 @@ using IntervalSets, LinearAlgebra, LazyArrays, BandedMatrices, InfiniteArrays, D
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail
 import Base.Broadcast: materialize
-import LazyArrays: Mul2, MemoryLayout
+import LazyArrays: Mul2, MemoryLayout, Applied
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 
@@ -23,6 +23,8 @@ struct AlephInfinity{N} <: Integer end
 
 const ℵ₁ = AlephInfinity{1}()
 
+
+const QMul2{A,B} = Mul{<:Any, <:Tuple{A,B}}
 
 cardinality(::AbstractInterval) = ℵ₁
 *(ℵ::AlephInfinity) = ℵ
@@ -59,10 +61,18 @@ MulQuasiOrArray = Union{MulArray,MulQuasiArray}
 _factors(M::MulQuasiOrArray) = M.applied.args
 _factors(M) = (M,)
 
-function fullmaterialize(M::MulQuasiOrArray)
-    M_mat = materialize(M.mul)
+_flatten() = ()
+_flatten(A, B...) = (A, _flatten(B...)...)
+_flatten(A::Mul, B...) = _flatten(A.args..., B...)
+flatten(A::Mul) = Mul(_flatten(A.args...)...)
+
+_flatten(A::MulQuasiArray, B...) = _flatten(A.applied, B...)
+flatten(A::MulQuasiArray) = MulQuasiArray(flatten(A.applied))
+
+function fullmaterialize(M::Applied{<:Any,typeof(*)})
+    M_mat = materialize(flatten(M))
     typeof(M_mat) <: MulQuasiOrArray || return M_mat
-    typeof(M_mat) == typeof(M) || return(fullmaterialize(M_mat))
+    typeof(M_mat.applied) == typeof(M) || return(fullmaterialize(M_mat))
 
     ABC = M_mat.applied.args
     length(ABC) ≤ 2 && return M_mat
@@ -81,10 +91,10 @@ function fullmaterialize(M::MulQuasiOrArray)
     first(ABC) * Mtail
 end
 
-fullmaterialize(M::Mul) = fullmaterialize(materialize(M))
+fullmaterialize(M::ApplyQuasiArray) = fullmaterialize(M.applied)
 fullmaterialize(M) = M
 
-materialize(M::Mul{<:Tuple,<:Tuple{Vararg{<:Union{Adjoint,QuasiAdjoint,QuasiDiagonal}}}}) =
+materialize(M::Applied{<:Any,typeof(*),<:Tuple{Vararg{<:Union{Adjoint,QuasiAdjoint,QuasiDiagonal}}}}) =
     materialize(Mul(reverse(adjoint.(M.args))...))'
 
 include("operators.jl")

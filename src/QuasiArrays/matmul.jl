@@ -15,6 +15,29 @@ const QuasiMatMulMat{T, V} = QuasiArrayMulArray{2, 2, T, V}
 const QuasiMatMulQuasiMat{T, V} = QuasiArrayMulQuasiArray{2, 2, T, V}
 
 
+import LazyArrays: _mul, rowsupport
+
+function getindex(M::Mul, k::Real)
+    A,Bs = first(M.args), tail(M.args)
+    B = _mul(Bs...)
+    ret = zero(eltype(M))
+    for j = rowsupport(A, k)
+        ret += A[k,j] * B[j]
+    end
+    ret
+end
+
+function getindex(M::Mul, k::Real, j::Real)
+    A,Bs = first(M.args), tail(M.args)
+    B = _mul(Bs...)
+    ret = zero(eltype(M))
+    @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
+        ret += A[k,ℓ] * B[ℓ,j]
+    end
+    ret
+end
+
+
 function getindex(M::QuasiMatMulVec, k::Real)
     A,B = M.args
     ret = zero(eltype(M))
@@ -37,6 +60,7 @@ end
 # Used for when a lazy version should be constructed on materialize
 struct LazyQuasiArrayApplyStyle <: ApplyStyle end
 
+ndims(M::Applied{LazyQuasiArrayApplyStyle,typeof(*)}) = ndims(last(M.args))
 
 
 *(A::AbstractQuasiArray, B...) = materialize(Mul(A,B...))
@@ -45,9 +69,6 @@ struct LazyQuasiArrayApplyStyle <: ApplyStyle end
 
 pinv(A::AbstractQuasiArray) = materialize(PInv(A))
 inv(A::AbstractQuasiArray) = materialize(Inv(A))
-
-ApplyStyle(::typeof(\), A::AbstractQuasiArray, B::AbstractQuasiArray) =
-    LayoutApplyStyle((MemoryLayout(A), MemoryLayout(B)))
 
 
 \(A::AbstractQuasiArray, B::AbstractQuasiArray) = materialize(Ldiv(A,B))
@@ -138,12 +159,16 @@ end
 
 MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.applied.args))
 
-ApplyStyle(::typeof(*), args::Union{AbstractQuasiArray,AbstractArray}...) =
-    LayoutApplyStyle(MemoryLayout.(args))
+ApplyStyle(::typeof(*), ::AbstractQuasiArray, B...) =
+    LazyQuasiArrayApplyStyle()
+ApplyStyle(::typeof(*), ::AbstractArray, ::AbstractQuasiArray, B...) =
+    LazyQuasiArrayApplyStyle()
+ApplyStyle(::typeof(*), ::AbstractArray, ::AbstractArray, ::AbstractQuasiArray, B...) =
+    LazyQuasiArrayApplyStyle()
 
 for op in (:pinv, :inv)
     @eval ApplyStyle(::typeof($op), args::AbstractQuasiArray) =
-        LayoutApplyStyle((MemoryLayout(args),))
+        LazyQuasiArrayApplyStyle()
 end
 ## PInvQuasiMatrix
 

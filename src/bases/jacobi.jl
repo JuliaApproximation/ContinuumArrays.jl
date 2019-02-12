@@ -28,20 +28,20 @@ axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 # Mass Matrix
 #########
 
-materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:Legendre},<:Legendre}) =
+materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:Legendre},<:Legendre}) =
     Diagonal(2 ./ (2(0:∞) .+ 1))
 
 ########
 # Jacobi Matrix
 ########
 
-materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
+materialize(M::Mul{<:Any,<:Tuple{<:PInv{<:Any,<:Legendre},
                                         <:Identity,
                                         <:Legendre}}) =
     _BandedMatrix(Vcat(((0:∞)./(1:2:∞))', Zeros(1,∞), ((1:∞)./(1:2:∞))'), ∞, 1,1)
 
 
-function materialize(M::Mul2{<:Any,<:Any,<:Identity,<:Legendre})
+function materialize(M::QMul2{<:Identity,<:Legendre})
     X, P = M.args
     MulQuasiMatrix(P, pinv(P)*X*P)
 end
@@ -53,7 +53,7 @@ end
 ##########
 
 # pinv(Jacobi(b+1,a+1))D*W*Jacobi(a,b)
-function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Jacobi},
+function materialize(M::Mul{<:Any,<:Tuple{<:PInv{<:Any,<:Jacobi},
                                         <:Derivative{<:Any,<:ChebyshevInterval},
                                         <:Jacobi}})
     Ji, D, S = M.args
@@ -63,14 +63,14 @@ function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Jacobi},
 end
 
 
-function materialize(M::Mul2{<:Any,<:Any,<:Derivative{<:Any,<:ChebyshevInterval},<:Jacobi})
+function materialize(M::QMul2{<:Derivative{<:Any,<:ChebyshevInterval},<:Jacobi})
     D, S = M.args
     A = PInv(Jacobi(S.b+1,S.a+1))*D*S
     MulQuasiMatrix(Jacobi(S.b+1,S.a+1), A)
 end
 
 # pinv(Legendre())D*W*Jacobi(true,true)
-function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
+function materialize(M::Mul{<:Any,<:Tuple{<:PInv{<:Any,<:Legendre},
                                         <:Derivative{<:Any,<:ChebyshevInterval},
                                         QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
     Li, _, W, S = M.args
@@ -80,8 +80,8 @@ function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
 end
 
 # reduce to Legendre
-function materialize(M::Mul{<:Tuple,<:Tuple{<:Derivative{<:Any,<:ChebyshevInterval},
-                                        QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
+function materialize(M::QMul2{<:Derivative{<:Any,<:ChebyshevInterval},
+                                        QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}})
     D, W, S = M.args
     w = parent(W)
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
@@ -89,8 +89,8 @@ function materialize(M::Mul{<:Tuple,<:Tuple{<:Derivative{<:Any,<:ChebyshevInterv
     MulQuasiMatrix(Legendre(), A)
 end
 
-function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Jacobi{Bool}},
-                            QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
+function materialize(M::QMul2{<:PInv{<:Any,<:Jacobi{Bool}},
+                            QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}})
     Ji, W, S = M.args
     J,w = parent(Ji),parent(W)
     @assert  S.b && S.a
@@ -105,8 +105,8 @@ function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Jacobi{Bool}},
     end
 end
 
-function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
-                            QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
+function materialize(M::QMul2{<:PInv{<:Any,<:Legendre},
+                            QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}})
     Li, W, S = M.args
     L,w = parent(Li),parent(W)
     if w.b && w.a
@@ -123,8 +123,8 @@ function materialize(M::Mul{<:Tuple,<:Tuple{<:PInv{<:Any,<:Legendre},
     end
 end
 
-function materialize(M::Mul{<:Tuple,<:Tuple{QuasiAdjoint{Bool,Jacobi{Bool}},
-                                        QuasiDiagonal{Int,JacobiWeight{Int}},Jacobi{Bool}}})
+function materialize(M::QMul2{QuasiAdjoint{Bool,Jacobi{Bool}},
+                                        QuasiDiagonal{Int,JacobiWeight{Int}},Jacobi{Bool}})
     St, W, S = M.args
 
     w = parent(W)
