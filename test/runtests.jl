@@ -1,5 +1,4 @@
-using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test,
-    InfiniteArrays
+using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
     import ContinuumArrays: ℵ₁, materialize
     import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
     import LazyArrays: MemoryLayout, ApplyStyle
@@ -96,7 +95,7 @@ end
     @test M.style isa LazyQuasiArrayApplyStyle
     @test eltype(materialize(M)) == Float64
 
-    fp = fullmaterialize(D*L*[1,2,4])
+    fp = D*L*[1,2,4]
 
     @test eltype(fp) == Float64
 
@@ -106,7 +105,7 @@ end
     @test fp[2.2] ≈ 2
 
 
-    fp = fullmaterialize(D*f)
+    fp = D*f
     @test length(fp.applied.args) == 2
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
@@ -118,13 +117,13 @@ end
 
     D = Derivative(axes(L,1))
 
-    M = fullmaterialize(ContinuumArrays.flatten(Mul(D',D*L)))
-    @test length(M.applied.args) == 3
-    @test last(M.applied.args) isa BandedMatrix
+    M = ContinuumArrays.QuasiArrays.flatten(Mul(D',D*L))
+    @test length(M.args) == 3
+    @test last(M.args) isa BandedMatrix
 
     @test (L'D') isa MulQuasiMatrix
     A = (L'D') * (D*L)
-    @test fullmaterialize(A) == fullmaterialize((D*L)'*(D*L)) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
+    @test A == (D*L)'*(D*L) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
     @test_skip bandwidths(A) == (1,1)
 end
 
@@ -161,7 +160,7 @@ end
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
     D = Derivative(axes(L,1))
-    Δ = -fullmaterialize((B'D')*(D*B)) # Weak Laplacian
+    Δ = -((B'D')*(D*B)) # Weak Laplacian
 
     f = L*exp.(L.points) # project exp(x)
     u = B * (Δ \ (B'f))

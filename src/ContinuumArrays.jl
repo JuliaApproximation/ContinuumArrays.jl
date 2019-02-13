@@ -53,50 +53,6 @@ end
 
 
 
-
-most(a) = reverse(tail(reverse(a)))
-
-MulQuasiOrArray = Union{MulArray,MulQuasiArray}
-
-_factors(M::MulQuasiOrArray) = M.applied.args
-_factors(M) = (M,)
-
-_flatten() = ()
-_flatten(A, B...) = (A, _flatten(B...)...)
-_flatten(A::Mul, B...) = _flatten(A.args..., B...)
-flatten(A::Mul) = Mul(_flatten(A.args...)...)
-
-_flatten(A::MulQuasiArray, B...) = _flatten(A.applied, B...)
-flatten(A::MulQuasiArray) = MulQuasiArray(flatten(A.applied))
-
-function fullmaterialize(M::Applied{<:Any,typeof(*)})
-    M_mat = materialize(flatten(M))
-    typeof(M_mat) <: MulQuasiOrArray || return M_mat
-    typeof(M_mat.applied) == typeof(M) || return(fullmaterialize(M_mat))
-
-    ABC = M_mat.applied.args
-    length(ABC) ≤ 2 && return M_mat
-
-    AB = most(ABC)
-    Mhead = fullmaterialize(Mul(AB...))
-
-    typeof(_factors(Mhead)) == typeof(AB) ||
-        return fullmaterialize(Mul(_factors(Mhead)..., last(ABC)))
-
-    BC = tail(ABC)
-    Mtail =  fullmaterialize(Mul(BC...))
-    typeof(_factors(Mtail)) == typeof(BC) ||
-        return fullmaterialize(Mul(first(ABC), _factors(Mtail)...))
-
-    first(ABC) * Mtail
-end
-
-fullmaterialize(M::ApplyQuasiArray) = fullmaterialize(M.applied)
-fullmaterialize(M) = M
-
-materialize(M::Applied{<:Any,typeof(*),<:Tuple{Vararg{<:Union{Adjoint,QuasiAdjoint,QuasiDiagonal}}}}) =
-    materialize(Mul(reverse(adjoint.(M.args))...))'
-
 include("operators.jl")
 include("bases/bases.jl")
 

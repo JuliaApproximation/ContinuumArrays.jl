@@ -63,9 +63,9 @@ struct LazyQuasiArrayApplyStyle <: ApplyStyle end
 ndims(M::Applied{LazyQuasiArrayApplyStyle,typeof(*)}) = ndims(last(M.args))
 
 
-*(A::AbstractQuasiArray, B...) = materialize(Mul(A,B...))
-*(A::AbstractQuasiArray, B::AbstractQuasiArray, C...) = materialize(Mul(A,B,C...))
-*(A::AbstractArray, B::AbstractQuasiArray, C...) = materialize(Mul(A,B,C...))
+*(A::AbstractQuasiArray, B...) = fullmaterialize(materialize(Mul(A,B...)))
+*(A::AbstractQuasiArray, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A,B,C...)))
+*(A::AbstractArray, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A,B,C...)))
 
 pinv(A::AbstractQuasiArray) = materialize(PInv(A))
 inv(A::AbstractQuasiArray) = materialize(Inv(A))
@@ -74,8 +74,8 @@ inv(A::AbstractQuasiArray) = materialize(Inv(A))
 \(A::AbstractQuasiArray, B::AbstractQuasiArray) = materialize(Ldiv(A,B))
 
 
-*(A::AbstractQuasiArray, B::Mul, C...) = materialize(Mul(A, B.args..., C...))
-*(A::Mul, B::AbstractQuasiArray, C...) = materialize(Mul(A.args..., B, C...))
+*(A::AbstractQuasiArray, B::Mul, C...) = fullmaterialize(materialize(Mul(A, B.args..., C...)))
+*(A::Mul, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A.args..., B, C...)))
 
 
 struct ApplyQuasiArray{T, N, App<:Applied} <: AbstractQuasiArray{T,N}
@@ -142,11 +142,53 @@ MulQuasiMatrix(factors...) = MulQuasiMatrix(Mul(factors...))
 _MulArray(factors...) = MulQuasiArray(factors...)
 _MulArray(factors::AbstractArray...) = MulArray(factors...)
 
-*(A::MulQuasiArray, B::MulQuasiArray) = materialize(Mul(A.applied.args..., B.applied.args...))
-*(A::MulQuasiArray, B::AbstractQuasiArray) = materialize(Mul(A.applied.args..., B))
-*(A::AbstractQuasiArray, B::MulQuasiArray) = materialize(Mul(A, B.applied.args...))
-*(A::MulQuasiArray, B::AbstractArray) = materialize(Mul(A.applied.args..., B))
-*(A::AbstractArray, B::MulQuasiArray) = materialize(Mul(A, B.applied.args...))
+most(a) = reverse(tail(reverse(a)))
+
+MulQuasiOrArray = Union{MulArray,MulQuasiArray}
+
+_factors(M::MulQuasiOrArray) = M.applied.args
+_factors(M) = (M,)
+
+_flatten() = ()
+_flatten(A, B...) = (A, _flatten(B...)...)
+_flatten(A::Mul, B...) = _flatten(A.args..., B...)
+flatten(A::Mul) = Mul(_flatten(A.args...)...)
+
+_flatten(A::MulQuasiArray, B...) = _flatten(A.applied, B...)
+flatten(A::MulQuasiArray) = MulQuasiArray(flatten(A.applied))
+
+function fullmaterialize(M::Applied{<:Any,typeof(*)})
+    M_mat = materialize(flatten(M))
+    typeof(M_mat) <: MulQuasiOrArray || return M_mat
+    typeof(M_mat.applied) == typeof(M) || return(fullmaterialize(M_mat))
+
+    ABC = M_mat.applied.args
+    length(ABC) ≤ 2 && return M_mat
+
+    AB = most(ABC)
+    Mhead = fullmaterialize(Mul(AB...))
+
+    typeof(_factors(Mhead)) == typeof(AB) ||
+        return fullmaterialize(Mul(_factors(Mhead)..., last(ABC)))
+
+    BC = tail(ABC)
+    Mtail =  fullmaterialize(Mul(BC...))
+    typeof(_factors(Mtail)) == typeof(BC) ||
+        return fullmaterialize(Mul(first(ABC), _factors(Mtail)...))
+
+    first(ABC) * Mtail
+end
+
+fullmaterialize(M::ApplyQuasiArray) = fullmaterialize(M.applied)
+fullmaterialize(M) = M
+
+*(A::MulQuasiArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A.applied.args..., B.applied.args...)))
+*(A::MulQuasiArray, B::AbstractQuasiArray) = fullmaterialize(materialize(Mul(A.applied.args..., B)))
+*(A::AbstractQuasiArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A, B.applied.args...)))
+*(A::MulQuasiArray, B::AbstractArray) = fullmaterialize(materialize(Mul(A.applied.args..., B)))
+*(A::AbstractArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A, B.applied.args...)))
+
+
 
 adjoint(A::MulQuasiArray) = MulQuasiArray(reverse(adjoint.(A.applied.args))...)
 transpose(A::MulQuasiArray) = MulQuasiArray(reverse(transpose.(A.applied.args))...)
