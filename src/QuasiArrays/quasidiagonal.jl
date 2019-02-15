@@ -85,7 +85,7 @@ function size(D::QuasiDiagonal,d::Integer)
     return d<=2 ? length(D.diag) : 1
 end
 
-@inline function getindex(D::QuasiDiagonal, i::Int, j::Int)
+@inline function getindex(D::QuasiDiagonal, i::Number, j::Number)
     @boundscheck checkbounds(D, i, j)
     if i == j
         @inbounds r = D.diag[i]

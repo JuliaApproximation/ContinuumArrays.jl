@@ -211,12 +211,12 @@ pinv(v::QuasiTransposeAbsVec, tol::Real = 0) = pinv(conj(v.parent)).parent
 
 
 function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint,<:QuasiAdjoint})
-    Ac,Bc = M.factors
+    Ac,Bc = M.args
     materialize(Mul(parent(Bc),parent(Ac)))'
 end
 
 function adjoint(M::Mul)
-    Mul(reverse(adjoint.(M.factors))...)
+    Mul(reverse(adjoint.(M.args))...)
 end
 
 ==(A::QuasiAdjoint, B::QuasiAdjoint) = parent(A) == parent(B)

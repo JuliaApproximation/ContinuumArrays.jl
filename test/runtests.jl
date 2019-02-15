@@ -1,12 +1,19 @@
-using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test,
-    InfiniteArrays
+using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
     import ContinuumArrays: ℵ₁, materialize
-    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec
-    import LazyArrays: rmaterialize
+    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
+    import LazyArrays: MemoryLayout, ApplyStyle
+
+
+@testset "Inclusion" begin
+    @test Inclusion(-1..1)[0.0] === 0
+    @test_throws InexactError Inclusion(-1..1)[0.1]
+    X = QuasiDiagonal(Inclusion(-1.0..1))
+    @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
+end
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)
-    @test axes(δ) === (axes(δ,1),) === (-1..3,)
+    @test axes(δ) === (axes(δ,1),) === (Inclusion(-1..3),)
     @test size(δ) === (length(δ),) === (ℵ₁,)
     @test δ[1.1] === 0.0
     @test δ[0.0] === Inf
@@ -15,7 +22,9 @@ end
 
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
-    @test axes(H) === (axes(H,1),axes(H,2)) === (1.0..3.0, Base.OneTo(2))
+    @test ApplyStyle(*, H) == LazyQuasiArrayApplyStyle()
+
+    @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1.0..3.0), Base.OneTo(2))
     @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
 
     @test_throws BoundsError H[0.1, 1]
@@ -35,7 +44,7 @@ end
     @test_throws BoundsError H[[0.1,2.1], 1]
 
     f = H*[1,2]
-    @test axes(f) == (1.0..3.0,)
+    @test axes(f) == (Inclusion(1.0..3.0),)
     @test f[1.1] ≈ 1
     @test f[2.1] ≈ 2
 
@@ -61,7 +70,7 @@ end
     @test_throws BoundsError L[[0.1,2.1], 1]
 
     f = L*[1,2,4]
-    @test axes(f) == (1.0..3.0,)
+    @test axes(f) == (Inclusion(1.0..3.0),)
     @test f[1.1] ≈ 1.1
     @test f[2.1] ≈ 2.2
 
@@ -75,18 +84,29 @@ end
 @testset "Derivative" begin
     L = LinearSpline([1,2,3])
     f = L*[1,2,4]
-    D = Derivative(axes(L,1))
-    @test D*L isa MulQuasiMatrix
+    @test f[1.2] == 1.2
 
-    fp = (D*L)*[1,2,4]
+    D = Derivative(axes(L,1))
+    @test ApplyStyle(*,D,L) isa LazyQuasiArrayApplyStyle
+    @test D*L isa MulQuasiMatrix
+    @test eltype(D*L) == Float64
+
+    M = applied(*, (D*L).applied.args..., [1,2,4])
+    @test M.style isa LazyQuasiArrayApplyStyle
+    @test eltype(materialize(M)) == Float64
+
+    fp = D*L*[1,2,4]
+
+    @test eltype(fp) == Float64
+
     @test fp isa Vec
-    @test length(fp.mul.factors) == 2
+    @test length(fp.applied.args) == 2
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
 
-    fp = D*f
-    @test length(fp.mul.factors) == 2
 
+    fp = D*f
+    @test length(fp.applied.args) == 2
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
 end
@@ -96,19 +116,15 @@ end
     L = LinearSpline(0:2)
 
     D = Derivative(axes(L,1))
-    M = rmaterialize(Mul(D',D*L))
-    @test length(M.mul.factors) == 3
-    @test last(M.mul.factors) isa BandedMatrix
 
-    @test M.mul.factors == rmaterialize(Mul(D',D,L)).mul.factors ==
-        *(D',D,L).mul.factors
+    M = ContinuumArrays.QuasiArrays.flatten(Mul(D',D*L))
+    @test length(M.args) == 3
+    @test last(M.args) isa BandedMatrix
 
     @test (L'D') isa MulQuasiMatrix
     A = (L'D') * (D*L)
     @test A == (D*L)'*(D*L) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
-
-    @test A isa MulArray
-    @test bandwidths(A) == (1,1)
+    @test_skip bandwidths(A) == (1,1)
 end
 
 @testset "Views" begin
@@ -166,17 +182,36 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
+S = Jacobi(true,true)
+L = Ldiv(S, S)
+@test eltype(L) == Float64
+
+pinv(S)
+
+MemoryLayout(pinv(S))
+Mul(pinv(S) , S)
+
+@test (S\S) === materialize(L)
+
+P =
+
+@which pinv(P)
+typeof(S) |> supertype|>supertype|>supertype
+ContinuumArrays.QuasiArrays.ApplyStyle(pinv, S)
+
 @testset "Jacobi" begin
     S = Jacobi(true,true)
     W = Diagonal(JacobiWeight(true,true))
     D = Derivative(axes(W,1))
     P = Legendre()
 
+    @test pinv(pinv(S)) === S
+
     Bi = pinv(Jacobi(2,2))
     @test Bi isa ContinuumArrays.QuasiArrays.PInvQuasiMatrix
-    @test PInv(P)*P === pinv(P)*P === Eye(∞)
+    @test pinv(P)*P === Eye(∞)
 
-    A = @inferred(PInv(Jacobi(2,2))*(D*S))
+    A = @inferred(pinv(Jacobi(2,2))*(D*S))
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
 
     @test A isa MulMatrix
@@ -187,8 +222,8 @@ end
 
     M = @inferred(D*S)
     @test M isa MulQuasiMatrix
-    @test M.mul.factors[1] == Jacobi(2,2)
-    @test M.mul.factors[2][1:10,1:10] == A[1:10,1:10]
+    @test M.applied.args[1] == Jacobi(2,2)
+    @test M.applied.args[2][1:10,1:10] == A[1:10,1:10]
 
     L = Diagonal(JacobiWeight(true,false))
     A = @inferred(pinv(Jacobi(false,true))*L*S)

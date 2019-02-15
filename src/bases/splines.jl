@@ -8,7 +8,8 @@ const HeavisideSpline{T} = Spline{0,T}
 
 Spline{o}(pts::AbstractVector{T}) where {o,T} = Spline{o,float(T)}(pts)
 
-axes(B::Spline{o}) where o = (first(B.points)..last(B.points), Base.OneTo(length(B.points)+o-1))
+axes(B::Spline{o}) where o =
+    (Inclusion(first(B.points)..last(B.points)), OneTo(length(B.points)+o-1))
 ==(A::Spline{o}, B::Spline{o}) where o = A.points == B.points
 
 function getindex(B::LinearSpline{T}, x::Real, k::Int) where T
@@ -36,8 +37,9 @@ function getindex(B::HeavisideSpline{T}, x::Real, k::Int) where T
 end
 
 
-function copyto!(dest::SymTridiagonal, AB::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) where T
-    Ac,B = AB.factors
+function copyto!(dest::SymTridiagonal,
+                 AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) where T
+    Ac,B = AB.args
     A = parent(Ac)
     A.points == B.points || throw(ArgumentError())
     dv,ev = dest.dv,dest.ev
@@ -61,16 +63,16 @@ end
 
 
 ## Mass matrix
-function similar(AB::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
+function similar(AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
     n = size(AB,1)
     SymTridiagonal(Vector{T}(undef, n), Vector{T}(undef, n-1))
 end
 #
-materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
+materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
     copyto!(similar(M, eltype(M)), M)
 
-function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:HeavisideSpline},<:HeavisideSpline})
-    Ac, B = M.factors
+function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:HeavisideSpline},<:HeavisideSpline})
+    Ac, B = M.args
     axes(Ac,2) == axes(B,1) || throw(DimensionMismatch("axes must be same"))
     A = parent(Ac)
     A.points == B.points || throw(ArgumentError("Cannot multiply incompatible splines"))
@@ -78,10 +80,10 @@ function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint{<:Any,<:HeavisideSpline}
 end
 
 ## Derivative
-function copyto!(dest::MulQuasiMatrix{<:Any,<:Mul2{<:Any,<:Any,<:HeavisideSpline}},
-                 M::Mul2{<:Any,<:Any,<:Derivative,<:LinearSpline})
-    D, L = M.factors
-    H, A = dest.mul.factors
+function copyto!(dest::MulQuasiMatrix{<:Any,<:QMul2{<:HeavisideSpline,<:Any}},
+                 M::QMul2{<:Derivative,<:LinearSpline})
+    D, L = M.args
+    H, A = dest.applied.args
     x = H.points
 
     axes(dest) == axes(M) || throw(DimensionMismatch("axes must be same"))
@@ -95,12 +97,12 @@ function copyto!(dest::MulQuasiMatrix{<:Any,<:Mul2{<:Any,<:Any,<:HeavisideSpline
     dest
 end
 
-function similar(M::Mul2{<:Any,<:Any,<:Derivative,<:LinearSpline}, ::Type{T}) where T
-    D, B = M.factors
+function similar(M::QMul2{<:Derivative,<:LinearSpline}, ::Type{T}) where T
+    D, B = M.args
     n = size(B,2)
     MulQuasiMatrix(HeavisideSpline{T}(B.points),
         BandedMatrix{T}(undef, (n-1,n), (0,1)))
 end
 
-materialize(M::Mul2{<:Any,<:Any,<:Derivative,<:LinearSpline}) =
+materialize(M::QMul2{<:Derivative,<:LinearSpline}) =
     copyto!(similar(M, eltype(M)), M)

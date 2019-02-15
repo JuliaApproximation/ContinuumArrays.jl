@@ -1,20 +1,45 @@
 
-const QuasiArrayMulArray{styleA, styleB, p, q, T, V} =
-    Mul2{styleA, styleB, <:AbstractQuasiArray{T,p}, <:AbstractArray{V,q}}
+const QuasiArrayMulArray{p, q, T, V} =
+    Applied{<:Any, typeof(*), <:Tuple{<:AbstractQuasiArray{T,p}, <:AbstractArray{V,q}}}
 
-const ArrayMulQuasiArray{styleA, styleB, p, q, T, V} =
-    Mul2{styleA, styleB, <:AbstractArray{T,p}, <:AbstractQuasiArray{V,q}}
+const ArrayMulQuasiArray{p, q, T, V} =
+    Applied{<:Any, typeof(*), <:Tuple{<:AbstractArray{T,p}, <:AbstractQuasiArray{V,q}}}
 
-const QuasiArrayMulQuasiArray{styleA, styleB, p, q, T, V} =
-    Mul2{styleA, styleB, <:AbstractQuasiArray{T,p}, <:AbstractQuasiArray{V,q}}
+const QuasiArrayMulQuasiArray{p, q, T, V} =
+    Applied{<:Any, typeof(*), <:Tuple{<:AbstractQuasiArray{T,p}, <:AbstractQuasiArray{V,q}}}
 ####
 # Matrix * Vector
 ####
-const QuasiMatMulVec{styleA, styleB, T, V} = QuasiArrayMulArray{styleA, styleB, 2, 1, T, V}
+const QuasiMatMulVec{T, V} = QuasiArrayMulArray{2, 1, T, V}
+const QuasiMatMulMat{T, V} = QuasiArrayMulArray{2, 2, T, V}
+const QuasiMatMulQuasiMat{T, V} = QuasiArrayMulQuasiArray{2, 2, T, V}
+
+
+import LazyArrays: _mul, rowsupport
+
+function getindex(M::Mul, k::Real)
+    A,Bs = first(M.args), tail(M.args)
+    B = _mul(Bs...)
+    ret = zero(eltype(M))
+    for j = rowsupport(A, k)
+        ret += A[k,j] * B[j]
+    end
+    ret
+end
+
+function getindex(M::Mul, k::Real, j::Real)
+    A,Bs = first(M.args), tail(M.args)
+    B = _mul(Bs...)
+    ret = zero(eltype(M))
+    @inbounds for ℓ in (rowsupport(A,k) ∩ colsupport(B,j))
+        ret += A[k,ℓ] * B[ℓ,j]
+    end
+    ret
+end
 
 
 function getindex(M::QuasiMatMulVec, k::Real)
-    A,B = M.factors
+    A,B = M.args
     ret = zero(eltype(M))
     @inbounds for j in axes(A,2)
         ret += A[k,j] * B[j]
@@ -23,7 +48,7 @@ function getindex(M::QuasiMatMulVec, k::Real)
 end
 
 function getindex(M::QuasiMatMulVec, k::AbstractArray)
-    A,B = M.factors
+    A,B = M.args
     ret = zeros(eltype(M),length(k))
     @inbounds for j in axes(A,2)
         ret .+= view(A,k,j) .* B[j]
@@ -32,26 +57,69 @@ function getindex(M::QuasiMatMulVec, k::AbstractArray)
 end
 
 
-QuasiMatMulMat{styleA, styleB, T, V} = QuasiArrayMulArray{styleA, styleB, 2, 2, T, V}
-QuasiMatMulQuasiMat{styleA, styleB, T, V} = QuasiArrayMulQuasiArray{styleA, styleB, 2, 2, T, V}
+# Used for when a lazy version should be constructed on materialize
+struct LazyQuasiArrayApplyStyle <: ApplyStyle end
 
-*(A::AbstractQuasiArray, B...) = materialize(Mul(A,B...))
-*(A::AbstractQuasiArray, B::AbstractQuasiArray, C...) = materialize(Mul(A,B,C...))
-*(A::AbstractArray, B::AbstractQuasiArray, C...) = materialize(Mul(A,B,C...))
+ndims(M::Applied{LazyQuasiArrayApplyStyle,typeof(*)}) = ndims(last(M.args))
+
+
+*(A::AbstractQuasiArray, B...) = fullmaterialize(materialize(Mul(A,B...)))
+*(A::AbstractQuasiArray, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A,B,C...)))
+*(A::AbstractArray, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A,B,C...)))
+
 pinv(A::AbstractQuasiArray) = materialize(PInv(A))
 inv(A::AbstractQuasiArray) = materialize(Inv(A))
 
-*(A::AbstractQuasiArray, B::Mul, C...) = materialize(Mul(A, B.factors..., C...))
-*(A::Mul, B::AbstractQuasiArray, C...) = materialize(Mul(A.factors..., B, C...))
+
+\(A::AbstractQuasiArray, B::AbstractQuasiArray) = materialize(Ldiv(A,B))
+
+
+*(A::AbstractQuasiArray, B::Mul, C...) = fullmaterialize(materialize(Mul(A, B.args..., C...)))
+*(A::Mul, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A.args..., B, C...)))
+
+
+struct ApplyQuasiArray{T, N, App<:Applied} <: AbstractQuasiArray{T,N}
+    applied::App
+end
+
+const ApplyQuasiVector{T, App<:Applied} = ApplyQuasiArray{T, 1, App}
+const ApplyQuasiMatrix{T, App<:Applied} = ApplyQuasiArray{T, 2, App}
+
+
+ApplyQuasiArray{T,N}(M::App) where {T,N,App<:Applied} = ApplyQuasiArray{T,N,App}(M)
+ApplyQuasiArray{T}(M::Applied) where {T} = ApplyQuasiArray{T,ndims(M)}(M)
+ApplyQuasiArray(M::Applied) = ApplyQuasiArray{eltype(M)}(M)
+ApplyQuasiVector(M::Applied) = ApplyQuasiVector{eltype(M)}(M)
+ApplyQuasiMatrix(M::Applied) = ApplyQuasiMatrix{eltype(M)}(M)
+
+ApplyQuasiArray(f, factors...) = ApplyQuasiArray(applied(f, factors...))
+ApplyQuasiArray{T}(f, factors...) where T = ApplyQuasiArray{T}(applied(f, factors...))
+ApplyQuasiArray{T,N}(f, factors...) where {T,N} = ApplyQuasiArray{T,N}(applied(f, factors...))
+
+ApplyQuasiVector(f, factors...) = ApplyQuasiVector(applied(f, factors...))
+ApplyQuasiMatrix(f, factors...) = ApplyQuasiMatrix(applied(f, factors...))
+
+axes(A::ApplyQuasiArray) = axes(A.applied)
+size(A::ApplyQuasiArray) = map(length, axes(A))
+
+IndexStyle(::ApplyQuasiArray{<:Any,1}) = IndexLinear()
+
+@propagate_inbounds getindex(A::ApplyQuasiArray{T,N}, kj::Vararg{Real,N}) where {T,N} =
+    A.applied[kj...]
+
+MemoryLayout(M::ApplyQuasiArray) = ApplyLayout(M.applied.f, MemoryLayout.(M.applied.args))
+
+materialize(A::Applied{LazyQuasiArrayApplyStyle}) = ApplyQuasiArray(A)
+
+@inline copyto!(dest::AbstractQuasiArray, M::Applied) = _copyto!(MemoryLayout(dest), dest, M)
+@inline _copyto!(_, dest::AbstractQuasiArray, M::Applied) = copyto!(dest, materialize(M))
 
 
 ####
 # MulQuasiArray
 #####
 
-struct MulQuasiArray{T, N, MUL<:Mul} <: AbstractQuasiArray{T,N}
-    mul::MUL
-end
+const MulQuasiArray{T, N, MUL<:Mul} = ApplyQuasiArray{T, N, MUL}
 
 const MulQuasiVector{T, MUL<:Mul} = MulQuasiArray{T, 1, MUL}
 const MulQuasiMatrix{T, MUL<:Mul} = MulQuasiArray{T, 2, MUL}
@@ -74,44 +142,80 @@ MulQuasiMatrix(factors...) = MulQuasiMatrix(Mul(factors...))
 _MulArray(factors...) = MulQuasiArray(factors...)
 _MulArray(factors::AbstractArray...) = MulArray(factors...)
 
-axes(A::MulQuasiArray) = axes(A.mul)
-size(A::MulQuasiArray) = map(length, axes(A))
+most(a) = reverse(tail(reverse(a)))
 
-IndexStyle(::MulQuasiArray{<:Any,1}) = IndexLinear()
+MulQuasiOrArray = Union{MulArray,MulQuasiArray}
 
-==(A::MulQuasiArray, B::MulQuasiArray) = A.mul == B.mul
+_factors(M::MulQuasiOrArray) = M.applied.args
+_factors(M) = (M,)
 
-@propagate_inbounds getindex(A::MulQuasiArray, kj::Real...) = A.mul[kj...]
+_flatten() = ()
+_flatten(A, B...) = (A, _flatten(B...)...)
+_flatten(A::Mul, B...) = _flatten(A.args..., B...)
+flatten(A::Mul) = Mul(_flatten(A.args...)...)
 
-*(A::MulQuasiArray, B::MulQuasiArray) = A.mul * B.mul
-*(A::MulQuasiArray, B::Mul) = A.mul * B
-*(A::Mul, B::MulQuasiArray) = A * B.mul
-*(A::MulQuasiArray, B::AbstractQuasiArray) = A.mul * B
-*(A::AbstractQuasiArray, B::MulQuasiArray) = A * B.mul
-*(A::MulQuasiArray, B::AbstractArray) = A.mul * B
-*(A::AbstractArray, B::MulQuasiArray) = A * B.mul
+_flatten(A::MulQuasiArray, B...) = _flatten(A.applied, B...)
+flatten(A::MulQuasiArray) = MulQuasiArray(flatten(A.applied))
 
-adjoint(A::MulQuasiArray) = MulQuasiArray(reverse(adjoint.(A.mul.factors))...)
-transpose(A::MulQuasiArray) = MulQuasiArray(reverse(transpose.(A.mul.factors))...)
+function fullmaterialize(M::Applied{<:Any,typeof(*)})
+    M_mat = materialize(flatten(M))
+    typeof(M_mat) <: MulQuasiOrArray || return M_mat
+    typeof(M_mat.applied) == typeof(M) || return(fullmaterialize(M_mat))
+
+    ABC = M_mat.applied.args
+    length(ABC) ≤ 2 && return M_mat
+
+    AB = most(ABC)
+    Mhead = fullmaterialize(Mul(AB...))
+
+    typeof(_factors(Mhead)) == typeof(AB) ||
+        return fullmaterialize(Mul(_factors(Mhead)..., last(ABC)))
+
+    BC = tail(ABC)
+    Mtail =  fullmaterialize(Mul(BC...))
+    typeof(_factors(Mtail)) == typeof(BC) ||
+        return fullmaterialize(Mul(first(ABC), _factors(Mtail)...))
+
+    first(ABC) * Mtail
+end
+
+fullmaterialize(M::ApplyQuasiArray) = fullmaterialize(M.applied)
+fullmaterialize(M) = M
+
+*(A::MulQuasiArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A.applied.args..., B.applied.args...)))
+*(A::MulQuasiArray, B::AbstractQuasiArray) = fullmaterialize(materialize(Mul(A.applied.args..., B)))
+*(A::AbstractQuasiArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A, B.applied.args...)))
+*(A::MulQuasiArray, B::AbstractArray) = fullmaterialize(materialize(Mul(A.applied.args..., B)))
+*(A::AbstractArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A, B.applied.args...)))
+
+
+
+adjoint(A::MulQuasiArray) = MulQuasiArray(reverse(adjoint.(A.applied.args))...)
+transpose(A::MulQuasiArray) = MulQuasiArray(reverse(transpose.(A.applied.args))...)
 
 function similar(A::MulQuasiArray)
-    B,a = A.mul.factors
+    B,a = A.applied.args
     B*similar(a)
 end
 
 
-MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.mul.factors))
+MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.applied.args))
 
+ApplyStyle(::typeof(*), ::AbstractQuasiArray, B...) =
+    LazyQuasiArrayApplyStyle()
+ApplyStyle(::typeof(*), ::AbstractArray, ::AbstractQuasiArray, B...) =
+    LazyQuasiArrayApplyStyle()
+ApplyStyle(::typeof(*), ::AbstractArray, ::AbstractArray, ::AbstractQuasiArray, B...) =
+    LazyQuasiArrayApplyStyle()
 
+for op in (:pinv, :inv)
+    @eval ApplyStyle(::typeof($op), args::AbstractQuasiArray) =
+        LazyQuasiArrayApplyStyle()
+end
 ## PInvQuasiMatrix
 
-function _PInvQuasiMatrix end
 
-struct PInvQuasiMatrix{T, PINV<:AbstractPInv} <: AbstractQuasiMatrix{T}
-    pinv::PINV
-    global _PInvQuasiMatrix(pinv::PINV) where PINV = new{eltype(pinv), PINV}(pinv)
-end
-
+const PInvQuasiMatrix{T, PINV<:InvOrPInv} = ApplyQuasiMatrix{T,PINV}
 const InvQuasiMatrix{T, INV<:Inv} = PInvQuasiMatrix{T,INV}
 
 PInvQuasiMatrix(M) = _PInvQuasiMatrix(PInv(M))
@@ -119,11 +223,10 @@ InvQuasiMatrix(M) = _PInvQuasiMatrix(Inv(M))
 
 axes(A::PInvQuasiMatrix) = axes(A.pinv)
 size(A::PInvQuasiMatrix) = map(length, axes(A))
+pinv(A::PInvQuasiMatrix) = first(A.pinv.args)
 
 @propagate_inbounds getindex(A::PInvQuasiMatrix{T}, k::Int, j::Int) where T =
     (A.pinv*[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
-
-MemoryLayout(M::PInvQuasiMatrix) = MemoryLayout(M.pinv)
 
 *(A::PInvQuasiMatrix, B::AbstractQuasiMatrix, C...) = *(A.pinv, B, C...)
 *(A::PInvQuasiMatrix, B::MulQuasiArray, C...) = *(A.pinv, B.mul, C...)
@@ -133,8 +236,8 @@ MemoryLayout(M::PInvQuasiMatrix) = MemoryLayout(M.pinv)
 # Matrix * Array
 ####
 
-_flatten(A::MulQuasiArray, B...) = _flatten(A.mul.factors..., B...)
-flatten(A::MulQuasiArray) = MulQuasiArray(Mul(_flatten(A.mul.factors...)))
+_flatten(A::MulQuasiArray, B...) = _flatten(A.applied.args..., B...)
+flatten(A::MulQuasiArray) = MulQuasiArray(Mul(_flatten(A.applied.args...)...))
 
 
 # the default is always Array
@@ -147,40 +250,40 @@ _materialize(M::QuasiArrayMulQuasiArray, _) = MulQuasiArray(M)
 
 # if multiplying two MulQuasiArrays simplifies the arguments, we materialize,
 # otherwise we leave it as a lazy object
-_mulquasi_join(As, M::MulQuasiArray, Cs) = MulQuasiArray(As..., M.mul.factors..., Cs...)
+_mulquasi_join(As, M::MulQuasiArray, Cs) = MulQuasiArray(As..., M.applied.args..., Cs...)
 _mulquasi_join(As, B, Cs) = *(As..., B, Cs...)
 
 
 function _materialize(M::Mul2{<:Any,<:Any,<:MulQuasiArray,<:MulQuasiArray}, _)
-    As, Bs = M.factors
+    As, Bs = M.args
     _mul_join(reverse(tail(reverse(As))), last(As) * first(Bs), tail(Bs))
 end
 
 
 function _materialize(M::Mul2{<:Any,<:Any,<:MulQuasiArray,<:AbstractQuasiArray}, _)
-    As, B = M.factors
-    rmaterialize(Mul(As.mul.factors..., B))
+    As, B = M.args
+    rmaterialize(Mul(As.applied.args..., B))
 end
 
 function _materialize(M::Mul2{<:Any,<:Any,<:AbstractQuasiArray,<:MulQuasiArray}, _)
-    A, Bs = M.factors
-    *(A, Bs.mul.factors...)
+    A, Bs = M.args
+    *(A, Bs.applied.args...)
 end
 
 # A MulQuasiArray can't be materialized further left-to-right, so we do right-to-left
 function _materialize(M::Mul2{<:Any,<:Any,<:MulQuasiArray,<:AbstractArray}, _)
-    As, B = M.factors
-    rmaterialize(Mul(As.mul.factors..., B))
+    As, B = M.args
+    rmaterialize(Mul(As.applied.args..., B))
 end
 
 function _lmaterialize(A::MulQuasiArray, B, C...)
-    As = A.mul.factors
+    As = A.applied.args
     flatten(_MulArray(reverse(tail(reverse(As)))..., _lmaterialize(last(As), B, C...)))
 end
 
 
 
 function _rmaterialize(Z::MulQuasiArray, Y, W...)
-    Zs = Z.mul.factors
+    Zs = Z.applied.args
     flatten(_MulArray(_rmaterialize(first(Zs), Y, W...), tail(Zs)...))
 end

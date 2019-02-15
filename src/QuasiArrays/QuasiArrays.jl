@@ -2,9 +2,9 @@ module QuasiArrays
 using Base, LinearAlgebra, LazyArrays
 import Base: getindex, size, axes, length, ==, isequal, iterate, CartesianIndices, LinearIndices,
                 Indices, IndexStyle, getindex, setindex!, parent, vec, convert, similar, zero,
-                map, eachindex, eltype, first, last, firstindex, lastindex
+                map, eachindex, eltype, first, last, firstindex, lastindex, in
 import Base: @_inline_meta, DimOrInd, OneTo, @_propagate_inbounds_meta, @_noinline_meta,
-                DimsInteger, error_if_canonical_getindex, @propagate_inbounds, _return_type, _default_type,
+                DimsInteger, error_if_canonical_getindex, @propagate_inbounds, _return_type,
                 _maybetail, tail, _getindex, _maybe_reshape, index_ndims, _unsafe_getindex,
                 index_shape, to_shape, unsafe_length, @nloops, @ncall, Slice, unalias
 import Base: ViewIndex, Slice, ScalarIndex, RangeIndex, view, viewindexing, ensure_indexable, index_dimsum,
@@ -21,10 +21,11 @@ import Base: Array, Matrix, Vector
 import Base.Broadcast: materialize
 
 import LinearAlgebra: transpose, adjoint, checkeltype_adjoint, checkeltype_transpose, Diagonal,
-                        AbstractTriangular
+                        AbstractTriangular, pinv, inv
 
-import LazyArrays: MemoryLayout, UnknownLayout, Mul2, _materialize, MulLayout, ⋆, rmaterialize,
-                    _rmaterialize, _lmaterialize, flatten, _flatten, AbstractPInv
+import LazyArrays: MemoryLayout, UnknownLayout, Mul2, _materialize, MulLayout, ⋆,
+                    _lmaterialize, InvOrPInv, ApplyStyle,
+                    LayoutApplyStyle, Applied
 
 export AbstractQuasiArray, AbstractQuasiMatrix, AbstractQuasiVector, materialize
 
@@ -48,5 +49,9 @@ include("abstractquasiarraymath.jl")
 
 include("quasiadjtrans.jl")
 include("quasidiagonal.jl")
+
+
+materialize(M::Applied{<:Any,typeof(*),<:Tuple{Vararg{<:Union{Adjoint,QuasiAdjoint,QuasiDiagonal}}}}) =
+    materialize(Mul(reverse(adjoint.(M.args))...))'
 
 end
