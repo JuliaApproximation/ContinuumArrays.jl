@@ -1,5 +1,5 @@
 using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
-    import ContinuumArrays: ℵ₁, materialize
+    import ContinuumArrays: ℵ₁, materialize, BasisStyle
     import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
     import LazyArrays: MemoryLayout, ApplyStyle
 
@@ -22,7 +22,7 @@ end
 
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
-    @test ApplyStyle(*, H) == LazyQuasiArrayApplyStyle()
+    @test ApplyStyle(*, H) == BasisStyle()
 
     @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1.0..3.0), Base.OneTo(2))
     @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
@@ -62,7 +62,7 @@ end
     @test L[2.1,2] ≈ 0.9
     @test L[2.1,3] == L'[3,2.1] == transpose(L)[3,2.1] ≈ 0.1
     @test_throws BoundsError L[3.1,2]
-    L[[1.1,2.1], 1]
+    
     @test L[[1.1,2.1], 1] == L'[1,[1.1,2.1]] == transpose(L)[1,[1.1,2.1]] ≈ [0.9,0.0]
     @test L[1.1,1:2] ≈ [0.9,0.1]
     @test L[[1.1,2.1], 1:2] ≈ [0.9 0.1; 0.0 0.9]
@@ -182,23 +182,6 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
-S = Jacobi(true,true)
-L = Ldiv(S, S)
-@test eltype(L) == Float64
-
-pinv(S)
-
-MemoryLayout(pinv(S))
-Mul(pinv(S) , S)
-
-@test (S\S) === materialize(L)
-
-P =
-
-@which pinv(P)
-typeof(S) |> supertype|>supertype|>supertype
-ContinuumArrays.QuasiArrays.ApplyStyle(pinv, S)
-
 @testset "Jacobi" begin
     S = Jacobi(true,true)
     W = Diagonal(JacobiWeight(true,true))
@@ -209,9 +192,9 @@ ContinuumArrays.QuasiArrays.ApplyStyle(pinv, S)
 
     Bi = pinv(Jacobi(2,2))
     @test Bi isa ContinuumArrays.QuasiArrays.PInvQuasiMatrix
-    @test pinv(P)*P === Eye(∞)
+    @test P\P === Bi*P === Eye(∞)
 
-    A = @inferred(pinv(Jacobi(2,2))*(D*S))
+    A = @inferred(Jacobi(2,2) \ (D*S)) 
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
 
     @test A isa MulMatrix

@@ -208,6 +208,13 @@ ApplyStyle(::typeof(*), ::AbstractArray, ::AbstractQuasiArray, B...) =
 ApplyStyle(::typeof(*), ::AbstractArray, ::AbstractArray, ::AbstractQuasiArray, B...) =
     LazyQuasiArrayApplyStyle()
 
+ApplyStyle(::typeof(\), ::AbstractQuasiArray, ::AbstractQuasiArray) =
+    LazyQuasiArrayApplyStyle()
+ApplyStyle(::typeof(\), ::AbstractQuasiArray, ::AbstractArray) =
+    LazyQuasiArrayApplyStyle()
+ApplyStyle(::typeof(\), ::AbstractArray, ::AbstractQuasiArray) =
+    LazyQuasiArrayApplyStyle()    
+
 for op in (:pinv, :inv)
     @eval ApplyStyle(::typeof($op), args::AbstractQuasiArray) =
         LazyQuasiArrayApplyStyle()
@@ -221,24 +228,20 @@ const InvQuasiMatrix{T, INV<:Inv} = PInvQuasiMatrix{T,INV}
 PInvQuasiMatrix(M) = _PInvQuasiMatrix(PInv(M))
 InvQuasiMatrix(M) = _PInvQuasiMatrix(Inv(M))
 
-axes(A::PInvQuasiMatrix) = axes(A.pinv)
+axes(A::PInvQuasiMatrix) = axes(A.applied)
 size(A::PInvQuasiMatrix) = map(length, axes(A))
-pinv(A::PInvQuasiMatrix) = first(A.pinv.args)
+pinv(A::PInvQuasiMatrix) = first(A.applied.args)
 
 @propagate_inbounds getindex(A::PInvQuasiMatrix{T}, k::Int, j::Int) where T =
     (A.pinv*[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-*(A::PInvQuasiMatrix, B::AbstractQuasiMatrix, C...) = *(A.pinv, B, C...)
-*(A::PInvQuasiMatrix, B::MulQuasiArray, C...) = *(A.pinv, B.mul, C...)
+*(A::PInvQuasiMatrix, B::AbstractQuasiMatrix, C...) = *(A.applied, B, C...)
+*(A::PInvQuasiMatrix, B::MulQuasiArray, C...) = *(A.applied, B.applied, C...)
 
 
 ####
 # Matrix * Array
 ####
-
-_flatten(A::MulQuasiArray, B...) = _flatten(A.applied.args..., B...)
-flatten(A::MulQuasiArray) = MulQuasiArray(Mul(_flatten(A.applied.args...)...))
-
 
 # the default is always Array
 
