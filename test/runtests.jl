@@ -146,7 +146,6 @@ end
     @test B[0.1,:] == [0.1]
 end
 
-
 @testset "Subindex of splines" begin
     L = LinearSpline(range(0,stop=1,length=10))
     @test L[:,2:end-1] isa MulQuasiMatrix
@@ -161,6 +160,10 @@ end
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
     D = Derivative(axes(L,1))
     Δ = -((B'D')*(D*B)) # Weak Laplacian
+
+    @test Δ == -(B'D'D*B)
+    @test_broken Δ == -B'*(D'D)*B
+    @test Δ == -(B'*(D'D)*B)
 
     f = L*exp.(L.points) # project exp(x)
     u = B * (Δ \ (B'f))

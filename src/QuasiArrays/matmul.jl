@@ -176,7 +176,7 @@ function fullmaterialize(M::Applied{<:Any,typeof(*)})
     typeof(_factors(Mtail)) == typeof(BC) ||
         return fullmaterialize(Mul(first(ABC), _factors(Mtail)...))
 
-    first(ABC) * Mtail
+    materialize(Mul(first(ABC), Mtail.applied.args...))
 end
 
 fullmaterialize(M::ApplyQuasiArray) = fullmaterialize(M.applied)
