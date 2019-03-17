@@ -25,7 +25,7 @@ import LinearAlgebra: transpose, adjoint, checkeltype_adjoint, checkeltype_trans
 
 import LazyArrays: MemoryLayout, UnknownLayout, Mul2, _materialize, MulLayout, ⋆,
                     _lmaterialize, InvOrPInv, ApplyStyle,
-                    LayoutApplyStyle, Applied
+                    LayoutApplyStyle, Applied, flatten, _flatten
 
 export AbstractQuasiArray, AbstractQuasiMatrix, AbstractQuasiVector, materialize
 
@@ -52,6 +52,6 @@ include("quasidiagonal.jl")
 
 
 materialize(M::Applied{<:Any,typeof(*),<:Tuple{Vararg{<:Union{Adjoint,QuasiAdjoint,QuasiDiagonal}}}}) =
-    materialize(Mul(reverse(adjoint.(M.args))...))'
+    apply(*,reverse(adjoint.(M.args))...)'
 
 end

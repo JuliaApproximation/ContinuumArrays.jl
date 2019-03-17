@@ -58,24 +58,30 @@ end
 
 
 # Used for when a lazy version should be constructed on materialize
-struct LazyQuasiArrayApplyStyle <: ApplyStyle end
+abstract type AbstractQuasiArrayApplyStyle <: ApplyStyle end
+struct LazyQuasiArrayApplyStyle <: AbstractQuasiArrayApplyStyle end
+struct QuasiArrayApplyStyle <: AbstractQuasiArrayApplyStyle end
 
 ndims(M::Applied{LazyQuasiArrayApplyStyle,typeof(*)}) = ndims(last(M.args))
 
 
-*(A::AbstractQuasiArray, B...) = fullmaterialize(materialize(Mul(A,B...)))
-*(A::AbstractQuasiArray, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A,B,C...)))
-*(A::AbstractArray, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A,B,C...)))
+*(A::AbstractQuasiArray, B...) = fullmaterialize(apply(*,A,B...))
+*(A::AbstractQuasiArray, B::AbstractQuasiArray, C...) = fullmaterialize(apply(*,A,B,C...))
+*(A::AbstractArray, B::AbstractQuasiArray, C...) = fullmaterialize(apply(*,A,B,C...))
 
 pinv(A::AbstractQuasiArray) = materialize(PInv(A))
 inv(A::AbstractQuasiArray) = materialize(Inv(A))
 
+axes(L::Ldiv{<:Any,<:Any,<:AbstractQuasiMatrix}) =
+    (axes(L.args[1], 2),axes(L.args[2],2))
+axes(L::Ldiv{<:Any,<:Any,<:AbstractQuasiVector}) =
+    (axes(L.args[1], 2),)    
 
-\(A::AbstractQuasiArray, B::AbstractQuasiArray) = materialize(Ldiv(A,B))
+ \(A::AbstractQuasiArray, B::AbstractQuasiArray) = materialize(Ldiv(A,B))
 
 
-*(A::AbstractQuasiArray, B::Mul, C...) = fullmaterialize(materialize(Mul(A, B.args..., C...)))
-*(A::Mul, B::AbstractQuasiArray, C...) = fullmaterialize(materialize(Mul(A.args..., B, C...)))
+*(A::AbstractQuasiArray, B::Mul, C...) = fullmaterialize(apply(*,A, B.args..., C...))
+*(A::Mul, B::AbstractQuasiArray, C...) = fullmaterialize(apply(*,A.args..., B, C...))
 
 
 struct ApplyQuasiArray{T, N, App<:Applied} <: AbstractQuasiArray{T,N}
@@ -149,13 +155,9 @@ MulQuasiOrArray = Union{MulArray,MulQuasiArray}
 _factors(M::MulQuasiOrArray) = M.applied.args
 _factors(M) = (M,)
 
-_flatten() = ()
-_flatten(A, B...) = (A, _flatten(B...)...)
-_flatten(A::Mul, B...) = _flatten(A.args..., B...)
-flatten(A::Mul) = Mul(_flatten(A.args...)...)
-
 _flatten(A::MulQuasiArray, B...) = _flatten(A.applied, B...)
 flatten(A::MulQuasiArray) = MulQuasiArray(flatten(A.applied))
+
 
 function fullmaterialize(M::Applied{<:Any,typeof(*)})
     M_mat = materialize(flatten(M))
@@ -163,7 +165,7 @@ function fullmaterialize(M::Applied{<:Any,typeof(*)})
     typeof(M_mat.applied) == typeof(M) || return(fullmaterialize(M_mat))
 
     ABC = M_mat.applied.args
-    length(ABC) ≤ 2 && return M_mat
+    length(ABC) ≤ 2 && return flatten(M_mat)
 
     AB = most(ABC)
     Mhead = fullmaterialize(Mul(AB...))
@@ -176,17 +178,17 @@ function fullmaterialize(M::Applied{<:Any,typeof(*)})
     typeof(_factors(Mtail)) == typeof(BC) ||
         return fullmaterialize(Mul(first(ABC), _factors(Mtail)...))
 
-    materialize(Mul(first(ABC), Mtail.applied.args...))
+    apply(*,first(ABC), Mtail.applied.args...)
 end
 
-fullmaterialize(M::ApplyQuasiArray) = fullmaterialize(M.applied)
-fullmaterialize(M) = M
+fullmaterialize(M::ApplyQuasiArray) = flatten(fullmaterialize(M.applied))
+fullmaterialize(M) = flatten(M)
 
-*(A::MulQuasiArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A.applied.args..., B.applied.args...)))
-*(A::MulQuasiArray, B::AbstractQuasiArray) = fullmaterialize(materialize(Mul(A.applied.args..., B)))
-*(A::AbstractQuasiArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A, B.applied.args...)))
-*(A::MulQuasiArray, B::AbstractArray) = fullmaterialize(materialize(Mul(A.applied.args..., B)))
-*(A::AbstractArray, B::MulQuasiArray) = fullmaterialize(materialize(Mul(A, B.applied.args...)))
+*(A::MulQuasiArray, B::MulQuasiArray) = flatten(fullmaterialize(apply(*,A.applied.args..., B.applied.args...)))
+*(A::MulQuasiArray, B::AbstractQuasiArray) = flatten(fullmaterialize(apply(*,A.applied.args..., B)))
+*(A::AbstractQuasiArray, B::MulQuasiArray) = flatten(fullmaterialize(apply(*,A, B.applied.args...)))
+*(A::MulQuasiArray, B::AbstractArray) = flatten(fullmaterialize(apply(*,A.applied.args..., B)))
+*(A::AbstractArray, B::MulQuasiArray) = flatten(fullmaterialize(apply(*,A, B.applied.args...)))
 
 
 
@@ -235,8 +237,8 @@ pinv(A::PInvQuasiMatrix) = first(A.applied.args)
 @propagate_inbounds getindex(A::PInvQuasiMatrix{T}, k::Int, j::Int) where T =
     (A.pinv*[Zeros(j-1); one(T); Zeros(size(A,2) - j)])[k]
 
-*(A::PInvQuasiMatrix, B::AbstractQuasiMatrix, C...) = *(A.applied, B, C...)
-*(A::PInvQuasiMatrix, B::MulQuasiArray, C...) = *(A.applied, B.applied, C...)
+*(A::PInvQuasiMatrix, B::AbstractQuasiMatrix, C...) = apply(*,A.applied, B, C...)
+*(A::PInvQuasiMatrix, B::MulQuasiArray, C...) = apply(*,A.applied, B.applied, C...)
 
 
 ####

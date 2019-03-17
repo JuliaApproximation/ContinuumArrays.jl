@@ -212,7 +212,7 @@ pinv(v::QuasiTransposeAbsVec, tol::Real = 0) = pinv(conj(v.parent)).parent
 
 function materialize(M::Mul2{<:Any,<:Any,<:QuasiAdjoint,<:QuasiAdjoint})
     Ac,Bc = M.args
-    materialize(Mul(parent(Bc),parent(Ac)))'
+    apply(*,parent(Bc),parent(Ac))'
 end
 
 function adjoint(M::Mul)

@@ -35,11 +35,11 @@ function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasi
     B[parent(A).x,:]
 end
 
-struct Derivative{T,A} <: AbstractQuasiMatrix{T}
-    axis::A
+struct Derivative{T,D} <: AbstractQuasiMatrix{T}
+    axis::Inclusion{T,D}
 end
 
-Derivative{T}(axis::A) where {T,A<:AbstractQuasiVector} = Derivative{T,A}(axis)
+Derivative{T}(axis::A) where {T,A<:Inclusion} = Derivative{T,A}(axis)
 Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
 Derivative(axis) = Derivative{Float64}(axis)
 
@@ -54,9 +54,6 @@ function materialize(M::QMul2{<:Derivative,<:SubQuasiArray})
     (Derivative(axes(P,1))*P)[parentindices(B)...]
 end
 
-
-materialize(M::QMul2{<:Derivative,<:Any}) = MulQuasiArray(M)
-materialize(M::QMul2{<:Any,<:Derivative}) = MulQuasiArray(M)
 
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
 #     f::F

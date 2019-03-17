@@ -35,9 +35,9 @@ materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:Legendre},<:Legendre}) =
 # Jacobi Matrix
 ########
 
-materialize(M::Mul{<:Any,<:Tuple{<:PInv{<:Any,<:Legendre},
-                                        <:Identity,
-                                        <:Legendre}}) =
+materialize(M::Ldiv{<:Any,<:Legendre,
+                               <:QMul2{<:Identity,
+                                       <:Legendre}}) =
     _BandedMatrix(Vcat(((0:∞)./(1:2:∞))', Zeros(1,∞), ((1:∞)./(1:2:∞))'), ∞, 1,1)
 
 
@@ -52,12 +52,12 @@ end
 # Derivatives
 ##########
 
-# pinv(Jacobi(b+1,a+1))D*W*Jacobi(a,b)
-function materialize(M::Mul{<:Any,<:Tuple{<:PInv{<:Any,<:Jacobi},
-                                        <:Derivative{<:Any,<:ChebyshevInterval},
-                                        <:Jacobi}})
-    Ji, D, S = M.args
-    J = parent(Ji)
+# Jacobi(b+1,a+1)\(D*Jacobi(a,b))
+function materialize(M::Ldiv{BasisStyle,<:Jacobi,
+                                        <:QMul2{<:Derivative{<:Any,<:ChebyshevInterval},
+                                                <:Jacobi}})
+    J, DS = M.args
+    D,S = DS.args
     (J.b == S.b+1 && J.a == S.a+1) || throw(ArgumentError())
     _BandedMatrix(((1:∞ .+ 1 .+ S.a .+ S.b)/2)', ∞, -1,1)
 end
@@ -65,34 +65,39 @@ end
 
 function materialize(M::QMul2{<:Derivative{<:Any,<:ChebyshevInterval},<:Jacobi})
     D, S = M.args
-    A = PInv(Jacobi(S.b+1,S.a+1))*D*S
+    A = apply(\,Jacobi(S.b+1,S.a+1),applied(*,D,S))
     MulQuasiMatrix(Jacobi(S.b+1,S.a+1), A)
 end
 
-# pinv(Legendre())D*W*Jacobi(true,true)
-function materialize(M::Mul{<:Any,<:Tuple{<:PInv{<:Any,<:Legendre},
-                                        <:Derivative{<:Any,<:ChebyshevInterval},
-                                        QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
-    Li, _, W, S = M.args
+# Legendre()\ (D*W*Jacobi(true,true))
+function materialize(M::Ldiv{BasisStyle,<:Legendre,
+                                        QMul3{<:Derivative{<:Any,<:ChebyshevInterval},
+                                              QuasiDiagonal{Bool,JacobiWeight{Bool}},
+                                              Jacobi{Bool}}})
+    L, DWS = M.args
+    D, W, S = DWS.args
     w = parent(W)
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
     _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
 end
 
 # reduce to Legendre
-function materialize(M::QMul2{<:Derivative{<:Any,<:ChebyshevInterval},
-                                        QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}})
+function materialize(M::QMul3{<:Derivative{<:Any,<:ChebyshevInterval},
+                              QuasiDiagonal{Bool,JacobiWeight{Bool}},
+                              Jacobi{Bool}})
     D, W, S = M.args
     w = parent(W)
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
-    A = pinv(Legendre{eltype(M)}())*D*W*S
+    A = apply(\, Legendre{eltype(M)}(), applied(*,D,W,S))
     MulQuasiMatrix(Legendre(), A)
 end
 
-function materialize(M::QMul2{<:PInv{<:Any,<:Jacobi{Bool}},
-                            QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}})
-    Ji, W, S = M.args
-    J,w = parent(Ji),parent(W)
+function materialize(M::Ldiv{BasisStyle,<:Jacobi{Bool},
+                                    <:QMul2{QuasiDiagonal{Bool,JacobiWeight{Bool}},
+                                            Jacobi{Bool}}})
+    J, WS = M.args
+    W,S = WS.args
+    w = parent(W)
     @assert  S.b && S.a
     if w.b && !w.a
         @assert !J.b && J.a
@@ -105,10 +110,11 @@ function materialize(M::QMul2{<:PInv{<:Any,<:Jacobi{Bool}},
     end
 end
 
-function materialize(M::QMul2{<:PInv{<:Any,<:Legendre},
-                            QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}})
-    Li, W, S = M.args
-    L,w = parent(Li),parent(W)
+function materialize(M::Ldiv{BasisStyle,<:Legendre,
+                                        <:QMul2{QuasiDiagonal{Bool,JacobiWeight{Bool}},Jacobi{Bool}}})
+    L, WS = M.args
+    W,S = WS.args
+    w = parent(W)
     if w.b && w.a
         @assert S.b && S.a
         _BandedMatrix(Vcat(((2:2:∞)./(3:2:∞))', Zeros(1,∞), (-(2:2:∞)./(3:2:∞))'), ∞, 2,0)

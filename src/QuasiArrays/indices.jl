@@ -172,9 +172,9 @@ axes1(S::Inclusion{<:Any,<:OneTo}) = S.domain
 
 first(S::Inclusion) = first(S.domain)
 last(S::Inclusion) = last(S.domain)
-size(S::Inclusion) = (length(S.domain),)
-length(S::Inclusion) = length(S.domain)
-unsafe_length(S::Inclusion) = unsafe_length(S.domain)
+size(S::Inclusion) = (cardinality(S.domain),)
+length(S::Inclusion) = cardinality(S.domain)
+unsafe_length(S::Inclusion) = cardinality(S.domain)
 cardinality(S::Inclusion) = cardinality(S.domain)
 getindex(S::Inclusion{T}, i::Real) where T =
     (@_inline_meta; @boundscheck checkbounds(S, i); convert(T,i))

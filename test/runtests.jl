@@ -1,5 +1,5 @@
 using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
-    import ContinuumArrays: ℵ₁, materialize, BasisStyle
+    import ContinuumArrays: ℵ₁, materialize, BasisStyle   
     import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
     import LazyArrays: MemoryLayout, ApplyStyle
 
@@ -192,12 +192,12 @@ end
     P = Legendre()
 
     @test pinv(pinv(S)) === S
+    @test P\P === pinv(P)*P === Eye(∞)
 
     Bi = pinv(Jacobi(2,2))
     @test Bi isa ContinuumArrays.QuasiArrays.PInvQuasiMatrix
-    @test P\P === Bi*P === Eye(∞)
 
-    A = @inferred(Jacobi(2,2) \ (D*S)) 
+    A = Jacobi(2,2) \ (D*S)
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
 
     @test A isa MulMatrix
@@ -212,16 +212,17 @@ end
     @test M.applied.args[2][1:10,1:10] == A[1:10,1:10]
 
     L = Diagonal(JacobiWeight(true,false))
-    A = @inferred(pinv(Jacobi(false,true))*L*S)
+    @test apply(\, Jacobi(false,true), applied(*,L,S)) isa BandedMatrix
+    A = @inferred(Jacobi(false,true)\(L*S))
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
 
     L = Diagonal(JacobiWeight(false,true))
-    A = @inferred(pinv(Jacobi(true,false))*L*S)
+    A = @inferred(Jacobi(true,false)\(L*S))
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
 
-    A,B = (P'P),(pinv(P)*W*S)
+    A,B = (P'P),P\(W*S)
 
     M = Mul(A,B)
     @test M[1,1] == 4/3
@@ -233,9 +234,13 @@ end
 
     @test A*B isa MulArray
 
-    A,B,C = (pinv(P)*W*S)',(P'P),(pinv(P)*W*S)
+    A,B,C = (P\(W*S))',(P'P),P\(W*S)
     M = MulArray(A,B,C)
-    @test typeof(A*B*C) == typeof(M)
+    @test bandwidths(M) == (2,2)
+    @test M[1,1] ≈  1+1/15
+    @test typeof(M) == typeof(A*B*C)
+    M = A*B*C
+    @test bandwidths(M) == (2,2)
     @test M[1,1] ≈  1+1/15
 end
 
@@ -244,16 +249,22 @@ end
     W = Diagonal(JacobiWeight(true,true))
     D = Derivative(axes(W,1))
     P = Legendre()
+    
+    M = P\(D*W*S)
+    @test M isa ApplyArray
+    @test M[1:10,1:10] == diagm(-1 => -2.0:-2:-18.0)
+
     N = 10
+    @test P\((D*W)*S[:,1:N]) isa AbstractMatrix
 
-    @test fullmaterialize(pinv(P)*(D*W)*S[:,1:N]) isa AbstractMatrix
-
-    L = fullmaterialize(D*W*S[:,1:N])
+    L = D*W*S
     Δ = L'L
     @test Δ isa MulMatrix
+    @test Δ[1:3,1:3] isa BandedMatrix
     @test bandwidths(Δ) == (0,0)
 
-    L = (D*W*S[:,1:N])
-    Δ = fullmaterialize(L'L)
-    @test Δ isa Matrix
+    L = D*W*S[:,1:N]
+    Δ = L'L
+    @test_broken Δ isa MulMatrix
+    @test_broken bandwidths(Δ) == (0,0)
 end
