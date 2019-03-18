@@ -200,6 +200,23 @@ function similar(A::MulQuasiArray)
     B*similar(a)
 end
 
+function similar(A::QuasiArrayMulArray)
+    B,a = A.args
+    applied(*, B, similar(a))
+end
+
+function copy(a::MulQuasiArray)
+    @_propagate_inbounds_meta
+    copymutable(a)
+end
+
+function copyto!(dest::MulQuasiArray, src::MulQuasiArray)
+    d = last(dest.applied.args)
+    s = last(src.applied.args)
+    copyto!(IndexStyle(d), d, IndexStyle(s), s)
+    dest
+end
+
 
 MemoryLayout(M::MulQuasiArray) = MulLayout(MemoryLayout.(M.applied.args))
 
