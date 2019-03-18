@@ -200,6 +200,11 @@ function similar(A::MulQuasiArray)
     B*similar(a)
 end
 
+function similar(A::QuasiArrayMulArray)
+    B,a = A.args
+    applied(*, B, similar(a))
+end
+
 function copy(a::MulQuasiArray)
     @_propagate_inbounds_meta
     copymutable(a)
