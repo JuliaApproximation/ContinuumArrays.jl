@@ -1,9 +1,11 @@
-struct JacobiWeight{T} <: AbstractQuasiVector{T}
+abstract type AbstractJacobiWeight{T} <: AbstractQuasiVector{T} end
+
+struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     b::T
     a::T
 end
 
-axes(::JacobiWeight) = (Inclusion(ChebyshevInterval()),)
+axes(::AbstractJacobiWeight) = (Inclusion(ChebyshevInterval()),)
 function getindex(w::JacobiWeight, x::Real)
     x ∈ axes(w,1) || throw(BoundsError())
     (1-x)^w.a * (1+x)^w.b

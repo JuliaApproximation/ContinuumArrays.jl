@@ -53,3 +53,4 @@ end
 
 include("splines.jl")
 include("jacobi.jl")
+include("ultraspherical.jl")

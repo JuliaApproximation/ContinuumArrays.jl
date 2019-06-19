@@ -35,6 +35,11 @@ function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasi
     B[parent(A).x,:]
 end
 
+#########
+# Derivative
+#########
+
+
 struct Derivative{T,D} <: AbstractQuasiMatrix{T}
     axis::Inclusion{T,D}
 end
@@ -62,3 +67,5 @@ end
 
 
 const Identity{T,D} = QuasiDiagonal{T,Inclusion{T,D}}
+
+Identity(d::Inclusion) = QuasiDiagonal(d)

@@ -1,7 +1,7 @@
 using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
-    import ContinuumArrays: ℵ₁, materialize, BasisStyle   
-    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
-    import LazyArrays: MemoryLayout, ApplyStyle
+import ContinuumArrays: ℵ₁, materialize, BasisStyle, Chebyshev, Ultraspherical
+import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
+import LazyArrays: MemoryLayout, ApplyStyle
 
 
 @testset "Inclusion" begin
@@ -183,6 +183,27 @@ end
     u = B * (A \ (B'f))
 
     @test u[0.1] ≈ 0.00012678835289369413
+end
+
+@testset "Ultraspherical" begin
+    T = Chebyshev()
+    U = Ultraspherical(1)
+    C = Ultraspherical(2)
+    D = Derivative(axes(T,1))
+    D₀ = (U\(D*T))[1:10,1:10]
+    @test D₀ isa BandedMatrix{Float64}
+    @test D₀ == diagm(1 => 1:9)
+
+    D₁ = C\(D*U)
+    materialize(apply(*,D₁,D₀))
+
+    S₀ = (U\T)[1:10,1:10]
+    @test S₀ isa BandedMatrix{Float64}
+    @test S₀ == diagm(0 => [1.0; fill(0.5,9)], 2=> fill(-0.5,8))
+
+    S₁ = (C\U)[1:10,1:10]
+    @test S₁ isa BandedMatrix{Float64}
+    @test S₁ == diagm(0 => 1 ./ (1:10), 2=> -(1 ./ (3:10)))
 end
 
 @testset "Jacobi" begin
