@@ -9,7 +9,7 @@ struct UltrasphericalWeight{T,Λ} <: AbstractJacobiWeight{T}
     λ::Λ
 end
 
-function getindex(w::ChebyshevWeight, x::Real)
+function getindex(w::UltrasphericalWeight, x::Real)
     x ∈ axes(w,1) || throw(BoundsError())
     (1-x^2)^(w.λ-one(w.λ)/2)
 end
