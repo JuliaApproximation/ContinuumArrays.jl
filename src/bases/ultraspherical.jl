@@ -130,3 +130,17 @@ function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,<:Ultraspherical})
         throw(ArgumentError())
     end
 end
+
+
+####
+# interrelationships
+####
+
+# (18.7.3)
+
+function materialize(M::Ldiv{BasisStyle,<:Chebyshev,<:Jacobi})
+    A,B = M.args
+    T = eltype(M)
+    (B.a == B.b == -T/2) || throw(ArgumentError())
+    Diagonal(Jacobi(-T/2,-T/2)[1,:])
+end

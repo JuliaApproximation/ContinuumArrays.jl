@@ -3,7 +3,10 @@ abstract type AbstractJacobiWeight{T} <: AbstractQuasiVector{T} end
 struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     b::T
     a::T
+    JacobiWeight{T}(b, a) where T = new{T}(convert(T,b), convert(T,a))
 end
+
+JacobiWeight(b::T, a::V) where {T,V} = JacobiWeight{promote_type(T,V)}(b,a)
 
 axes(::AbstractJacobiWeight) = (Inclusion(ChebyshevInterval()),)
 function getindex(w::JacobiWeight, x::Real)
@@ -21,7 +24,10 @@ Legendre() = Legendre{Float64}()
 struct Jacobi{T} <: AbstractJacobi{T}
     b::T
     a::T
+    Jacobi{T}(b, a) where T = new{T}(convert(T,b), convert(T,a))
 end
+
+Jacobi(b::T, a::V) where {T,V} = Jacobi{promote_type(T,V)}(b,a)
 
 axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 ==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
@@ -51,6 +57,18 @@ end
 
 
 ##########
+# Conversion
+##########
+
+function materialize(M::Ldiv{BasisStyle,<:Jacobi,<:Jacobi}) 
+    A,B = M.args
+    a,b = B.a,B.b
+    if A.a == a && A.b == b+1
+        _BandedMatrix(Vcat((((0:∞) .+ a)./((1:2:∞) .+ (a+b)))', (((1:∞) .+ (a+b))./((1:2:∞) .+ (a+b)))'), ∞, 0,1)
+    end
+end
+
+##########
 # Derivatives
 ##########
 
@@ -61,7 +79,7 @@ function materialize(M::Ldiv{BasisStyle,<:Jacobi,
     J, DS = M.args
     D,S = DS.args
     (J.b == S.b+1 && J.a == S.a+1) || throw(ArgumentError())
-    _BandedMatrix(((1:∞ .+ 1 .+ S.a .+ S.b)/2)', ∞, -1,1)
+    _BandedMatrix((((1:∞) .+ (S.a + S.b))/2)', ∞, -1,1)
 end
 
 
@@ -92,6 +110,28 @@ function materialize(M::QMul3{<:Derivative{<:Any,<:ChebyshevInterval},
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
     A = apply(\, Legendre{eltype(M)}(), applied(*,D,W,S))
     MulQuasiMatrix(Legendre(), A)
+end
+
+# Jacobi(b-1,a-1)\ (D*w*Jacobi(b,a))
+function materialize(M::Ldiv{BasisStyle,<:Jacobi,
+    QMul3{<:Derivative{<:Any,<:ChebyshevInterval},
+          <:QuasiDiagonal{<:Any,<:JacobiWeight},
+          <:Jacobi}})
+    L, DWS = M.args
+    D, W, S = DWS.args
+    w = parent(W)
+    (w.a == S.a == L.a+1 && w.b == S.b == L.b+1) || throw(ArgumentError())
+    _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
+end
+
+function materialize(M::QMul3{<:Derivative{<:Any,<:ChebyshevInterval},
+QuasiDiagonal{Bool,JacobiWeight{Bool}},
+Jacobi{Bool}})
+D, W, S = M.args
+w = parent(W)
+(w.a && S.a && w.b && S.b) || throw(ArgumentError())
+A = apply(\, Legendre{eltype(M)}(), applied(*,D,W,S))
+MulQuasiMatrix(Legendre(), A)
 end
 
 function materialize(M::Ldiv{BasisStyle,<:Jacobi{Bool},
