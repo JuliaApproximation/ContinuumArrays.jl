@@ -330,13 +330,13 @@ end
 
     P = Chebyshev()
     D = Derivative(axes(P,1))
-    D2 = D*(D*P)
+    D2 = D*(D*P) # could be D^2*P in the future
     n = 300
-    x = cos.((1:n-2) .* π ./ (n-1))
+    x = cos.((1:n-2) .* π ./ (n-1)) # interior Chebyshev points 
     C = [P[-1,1:n]';
          D2[x,1:n] + P[x,1:n];
          P[1,1:n]']
-    cfs = C \ [1; zeros(n-2); 2]
-    u = P[:,1:n]*cfs
+    cfs = C \ [1; zeros(n-2); 2] # Chebyshev coefficients
+    u = P[:,1:n]*cfs  # interpret in basis
     @test u[0.1] ≈ (3cos(0.1)sec(1) + csc(1)sin(0.1))/2
 end
