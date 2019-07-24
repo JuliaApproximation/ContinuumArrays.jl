@@ -1,5 +1,5 @@
 using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
-import ContinuumArrays: ℵ₁, materialize, BasisStyle, Chebyshev, Ultraspherical
+import ContinuumArrays: ℵ₁, materialize, BasisStyle, Chebyshev, Ultraspherical, jacobioperator
 import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
 import LazyArrays: MemoryLayout, ApplyStyle
 
@@ -288,4 +288,55 @@ end
     Δ = L'L
     @test_broken Δ isa MulMatrix
     @test_broken bandwidths(Δ) == (0,0)
+end
+
+
+@testset "Chebyshev evaluation" begin
+    P = Chebyshev()
+    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.1]
+    for N = 1:10
+        @test @inferred(P[0.1,Base.OneTo(N)]) ≈ @inferred(P[0.1,1:N]) ≈ [cos(n*acos(0.1)) for n = 0:N-1]
+        @test @inferred(P[0.1,N]) ≈ cos((N-1)*acos(0.1))
+    end
+    @test P[0.1,[2,5,10]] ≈ [0.1,cos(4acos(0.1)),cos(9acos(0.1))]
+
+    P = Ultraspherical(1)
+    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.2]
+    for N = 1:10
+        @test @inferred(P[0.1,Base.OneTo(N)]) ≈ @inferred(P[0.1,1:N]) ≈ [sin((n+1)*acos(0.1))/sin(acos(0.1)) for n = 0:N-1]
+        @test @inferred(P[0.1,N]) ≈ sin(N*acos(0.1))/sin(acos(0.1))
+    end
+    @test P[0.1,[2,5,10]] ≈ [0.2,sin(5acos(0.1))/sin(acos(0.1)),sin(10acos(0.1))/sin(acos(0.1))]
+
+    P = Ultraspherical(2)
+    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.4]
+    @test @inferred(P[0.1,Base.OneTo(3)]) == [1.0,0.4,-1.88]
+end
+
+@testset "Collocation" begin
+    P = Chebyshev()
+    D = Derivative(axes(P,1))
+    n = 300
+    x = cos.((1:n-1) .* π ./ (n-1))
+    cfs = [P[-1,1:n]'; (D*P)[x,1:n] - P[x,1:n]] \ [exp(-1); zeros(n-1)]
+    u = P[:,1:n]*cfs
+    @test u[0.1] ≈ exp(0.1)
+
+    P = Chebyshev()
+    D = Derivative(axes(P,1))
+    D2 = D*(D*P)
+    n = 300
+    x = cos.((1:n-2) .* π ./ (n-1))
+    C = [P[-1,1:n]';
+         D2[x,1:n] + P[x,1:n];
+         P[1,1:n]']
+    cfs = C \ [1; zeros(n-2); 2]
+    u = P[:,1:n]*cfs
+    @test u[0.1] ≈ (3cos(0.1)sec(1) + csc(1)sin(0.1))/2
 end

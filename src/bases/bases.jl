@@ -52,5 +52,6 @@ end
 
 
 include("splines.jl")
+include("orthogonalpolynomials.jl")
 include("jacobi.jl")
 include("ultraspherical.jl")

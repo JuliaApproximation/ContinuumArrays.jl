@@ -21,7 +21,7 @@ function getindex(M::Mul, k::Real)
     A,Bs = first(M.args), tail(M.args)
     B = _mul(Bs...)
     ret = zero(eltype(M))
-    for j = rowsupport(A, k)
+    for j = rowsupport(A, k) ∩ colsupport(B,1)
         ret += A[k,j] * B[j]
     end
     ret

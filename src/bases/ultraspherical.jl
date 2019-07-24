@@ -36,18 +36,13 @@ function materialize(M::Ldiv{BasisStyle,<:Chebyshev,
                                <:QMul2{<:Identity,
                                        <:Chebyshev}}) 
     T = eltype(M)                                       
-    BandedMatrix(-1 => Vcat([one(T)],Fill(one(T)/2,∞)), 1 => Vcat([one(T)/2],Fill(one(T)/2,∞)))
+    _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), Zeros(1,∞), Hcat(one(T), Fill(one(T)/2,1,∞))), ∞, 1, 1)
 end
-
 
 function materialize(M::QMul2{<:Identity,<:Chebyshev})
     X, P = M.args
     MulQuasiMatrix(P, apply(\, P, applied(*, X, P)))
 end
-
-recβ(::Type{T},S::Ultraspherical,k) where {T} = k/(2*(k-one(T)+order(S)))   # one(T) ensures we get correct type
-recγ(::Type{T},S::Ultraspherical,k) where {T} = (k-2+2order(S))/(2*(k-one(T)+order(S)))   # one(T) ensures we get correct type
-
 
 function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,
                                <:QMul2{<:Identity,
@@ -55,9 +50,9 @@ function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,
     T = eltype(M)         
     P,_ = M.args                              
     λ = P.λ
-    _BandedMatrix(Vcat(((one(T):∞) ./ (2 .*((zero(T):∞) .+ λ)))',
+    _BandedMatrix(Vcat((((2λ-1):∞) ./ (2 .*((zero(T):∞) .+ λ)))',
                         Zeros{T}(1,∞),
-                        (((2λ-1):∞) ./ (2 .*((zero(T):∞) .+ λ)))'), ∞, 1, 1)
+                        ((one(T):∞) ./ (2 .*((zero(T):∞) .+ λ)))'), ∞, 1, 1)
 end
 
 

@@ -1,11 +1,12 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, BandedMatrices, InfiniteArrays, DomainSets, InfiniteBandedMatrices
+using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, InfiniteArrays, DomainSets, InfiniteBandedMatrices
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
-                IndexStyle, IndexLinear, ==, OneTo, tail
+                IndexStyle, IndexLinear, ==, OneTo, tail, similar
 import Base.Broadcast: materialize
 import LazyArrays: Mul2, MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
+import FillArrays: AbstractFill, getindex_value
 
 include("QuasiArrays/QuasiArrays.jl")
 using .QuasiArrays
@@ -13,7 +14,7 @@ import .QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slic
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre,
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre, Chebyshev,
             fullmaterialize
 
 ####
