@@ -1,6 +1,6 @@
-using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
 import ContinuumArrays: ℵ₁, materialize, BasisStyle, Chebyshev, Ultraspherical, jacobioperator
-import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
+import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
 import LazyArrays: MemoryLayout, ApplyStyle
 
 
@@ -117,7 +117,7 @@ end
 
     D = Derivative(axes(L,1))
 
-    M = ContinuumArrays.QuasiArrays.flatten(Mul(D',D*L))
+    M = QuasiArrays.flatten(Mul(D',D*L))
     @test length(M.args) == 3
     @test last(M.args) isa BandedMatrix
 
@@ -149,7 +149,7 @@ end
 @testset "Subindex of splines" begin
     L = LinearSpline(range(0,stop=1,length=10))
     @test L[:,2:end-1] isa MulQuasiMatrix
-    @test_broken L[:,2:end-1][0.1,1] == L[0.1,2]
+    @test L[:,2:end-1][0.1,1] == L[0.1,2]
     v = randn(8)
     f = L[:,2:end-1] * v
     @test f[0.1] ≈ (L*[0; v; 0])[0.1]
@@ -216,7 +216,7 @@ end
     @test P\P === pinv(P)*P === Eye(∞)
 
     Bi = pinv(Jacobi(2,2))
-    @test Bi isa ContinuumArrays.QuasiArrays.PInvQuasiMatrix
+    @test Bi isa QuasiArrays.PInvQuasiMatrix
 
     A = Jacobi(2,2) \ (D*S)
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))

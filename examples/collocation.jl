@@ -1,5 +1,5 @@
-using ContinuumArrays, FillArrays, InfiniteArrays
-import ContinuumArrays.QuasiArrays: Inclusion, QuasiDiagonal
+using ContinuumArrays, QuasiArrays, FillArrays, InfiniteArrays
+import QuasiArrays: Inclusion, QuasiDiagonal
 
 using Plots; pyplot();
 
