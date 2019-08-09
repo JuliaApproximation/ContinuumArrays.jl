@@ -8,6 +8,7 @@ ApplyStyle(_, ::Basis) = BasisStyle()
 ApplyStyle(_, ::Basis, ::AbstractArray) = BasisStyle()
 ApplyStyle(::typeof(*), ::Basis, ::AbstractArray) = BasisStyle()
 
+
 pinv(J::Basis) = apply(pinv,J)
 materialize(P::Applied{BasisStyle,typeof(pinv)}) = ApplyQuasiMatrix(pinv,parent(P))
 

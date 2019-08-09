@@ -1,7 +1,7 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, InfiniteArrays, DomainSets, InfiniteLinearAlgebra, QuasiArrays
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
-                IndexStyle, IndexLinear, ==, OneTo, tail, similar
+                IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!
 import Base.Broadcast: materialize
 import LazyArrays: Mul2, MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport
 import LinearAlgebra: pinv
@@ -9,7 +9,7 @@ import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value
 
 
-import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slice, Inclusion, SubQuasiArray,
+import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle
 

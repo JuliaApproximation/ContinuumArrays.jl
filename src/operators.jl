@@ -1,5 +1,29 @@
 
 
+struct SimplifyStyle <: ApplyStyle end
+
+
+macro simplify(qt)
+    @assert qt.head == :function || qt.head == :(=)
+    @assert qt.args[1].head == :call
+    @assert qt.args[1].args[1] == :(*)
+    @assert length(qt.args[1].args) == 3
+    @assert qt.args[1].args[2].head == :(::)
+    Aname,Atyp = qt.args[1].args[2].args
+    Bname,Btyp = qt.args[1].args[3].args
+    mat = qt.args[2]
+    esc(quote
+        LazyArrays.ApplyStyle(::typeof(*), ::$Atyp, ::$Btyp) = ContinuumArrays.SimplifyStyle()
+        function materialize(M::QMul2{<:$Atyp,<:$Btyp})
+            $Aname,$Bname = M.args
+            axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
+            $mat
+        end
+    end)
+end
+
+
+
 struct DiracDelta{T,A} <: AbstractQuasiVector{T}
     x::T
     axis::A
@@ -23,17 +47,8 @@ function getindex(δ::DiracDelta{T}, x::Real) where T
 end
 
 
-function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiVector})
-    A, B = M.args
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
-    B[parent(A).x]
-end
-
-function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:DiracDelta},<:AbstractQuasiMatrix})
-    A, B = M.args
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
-    B[parent(A).x,:]
-end
+@simplify *(A::QuasiAdjoint{<:Any,<:DiracDelta}, B::AbstractQuasiVector) = B[parent(A).x]
+@simplify *(A::QuasiAdjoint{<:Any,<:DiracDelta}, B::AbstractQuasiMatrix) = B[parent(A).x,:]
 
 #########
 # Derivative

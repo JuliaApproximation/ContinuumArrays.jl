@@ -1,5 +1,5 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
-import ContinuumArrays: ℵ₁, materialize, BasisStyle, Chebyshev, Ultraspherical, jacobioperator
+import ContinuumArrays: ℵ₁, materialize, BasisStyle, Chebyshev, Ultraspherical, jacobioperator, SimplifyStyle
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
 import LazyArrays: MemoryLayout, ApplyStyle
 
@@ -48,6 +48,8 @@ end
     @test f[1.1] ≈ 1
     @test f[2.1] ≈ 2
 
+    @test ApplyStyle(*,H',H) == SimplifyStyle()
+
     @test H'H == Eye(2)
 end
 
@@ -87,7 +89,7 @@ end
     @test f[1.2] == 1.2
 
     D = Derivative(axes(L,1))
-    @test ApplyStyle(*,D,L) isa LazyQuasiArrayApplyStyle
+    @test ApplyStyle(*,D,L) isa SimplifyStyle
     @test D*L isa MulQuasiMatrix
     @test eltype(D*L) == Float64
 
@@ -159,9 +161,12 @@ end
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
     D = Derivative(axes(L,1))
-    Δ = -((B'D')*(D*B)) # Weak Laplacian
+    Δ = -((D*B)'*(D*B)) # Weak Laplacian
+
+    B'D'
 
     @test Δ == -(B'D'D*B)
+    @test_broken Δ == -((B'D')*(D*B))
     @test_broken Δ == -B'*(D'D)*B
     @test Δ == -(B'*(D'D)*B)
 

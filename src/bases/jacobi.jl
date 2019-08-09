@@ -163,7 +163,7 @@ function materialize(M::Ldiv{BasisStyle,<:Legendre,
     end
 end
 
-function materialize(M::QMul2{QuasiAdjoint{Bool,Jacobi{Bool}},
+function materialize(M::QMul3{QuasiAdjoint{Bool,Jacobi{Bool}},
                                         QuasiDiagonal{Int,JacobiWeight{Int}},Jacobi{Bool}})
     St, W, S = M.args
 
