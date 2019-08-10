@@ -5,8 +5,8 @@ import LazyArrays: MemoryLayout, ApplyStyle
 
 
 @testset "Inclusion" begin
-    @test Inclusion(-1..1)[0.0] === 0
     @test_throws InexactError Inclusion(-1..1)[0.1]
+    @test Inclusion(-1..1)[0.0] === 0
     X = QuasiDiagonal(Inclusion(-1.0..1))
     @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
 end
@@ -163,10 +163,8 @@ end
     D = Derivative(axes(L,1))
     Δ = -((D*B)'*(D*B)) # Weak Laplacian
 
-    B'D'
-
     @test Δ == -(B'D'D*B)
-    @test_broken Δ == -((B'D')*(D*B))
+    @test Δ == -((B'D')*(D*B))
     @test_broken Δ == -B'*(D'D)*B
     @test Δ == -(B'*(D'D)*B)
 
@@ -223,6 +221,8 @@ end
     Bi = pinv(Jacobi(2,2))
     @test Bi isa QuasiArrays.PInvQuasiMatrix
 
+    A = apply(\, Jacobi(2,2), applied(*, D, S))
+    A.data
     A = Jacobi(2,2) \ (D*S)
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
 

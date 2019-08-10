@@ -4,22 +4,71 @@ struct SimplifyStyle <: ApplyStyle end
 
 
 macro simplify(qt)
-    @assert qt.head == :function || qt.head == :(=)
+    qt.head == :function || qt.head == :(=) || error("Must start with a function")
     @assert qt.args[1].head == :call
-    @assert qt.args[1].args[1] == :(*)
-    @assert length(qt.args[1].args) == 3
-    @assert qt.args[1].args[2].head == :(::)
-    Aname,Atyp = qt.args[1].args[2].args
-    Bname,Btyp = qt.args[1].args[3].args
-    mat = qt.args[2]
-    esc(quote
-        LazyArrays.ApplyStyle(::typeof(*), ::$Atyp, ::$Btyp) = ContinuumArrays.SimplifyStyle()
-        function materialize(M::QMul2{<:$Atyp,<:$Btyp})
-            $Aname,$Bname = M.args
-            axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
-            $mat
+    if qt.args[1].args[1] == :(*)
+        mat = qt.args[2]
+        @assert qt.args[1].args[2].head == :(::)
+        Aname,Atyp = qt.args[1].args[2].args
+        Bname,Btyp = qt.args[1].args[3].args
+        if length(qt.args[1].args) == 3
+            esc(quote
+                LazyArrays.ApplyStyle(::typeof(*), ::$Atyp, ::$Btyp) = ContinuumArrays.SimplifyStyle()
+                function materialize(M::QMul2{<:$Atyp,<:$Btyp})
+                    $Aname,$Bname = M.args
+                    axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
+                    $mat
+                end
+            end)
+        else
+            @assert length(qt.args[1].args) == 4
+            Cname,Ctyp = qt.args[1].args[4].args
+            esc(quote
+            LazyArrays.ApplyStyle(::typeof(*), ::$Atyp, ::$Btyp, ::$Ctyp) = ContinuumArrays.SimplifyStyle()
+            function materialize(M::QMul3{<:$Atyp,<:$Btyp,<:$Ctyp})
+                $Aname,$Bname,$Cname = M.args
+                axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
+                axes($Bname,2) == axes($Cname,1) || throw(DimensionMismatch("axes must be same"))
+                $mat
+            end
+         end)
+    end
+    else # A \ (B*C)
+        mat = qt.args[2]  
+        @assert qt.args[1].args[1] == :(\)
+        @assert qt.args[1].args[2].head == :(::)
+        Aname,Atyp = qt.args[1].args[2].args
+        @assert qt.args[1].args[3].head == :call
+        @assert qt.args[1].args[3].args[1] == :(*)
+        @assert qt.args[1].args[3].args[2].head == :(::)
+        Bname,Btyp = qt.args[1].args[3].args[2].args
+        @assert qt.args[1].args[3].args[3].head == :(::)
+        Cname,Ctyp = qt.args[1].args[3].args[3].args   
+        if length(qt.args[1].args[3].args) == 3
+            esc(quote
+                function materialize(M::Ldiv{BasisStyle,<:$Atyp,<:QMul2{<:$Btyp,<:$Ctyp}})
+                    $Aname,BC = M.args
+                    $Bname,$Cname = BC.args
+                    (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1)) || 
+                        throw(DimensionMismatch("axes must be same"))
+                    $mat
+                end
+            end)
+        else
+            @assert length(qt.args[1].args[3].args) == 4
+            Dname,Dtyp = qt.args[1].args[3].args[4].args   
+            esc(quote
+                function materialize(M::Ldiv{BasisStyle,<:$Atyp,<:QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}})
+                    $Aname,BC = M.args
+                    $Bname,$Cname,$Dname = BC.args
+                    (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1) &&
+                    axes($Cname,2) == axes($Dname,1)) || 
+                        throw(DimensionMismatch("axes must be same"))
+                    $mat
+                end
+            end)
         end
-    end)
+    end
 end
 
 

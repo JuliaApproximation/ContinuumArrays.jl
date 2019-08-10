@@ -56,10 +56,7 @@ function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,
 end
 
 
-function materialize(M::QMul2{<:Identity,<:Ultraspherical})
-    X, P = M.args
-    MulQuasiMatrix(P, apply(\, P, applied(*, X, P)))
-end
+@simplify *(X::Identity, P::Ultraspherical) = MulQuasiMatrix(P, apply(\, P, applied(*, X, P)))
 
 
 ##########
@@ -67,35 +64,24 @@ end
 ##########
 
 # Ultraspherical(1)\(D*Chebyshev())
-function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,
-    <:QMul2{<:Derivative{<:Any,<:ChebyshevInterval},
-            <:Chebyshev}})
-    J, DS = M.args
-    D,S = DS.args
+@simplify function \(J::Ultraspherical, *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Chebyshev))
     (J.λ == 1) || throw(ArgumentError())
     _BandedMatrix((zero(eltype(M)):∞)', ∞, -1,1)
 end
 
 
-function materialize(M::QMul2{<:Derivative{<:Any,<:ChebyshevInterval},<:Chebyshev})
-    D, S = M.args
+@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Chebyshev)
     A = apply(\,Ultraspherical{eltype(S)}(1),applied(*,D,S))
     MulQuasiMatrix(Ultraspherical{eltype(S)}(1), A)
 end
 
 # Ultraspherical(λ+1)\(D*Ultraspherical(λ))
-function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,
-    <:QMul2{<:Derivative{<:Any,<:ChebyshevInterval},
-            <:Ultraspherical}})
-    J, DS = M.args
-    D,S = DS.args
+@simplify function \(J::Ultraspherical, *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Ultraspherical))
     (J.λ == S.λ+1) || throw(ArgumentError())
     _BandedMatrix(Fill(2S.λ,1,∞), ∞, -1,1)
 end
 
-
-function materialize(M::QMul2{<:Derivative{<:Any,<:ChebyshevInterval},<:Ultraspherical})
-    D, S = M.args
+@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Ultraspherical)
     A = apply(\,Ultraspherical{eltype(S)}(S.λ+1),applied(*,D,S))
     MulQuasiMatrix(Ultraspherical{eltype(S)}(S.λ+1), A)
 end
