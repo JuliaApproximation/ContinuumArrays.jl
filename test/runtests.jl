@@ -222,7 +222,7 @@ end
     @test Bi isa QuasiArrays.PInvQuasiMatrix
 
     A = apply(\, Jacobi(2,2), applied(*, D, S))
-    A.data
+    @test A isa BandedMatrix
     A = Jacobi(2,2) \ (D*S)
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
 
