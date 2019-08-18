@@ -32,7 +32,7 @@ Ultraspherical(λ::Λ) where Λ = Ultraspherical{Float64,Λ}(λ)
 # Jacobi Matrix
 ########
 
-function materialize(M::Ldiv{BasisStyle,<:Chebyshev,
+function materialize(M::Ldiv{<:Any,<:Any,<:Chebyshev,
                                <:QMul2{<:Identity,
                                        <:Chebyshev}}) 
     T = eltype(M)                                       
@@ -41,10 +41,10 @@ end
 
 function materialize(M::QMul2{<:Identity,<:Chebyshev})
     X, P = M.args
-    MulQuasiMatrix(P, apply(\, P, applied(*, X, P)))
+    ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
 end
 
-function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,
+function materialize(M::Ldiv{<:Any,<:Any,<:Ultraspherical,
                                <:QMul2{<:Identity,
                                        <:Ultraspherical}}) 
     T = eltype(M)         
@@ -56,7 +56,7 @@ function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,
 end
 
 
-@simplify *(X::Identity, P::Ultraspherical) = MulQuasiMatrix(P, apply(\, P, applied(*, X, P)))
+@simplify *(X::Identity, P::Ultraspherical) = ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
 
 
 ##########
@@ -72,7 +72,7 @@ end
 
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Chebyshev)
     A = apply(\,Ultraspherical{eltype(S)}(1),applied(*,D,S))
-    MulQuasiMatrix(Ultraspherical{eltype(S)}(1), A)
+    ApplyQuasiMatrix(*, Ultraspherical{eltype(S)}(1), A)
 end
 
 # Ultraspherical(λ+1)\(D*Ultraspherical(λ))
@@ -83,7 +83,7 @@ end
 
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Ultraspherical)
     A = apply(\,Ultraspherical{eltype(S)}(S.λ+1),applied(*,D,S))
-    MulQuasiMatrix(Ultraspherical{eltype(S)}(S.λ+1), A)
+    ApplyQuasiMatrix(*, Ultraspherical{eltype(S)}(S.λ+1), A)
 end
 
 
@@ -92,14 +92,14 @@ end
 ##########
 
 
-function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,<:Chebyshev})
+function materialize(M::Ldiv{<:Any,<:Any,<:Ultraspherical,<:Chebyshev})
     U,C = M.args
     (U.λ == 1) || throw(ArgumentError())
     T = eltype(M)
     BandedMatrix(0 => Vcat([one(T)],Fill(one(T)/2,∞)), 2 => Vcat([-one(T)/2],Fill(-one(T)/2,∞)))
 end
 
-function materialize(M::Ldiv{BasisStyle,<:Ultraspherical,<:Ultraspherical})
+function materialize(M::Ldiv{<:Any,<:Any,<:Ultraspherical,<:Ultraspherical})
     C2,C1 = M.args
     λ = C1.λ
     T = eltype(M)
@@ -119,7 +119,7 @@ end
 
 # (18.7.3)
 
-function materialize(M::Ldiv{BasisStyle,<:Chebyshev,<:Jacobi})
+function materialize(M::Ldiv{<:Any,<:Any,<:Chebyshev,<:Jacobi})
     A,B = M.args
     T = eltype(M)
     (B.a == B.b == -T/2) || throw(ArgumentError())

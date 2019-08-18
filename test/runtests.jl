@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
 import ContinuumArrays: ℵ₁, materialize, BasisStyle, Chebyshev, Ultraspherical, jacobioperator, SimplifyStyle
-import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
-import LazyArrays: MemoryLayout, ApplyStyle
+import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, AdjointStyle
+import LazyArrays: MemoryLayout, ApplyStyle, Applied
 
 
 @testset "Inclusion" begin
@@ -22,7 +22,7 @@ end
 
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
-    @test ApplyStyle(*, H) == BasisStyle()
+    @test ApplyStyle(*, typeof(H)) == LazyQuasiArrayApplyStyle()
 
     @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1.0..3.0), Base.OneTo(2))
     @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
@@ -48,9 +48,9 @@ end
     @test f[1.1] ≈ 1
     @test f[2.1] ≈ 2
 
-    @test ApplyStyle(*,H',H) == SimplifyStyle()
+    @test ApplyStyle(*,typeof(H'),typeof(H)) == SimplifyStyle()
 
-    @test H'H == Eye(2)
+    @test materialize(applied(*,H',H)) == H'H == Eye(2)
 end
 
 @testset "LinearSpline" begin
@@ -89,13 +89,16 @@ end
     @test f[1.2] == 1.2
 
     D = Derivative(axes(L,1))
-    @test ApplyStyle(*,D,L) isa SimplifyStyle
+    @test ApplyStyle(*,typeof(D),typeof(L)) isa SimplifyStyle
     @test D*L isa MulQuasiMatrix
     @test eltype(D*L) == Float64
 
     M = applied(*, (D*L).applied.args..., [1,2,4])
-    @test M.style isa LazyQuasiArrayApplyStyle
+    @test M isa Applied{LazyQuasiArrayApplyStyle}
     @test eltype(materialize(M)) == Float64
+
+    M = applied(*, D, L, [1,2,4])
+    @test M isa Applied{LazyQuasiArrayApplyStyle}
 
     fp = D*L*[1,2,4]
 
@@ -116,17 +119,18 @@ end
 @testset "Weak Laplacian" begin
     H = HeavisideSpline(0:2)
     L = LinearSpline(0:2)
-
     D = Derivative(axes(L,1))
 
     M = QuasiArrays.flatten(Mul(D',D*L))
     @test length(M.args) == 3
     @test last(M.args) isa BandedMatrix
 
+    @test ApplyStyle(*, typeof(L'), typeof(D')) == AdjointStyle()
     @test (L'D') isa MulQuasiMatrix
+
     A = (L'D') * (D*L)
     @test A == (D*L)'*(D*L) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
-    @test_skip bandwidths(A) == (1,1)
+    @test bandwidths(A) == (1,1)
 end
 
 @testset "Views" begin
@@ -163,6 +167,8 @@ end
     D = Derivative(axes(L,1))
     Δ = -((D*B)'*(D*B)) # Weak Laplacian
 
+    B'*D'*D*B
+    *(B',D',D,B)
     @test Δ == -(B'D'D*B)
     @test Δ == -((B'D')*(D*B))
     @test_broken Δ == -B'*(D'D)*B

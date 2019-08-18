@@ -49,7 +49,7 @@ axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
     _BandedMatrix(Vcat(((0:∞)./(1:2:∞))', Zeros(1,∞), ((1:∞)./(1:2:∞))'), ∞, 1,1)
 
 
-@simplify *(X::Identity, P::Legendre) = MulQuasiMatrix(P, P\(X*P))
+@simplify *(X::Identity, P::Legendre) = ApplyQuasiMatrix(*, P, P\(X*P))
 
 
 
@@ -77,7 +77,7 @@ end
 
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Jacobi)
     A = apply(\,Jacobi(S.b+1,S.a+1),applied(*,D,S))
-    MulQuasiMatrix(Jacobi(S.b+1,S.a+1), A)
+    ApplyQuasiMatrix(*, Jacobi(S.b+1,S.a+1), A)
 end
 
 # Legendre()\ (D*W*Jacobi(true,true))
@@ -93,7 +93,7 @@ end
     w = parent(W)
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
     A = apply(\, Legendre{eltype(M)}(), applied(*,D,W,S))
-    MulQuasiMatrix(Legendre(), A)
+    ApplyQuasiMatrix(*, Legendre(), A)
 end
 
 # Jacobi(b-1,a-1)\ (D*w*Jacobi(b,a))

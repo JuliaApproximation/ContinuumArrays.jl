@@ -1,6 +1,6 @@
 
 
-struct SimplifyStyle <: ApplyStyle end
+struct SimplifyStyle <: AbstractQuasiArrayApplyStyle end
 
 
 macro simplify(qt)
@@ -13,7 +13,7 @@ macro simplify(qt)
         Bname,Btyp = qt.args[1].args[3].args
         if length(qt.args[1].args) == 3
             esc(quote
-                LazyArrays.ApplyStyle(::typeof(*), ::$Atyp, ::$Btyp) = ContinuumArrays.SimplifyStyle()
+                LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = ContinuumArrays.SimplifyStyle()
                 function materialize(M::QMul2{<:$Atyp,<:$Btyp})
                     $Aname,$Bname = M.args
                     axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
@@ -24,7 +24,7 @@ macro simplify(qt)
             @assert length(qt.args[1].args) == 4
             Cname,Ctyp = qt.args[1].args[4].args
             esc(quote
-            LazyArrays.ApplyStyle(::typeof(*), ::$Atyp, ::$Btyp, ::$Ctyp) = ContinuumArrays.SimplifyStyle()
+            LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}, ::Type{<:$Ctyp}) = ContinuumArrays.SimplifyStyle()
             function materialize(M::QMul3{<:$Atyp,<:$Btyp,<:$Ctyp})
                 $Aname,$Bname,$Cname = M.args
                 axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
@@ -46,7 +46,7 @@ macro simplify(qt)
         Cname,Ctyp = qt.args[1].args[3].args[3].args   
         if length(qt.args[1].args[3].args) == 3
             esc(quote
-                function materialize(M::Ldiv{BasisStyle,<:$Atyp,<:QMul2{<:$Btyp,<:$Ctyp}})
+                function materialize(M::Ldiv{<:Any,<:Any,<:$Atyp,<:QMul2{<:$Btyp,<:$Ctyp}})
                     $Aname,BC = M.args
                     $Bname,$Cname = BC.args
                     (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1)) || 
@@ -58,7 +58,7 @@ macro simplify(qt)
             @assert length(qt.args[1].args[3].args) == 4
             Dname,Dtyp = qt.args[1].args[3].args[4].args   
             esc(quote
-                function materialize(M::Ldiv{BasisStyle,<:$Atyp,<:QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}})
+                function materialize(M::Ldiv{<:Any,<:Any,<:$Atyp,<:QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}})
                     $Aname,BC = M.args
                     $Bname,$Cname,$Dname = BC.args
                     (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1) &&
@@ -73,7 +73,7 @@ end
 
 
 
-struct DiracDelta{T,A} <: AbstractQuasiVector{T}
+struct DiracDelta{T,A} <: LazyQuasiVector{T}
     x::T
     axis::A
     DiracDelta{T,A}(x, axis) where {T,A} = new{T,A}(x,axis)
@@ -104,7 +104,7 @@ end
 #########
 
 
-struct Derivative{T,D} <: AbstractQuasiMatrix{T}
+struct Derivative{T,D} <: LazyQuasiMatrix{T}
     axis::Inclusion{T,D}
 end
 

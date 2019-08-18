@@ -41,7 +41,7 @@ end
 
 ## Mass matrix
 
-ApplyStyle(::typeof(*), ::QuasiAdjoint{<:Any,<:LinearSpline}, ::LinearSpline) = 
+ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:LinearSpline}) = 
     SimplifyStyle()    
 
 
@@ -84,14 +84,13 @@ end
 
 
 ## Derivative
-ApplyStyle(::typeof(*), ::Derivative, ::LinearSpline) = 
-    SimplifyStyle()    
+ApplyStyle(::typeof(*), ::Type{<:Derivative}, ::Type{<:LinearSpline}) = SimplifyStyle()    
 
 
-function copyto!(dest::MulQuasiMatrix{<:Any,<:QMul2{<:HeavisideSpline,<:Any}},
+function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
                  M::QMul2{<:Derivative,<:LinearSpline})
     D, L = M.args
-    H, A = dest.applied.args
+    H, A = dest.args
     x = H.points
 
     axes(dest) == axes(M) || throw(DimensionMismatch("axes must be same"))
@@ -108,7 +107,7 @@ end
 function similar(M::QMul2{<:Derivative,<:LinearSpline}, ::Type{T}) where T
     D, B = M.args
     n = size(B,2)
-    MulQuasiMatrix(HeavisideSpline{T}(B.points),
+    ApplyQuasiMatrix(*, HeavisideSpline{T}(B.points),
         BandedMatrix{T}(undef, (n-1,n), (0,1)))
 end
 
