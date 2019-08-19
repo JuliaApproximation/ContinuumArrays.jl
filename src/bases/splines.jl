@@ -87,6 +87,7 @@ end
 ApplyStyle(::typeof(*), ::Type{<:Derivative}, ::Type{<:LinearSpline}) = SimplifyStyle()    
 
 
+
 function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
                  M::QMul2{<:Derivative,<:LinearSpline})
     D, L = M.args
@@ -113,3 +114,11 @@ end
 
 materialize(M::QMul2{<:Derivative,<:LinearSpline}) =
     copyto!(similar(M, eltype(M)), M)
+
+ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:QuasiAdjoint{<:Any,<:Derivative}}) = SimplifyStyle()        
+
+function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:QuasiAdjoint{<:Any,<:Derivative}})
+    Bc,Ac = M.args
+    axes(Bc,2) == axes(Ac,1) || throw(DimensionMismatch("axes must be same"))
+    apply(*,Ac',Bc')'
+end

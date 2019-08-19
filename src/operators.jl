@@ -2,6 +2,21 @@
 
 struct SimplifyStyle <: AbstractQuasiArrayApplyStyle end
 
+function removesubtype(typ) 
+    if typ isa Expr && typ.head == :(<:) 
+        typ.args[1]
+    else
+        typ
+    end
+end
+
+function adjtype(Atyp) 
+    if Atyp isa Expr && Atyp.args[1] == :QuasiAdjoint 
+        removesubtype(Atyp.args[3])
+    else
+        :(QuasiAdjoint{<:Any,<:$Atyp}) 
+    end
+end
 
 macro simplify(qt)
     qt.head == :function || qt.head == :(=) || error("Must start with a function")
@@ -10,16 +25,32 @@ macro simplify(qt)
         mat = qt.args[2]
         @assert qt.args[1].args[2].head == :(::)
         Aname,Atyp = qt.args[1].args[2].args
+        Aadj = adjtype(Atyp)
         Bname,Btyp = qt.args[1].args[3].args
+        Badj = adjtype(Btyp)
         if length(qt.args[1].args) == 3
-            esc(quote
+            ret = quote
                 LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = ContinuumArrays.SimplifyStyle()
                 function materialize(M::QMul2{<:$Atyp,<:$Btyp})
                     $Aname,$Bname = M.args
                     axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
                     $mat
                 end
-            end)
+            end
+            if Aadj ≠ Btyp 
+                @assert Atyp ≠ Badj
+                ret = quote
+                    $ret
+                    LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Aadj}, ::Type{<:$Badj}) = ContinuumArrays.SimplifyStyle()
+                    function materialize(M::QMul2{<:$Badj,<:$Aadj})
+                        Bc,Ac = M.args
+                        axes(Bc,2) == axes(Ac,1) || throw(DimensionMismatch("axes must be same"))
+                        apply(*,Ac',Bc')'
+                    end
+                end
+            end
+            
+            esc(ret)
         else
             @assert length(qt.args[1].args) == 4
             Cname,Ctyp = qt.args[1].args[4].args

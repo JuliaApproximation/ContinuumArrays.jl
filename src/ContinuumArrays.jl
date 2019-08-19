@@ -11,7 +11,7 @@ import FillArrays: AbstractFill, getindex_value
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
-                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, quasimulapplystyle, AdjointLayout
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, quasimulapplystyle, LazyLayout
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre, Chebyshev, Ultraspherical,
             fullmaterialize

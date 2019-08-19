@@ -1,6 +1,6 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
-import ContinuumArrays: ℵ₁, materialize, BasisStyle, Chebyshev, Ultraspherical, jacobioperator, SimplifyStyle
-import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, AdjointStyle
+import ContinuumArrays: ℵ₁, materialize, Chebyshev, Ultraspherical, jacobioperator, SimplifyStyle
+import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied
 
 
@@ -125,7 +125,7 @@ end
     @test length(M.args) == 3
     @test last(M.args) isa BandedMatrix
 
-    @test ApplyStyle(*, typeof(L'), typeof(D')) == AdjointStyle()
+    @test ApplyStyle(*, typeof(L'), typeof(D')) == SimplifyStyle()
     @test (L'D') isa MulQuasiMatrix
 
     A = (L'D') * (D*L)
@@ -167,7 +167,9 @@ end
     D = Derivative(axes(L,1))
     Δ = -((D*B)'*(D*B)) # Weak Laplacian
 
-    B'*D'*D*B
+    @test B'D' isa MulQuasiMatrix
+    @test length((B'D').args) == 2
+
     *(B',D',D,B)
     @test Δ == -(B'D'D*B)
     @test Δ == -((B'D')*(D*B))

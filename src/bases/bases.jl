@@ -1,11 +1,7 @@
 abstract type Basis{T} <: LazyQuasiMatrix{T} end
-struct BasisLayout <: MemoryLayout end
 
 
-MemoryLayout(::Type{<:Basis}) = BasisLayout()
-
-quasimulapplystyle(::BasisLayout, _...) = LazyQuasiArrayApplyStyle()
-adjointlayout(::Type, ::ML) where ML<:BasisLayout = AdjointLayout{ML}()
+MemoryLayout(::Type{<:Basis}) = LazyLayout()
 
 pinv(J::Basis) = apply(pinv,J)
 
@@ -17,7 +13,7 @@ _multup(a) = a
     throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
 
 
-function materialize(P::Ldiv{BasisLayout,BasisLayout})
+function materialize(P::Ldiv{<:Any,<:Any,<:Basis,<:Basis})
     A, B = P.args
     axes(A) == axes(B) || throw(DimensionMismatch("axes of bases must match"))
     A == B || throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
