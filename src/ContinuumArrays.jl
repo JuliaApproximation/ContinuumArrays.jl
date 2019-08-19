@@ -3,7 +3,7 @@ using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, Infin
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!
 import Base.Broadcast: materialize
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value
@@ -11,7 +11,7 @@ import FillArrays: AbstractFill, getindex_value
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
-                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, quasimulapplystyle, AdjointLayout
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre, Chebyshev, Ultraspherical,
             fullmaterialize

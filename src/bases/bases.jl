@@ -4,7 +4,8 @@ struct BasisLayout <: MemoryLayout end
 
 MemoryLayout(::Type{<:Basis}) = BasisLayout()
 
-
+quasimulapplystyle(::BasisLayout, _...) = LazyQuasiArrayApplyStyle()
+adjointlayout(::Type, ::ML) where ML<:BasisLayout = AdjointLayout{ML}()
 
 pinv(J::Basis) = apply(pinv,J)
 

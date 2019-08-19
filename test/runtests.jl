@@ -22,7 +22,6 @@ end
 
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
-    @test ApplyStyle(*, typeof(H)) == LazyQuasiArrayApplyStyle()
 
     @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1.0..3.0), Base.OneTo(2))
     @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
@@ -43,6 +42,7 @@ end
 
     @test_throws BoundsError H[[0.1,2.1], 1]
 
+    @test ApplyStyle(*, typeof(H), typeof([1,2])) isa LazyQuasiArrayApplyStyle
     f = H*[1,2]
     @test axes(f) == (Inclusion(1.0..3.0),)
     @test f[1.1] ≈ 1
@@ -50,7 +50,7 @@ end
 
     @test ApplyStyle(*,typeof(H'),typeof(H)) == SimplifyStyle()
 
-    @test materialize(applied(*,H',H)) == H'H == Eye(2)
+    @test H'H == materialize(applied(*,H',H)) == Eye(2)
 end
 
 @testset "LinearSpline" begin
