@@ -170,11 +170,11 @@ end
     @test B'D' isa MulQuasiMatrix
     @test length((B'D').args) == 2
 
-    *(B',D',D,B)
+    @test Δ == -(*(B',D',D,B))
     @test Δ == -(B'D'D*B)
     @test Δ == -((B'D')*(D*B))
     @test_broken Δ == -B'*(D'D)*B
-    @test Δ == -(B'*(D'D)*B)
+    @test_broken Δ == -(B'*(D'D)*B)
 
     f = L*exp.(L.points) # project exp(x)
     u = B * (Δ \ (B'f))
@@ -201,6 +201,11 @@ end
     U = Ultraspherical(1)
     C = Ultraspherical(2)
     D = Derivative(axes(T,1))
+
+    @test ApplyStyle(\,typeof(U),typeof(applied(*,D,T))) == SimplifyStyle()
+    D*T
+
+
     D₀ = (U\(D*T))[1:10,1:10]
     @test D₀ isa BandedMatrix{Float64}
     @test D₀ == diagm(1 => 1:9)
