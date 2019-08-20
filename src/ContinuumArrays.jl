@@ -3,7 +3,7 @@ using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, Infin
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!
 import Base.Broadcast: materialize
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value

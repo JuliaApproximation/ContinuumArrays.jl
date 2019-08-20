@@ -32,29 +32,21 @@ Ultraspherical(λ::Λ) where Λ = Ultraspherical{Float64,Λ}(λ)
 # Jacobi Matrix
 ########
 
-function materialize(M::Ldiv{<:Any,<:Any,<:Chebyshev,
-                               <:QMul2{<:Identity,
-                                       <:Chebyshev}}) 
-    T = eltype(M)                                       
+@simplify function \(C::Chebyshev, *(X::Identity, C2::Chebyshev))
+    T = promote_type(eltype(C), eltype(X), eltype(C2))
     _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), Zeros(1,∞), Hcat(one(T), Fill(one(T)/2,1,∞))), ∞, 1, 1)
 end
 
-function materialize(M::QMul2{<:Identity,<:Chebyshev})
-    X, P = M.args
-    ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
-end
+@simplify *(X::Identity, P::Chebyshev) = ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
 
-function materialize(M::Ldiv{<:Any,<:Any,<:Ultraspherical,
-                               <:QMul2{<:Identity,
-                                       <:Ultraspherical}}) 
-    T = eltype(M)         
-    P,_ = M.args                              
+@simplify function \(P::Ultraspherical, *(X::Identity, U::Ultraspherical))
+    T = promote_type(eltype(P), eltype(X), eltype(U))
     λ = P.λ
+    λ == U.λ || throw(ArgumentError())
     _BandedMatrix(Vcat((((2λ-1):∞) ./ (2 .*((zero(T):∞) .+ λ)))',
                         Zeros{T}(1,∞),
                         ((one(T):∞) ./ (2 .*((zero(T):∞) .+ λ)))'), ∞, 1, 1)
 end
-
 
 @simplify *(X::Identity, P::Ultraspherical) = ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
 
@@ -68,7 +60,6 @@ end
     (J.λ == 1) || throw(ArgumentError())
     _BandedMatrix((zero(eltype(M)):∞)', ∞, -1,1)
 end
-
 
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Chebyshev)
     A = apply(\,Ultraspherical{eltype(S)}(1),applied(*,D,S))
@@ -88,21 +79,19 @@ end
 
 
 ##########
-# Converision
+# Conversion
 ##########
 
 
-function materialize(M::Ldiv{<:Any,<:Any,<:Ultraspherical,<:Chebyshev})
-    U,C = M.args
+@simplify function \(U::Ultraspherical, C::Chebyshev)
     (U.λ == 1) || throw(ArgumentError())
-    T = eltype(M)
+    T = promote_type(eltype(U), eltype(C))
     BandedMatrix(0 => Vcat([one(T)],Fill(one(T)/2,∞)), 2 => Vcat([-one(T)/2],Fill(-one(T)/2,∞)))
 end
 
-function materialize(M::Ldiv{<:Any,<:Any,<:Ultraspherical,<:Ultraspherical})
-    C2,C1 = M.args
+@simplify function \(C2::Ultraspherical, C1::Ultraspherical)
     λ = C1.λ
-    T = eltype(M)
+    T = promote_type(eltype(C2), eltype(C1))
     if C2.λ == λ+1 
         _BandedMatrix( Vcat(-(λ ./ (1:∞ .+ λ))', Zeros(1,∞), (λ ./ (1:∞ .+ λ))'), ∞, 0, 2)
     elseif C2.λ == λ
@@ -119,9 +108,8 @@ end
 
 # (18.7.3)
 
-function materialize(M::Ldiv{<:Any,<:Any,<:Chebyshev,<:Jacobi})
-    A,B = M.args
-    T = eltype(M)
+@simplify function \(A::Chebyshev, B::Jacobi)
+    T = promote_type(eltype(A), eltype(B))
     (B.a == B.b == -T/2) || throw(ArgumentError())
     Diagonal(Jacobi(-T/2,-T/2)[1,:])
 end

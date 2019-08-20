@@ -64,42 +64,54 @@ macro simplify(qt)
             end
          end)
     end
-    else # A \ (B*C)
+    else # A\
         mat = qt.args[2]  
         @assert qt.args[1].args[1] == :(\)
         @assert qt.args[1].args[2].head == :(::)
         Aname,Atyp = qt.args[1].args[2].args
-        @assert qt.args[1].args[3].head == :call
-        @assert qt.args[1].args[3].args[1] == :(*)
-        @assert qt.args[1].args[3].args[2].head == :(::)
-        Bname,Btyp = qt.args[1].args[3].args[2].args
-        @assert qt.args[1].args[3].args[3].head == :(::)
-        Cname,Ctyp = qt.args[1].args[3].args[3].args   
-        if length(qt.args[1].args[3].args) == 3
+        if qt.args[1].args[3].head == :(::) # A \ B
+            Bname,Btyp = qt.args[1].args[3].args
             esc(quote
-                LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:QMul2{<:$Btyp,<:$Ctyp}}) = SimplifyStyle()
-                function materialize(M::Applied{SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:QMul2{<:$Btyp,<:$Ctyp}}})
-                    $Aname,BC = M.args
-                    $Bname,$Cname = BC.args
-                    (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1)) || 
-                        throw(DimensionMismatch("axes must be same"))
+                LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = SimplifyStyle()
+                function materialize(M::Applied{SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:$Btyp}})
+                    $Aname,$Bname = M.args
+                    axes($Aname,1) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
                     $mat
                 end
             end)
-        else
-            @assert length(qt.args[1].args[3].args) == 4
-            Dname,Dtyp = qt.args[1].args[3].args[4].args   
-            esc(quote
-                ApplyStyle(::typeof(\),::Type{<:$Atyp}, ::Type{<:QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}) = SimplifyStyle()
-                function materialize(M::Applied{SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}})
-                    $Aname,BC = M.args
-                    $Bname,$Cname,$Dname = BC.args
-                    (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1) &&
-                    axes($Cname,2) == axes($Dname,1)) || 
-                        throw(DimensionMismatch("axes must be same"))
-                    $mat
-                end
-            end)
+        else # A \ (B*C)
+            @assert qt.args[1].args[3].head == :call
+            @assert qt.args[1].args[3].args[1] == :(*)
+            @assert qt.args[1].args[3].args[2].head == :(::)
+            Bname,Btyp = qt.args[1].args[3].args[2].args
+            @assert qt.args[1].args[3].args[3].head == :(::)
+            Cname,Ctyp = qt.args[1].args[3].args[3].args   
+            if length(qt.args[1].args[3].args) == 3
+                esc(quote
+                    LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:QMul2{<:$Btyp,<:$Ctyp}}) = SimplifyStyle()
+                    function materialize(M::Applied{SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:QMul2{<:$Btyp,<:$Ctyp}}})
+                        $Aname,BC = M.args
+                        $Bname,$Cname = BC.args
+                        (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1)) || 
+                            throw(DimensionMismatch("axes must be same"))
+                        $mat
+                    end
+                end)
+            else
+                @assert length(qt.args[1].args[3].args) == 4
+                Dname,Dtyp = qt.args[1].args[3].args[4].args   
+                esc(quote
+                    ApplyStyle(::typeof(\),::Type{<:$Atyp}, ::Type{<:QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}) = SimplifyStyle()
+                    function materialize(M::Applied{SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}})
+                        $Aname,BC = M.args
+                        $Bname,$Cname,$Dname = BC.args
+                        (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1) &&
+                        axes($Cname,2) == axes($Dname,1)) || 
+                            throw(DimensionMismatch("axes must be same"))
+                        $mat
+                    end
+                end)
+            end
         end
     end
 end

@@ -203,15 +203,13 @@ end
     D = Derivative(axes(T,1))
 
     @test ApplyStyle(\,typeof(U),typeof(applied(*,D,T))) == SimplifyStyle()
-    D*T
-
-
-    D₀ = (U\(D*T))[1:10,1:10]
-    @test D₀ isa BandedMatrix{Float64}
-    @test D₀ == diagm(1 => 1:9)
+    @test materialize(@~ U\(D*T)) isa BandedMatrix
+    D₀ = (U\(D*T))
+    @test D₀[1:10,1:10] isa BandedMatrix{Float64}
+    @test D₀[1:10,1:10] == diagm(1 => 1:9)
 
     D₁ = C\(D*U)
-    materialize(apply(*,D₁,D₀))
+    @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
 
     S₀ = (U\T)[1:10,1:10]
     @test S₀ isa BandedMatrix{Float64}
