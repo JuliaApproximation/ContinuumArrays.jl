@@ -1,6 +1,6 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
 import ContinuumArrays: ℵ₁, materialize, Chebyshev, Ultraspherical, jacobioperator, SimplifyStyle
-import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
+import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LmaterializeApplyStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied
 
 
@@ -306,13 +306,17 @@ end
     @test bandwidths(Δ) == (0,0)
 
     L = D*W*S[:,1:N]
-    apply(*, (L').args..., L.args...)
+
+    A  = apply(*, (L').args..., L.args...)
+    @test A isa MulQuasiMatrix
+
+    A  = *((L').args..., L.args...)
+    @test A isa MulQuasiMatrix
 
     Δ = L'L
-    @test_broken Δ isa MulMatrix
-    @test_broken bandwidths(Δ) == (0,0)
+    @test Δ isa MulMatrix
+    @test bandwidths(Δ) == (0,0)
 end
-
 
 @testset "Chebyshev evaluation" begin
     P = Chebyshev()
