@@ -1,12 +1,12 @@
-using ContinuumArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
-    import ContinuumArrays: ℵ₁, materialize, BasisStyle   
-    import ContinuumArrays.QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
-    import LazyArrays: MemoryLayout, ApplyStyle
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
+import ContinuumArrays: ℵ₁, materialize, Chebyshev, Ultraspherical, jacobioperator, SimplifyStyle
+import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle
+import LazyArrays: MemoryLayout, ApplyStyle, Applied
 
 
 @testset "Inclusion" begin
-    @test Inclusion(-1..1)[0.0] === 0
     @test_throws InexactError Inclusion(-1..1)[0.1]
+    @test Inclusion(-1..1)[0.0] === 0
     X = QuasiDiagonal(Inclusion(-1.0..1))
     @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
 end
@@ -22,7 +22,6 @@ end
 
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
-    @test ApplyStyle(*, H) == BasisStyle()
 
     @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1.0..3.0), Base.OneTo(2))
     @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
@@ -43,12 +42,15 @@ end
 
     @test_throws BoundsError H[[0.1,2.1], 1]
 
+    @test ApplyStyle(*, typeof(H), typeof([1,2])) isa LazyQuasiArrayApplyStyle
     f = H*[1,2]
     @test axes(f) == (Inclusion(1.0..3.0),)
     @test f[1.1] ≈ 1
     @test f[2.1] ≈ 2
 
-    @test H'H == Eye(2)
+    @test ApplyStyle(*,typeof(H'),typeof(H)) == SimplifyStyle()
+
+    @test H'H == materialize(applied(*,H',H)) == Eye(2)
 end
 
 @testset "LinearSpline" begin
@@ -87,13 +89,16 @@ end
     @test f[1.2] == 1.2
 
     D = Derivative(axes(L,1))
-    @test ApplyStyle(*,D,L) isa LazyQuasiArrayApplyStyle
+    @test ApplyStyle(*,typeof(D),typeof(L)) isa SimplifyStyle
     @test D*L isa MulQuasiMatrix
     @test eltype(D*L) == Float64
 
     M = applied(*, (D*L).applied.args..., [1,2,4])
-    @test M.style isa LazyQuasiArrayApplyStyle
+    @test M isa Applied{LazyQuasiArrayApplyStyle}
     @test eltype(materialize(M)) == Float64
+
+    M = applied(*, D, L, [1,2,4])
+    @test M isa Applied{LazyQuasiArrayApplyStyle}
 
     fp = D*L*[1,2,4]
 
@@ -114,17 +119,18 @@ end
 @testset "Weak Laplacian" begin
     H = HeavisideSpline(0:2)
     L = LinearSpline(0:2)
-
     D = Derivative(axes(L,1))
 
-    M = ContinuumArrays.QuasiArrays.flatten(Mul(D',D*L))
+    M = QuasiArrays.flatten(Mul(D',D*L))
     @test length(M.args) == 3
     @test last(M.args) isa BandedMatrix
 
+    @test ApplyStyle(*, typeof(L'), typeof(D')) == SimplifyStyle()
     @test (L'D') isa MulQuasiMatrix
+
     A = (L'D') * (D*L)
     @test A == (D*L)'*(D*L) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
-    @test_skip bandwidths(A) == (1,1)
+    @test bandwidths(A) == (1,1)
 end
 
 @testset "Views" begin
@@ -149,7 +155,7 @@ end
 @testset "Subindex of splines" begin
     L = LinearSpline(range(0,stop=1,length=10))
     @test L[:,2:end-1] isa MulQuasiMatrix
-    @test_broken L[:,2:end-1][0.1,1] == L[0.1,2]
+    @test L[:,2:end-1][0.1,1] == L[0.1,2]
     v = randn(8)
     f = L[:,2:end-1] * v
     @test f[0.1] ≈ (L*[0; v; 0])[0.1]
@@ -159,11 +165,16 @@ end
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
     D = Derivative(axes(L,1))
-    Δ = -((B'D')*(D*B)) # Weak Laplacian
+    Δ = -((D*B)'*(D*B)) # Weak Laplacian
 
+    @test B'D' isa MulQuasiMatrix
+    @test length((B'D').args) == 2
+
+    @test Δ == -(*(B',D',D,B))
     @test Δ == -(B'D'D*B)
+    @test Δ == -((B'D')*(D*B))
     @test_broken Δ == -B'*(D'D)*B
-    @test Δ == -(B'*(D'D)*B)
+    @test_broken Δ == -(B'*(D'D)*B)
 
     f = L*exp.(L.points) # project exp(x)
     u = B * (Δ \ (B'f))
@@ -185,6 +196,30 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
+@testset "Ultraspherical" begin
+    T = Chebyshev()
+    U = Ultraspherical(1)
+    C = Ultraspherical(2)
+    D = Derivative(axes(T,1))
+
+    @test ApplyStyle(\,typeof(U),typeof(applied(*,D,T))) == SimplifyStyle()
+    @test materialize(@~ U\(D*T)) isa BandedMatrix
+    D₀ = (U\(D*T))
+    @test D₀[1:10,1:10] isa BandedMatrix{Float64}
+    @test D₀[1:10,1:10] == diagm(1 => 1:9)
+
+    D₁ = C\(D*U)
+    @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
+
+    S₀ = (U\T)[1:10,1:10]
+    @test S₀ isa BandedMatrix{Float64}
+    @test S₀ == diagm(0 => [1.0; fill(0.5,9)], 2=> fill(-0.5,8))
+
+    S₁ = (C\U)[1:10,1:10]
+    @test S₁ isa BandedMatrix{Float64}
+    @test S₁ == diagm(0 => 1 ./ (1:10), 2=> -(1 ./ (3:10)))
+end
+
 @testset "Jacobi" begin
     S = Jacobi(true,true)
     W = Diagonal(JacobiWeight(true,true))
@@ -195,8 +230,10 @@ end
     @test P\P === pinv(P)*P === Eye(∞)
 
     Bi = pinv(Jacobi(2,2))
-    @test Bi isa ContinuumArrays.QuasiArrays.PInvQuasiMatrix
+    @test Bi isa QuasiArrays.PInvQuasiMatrix
 
+    A = apply(\, Jacobi(2,2), applied(*, D, S))
+    @test A isa BandedMatrix
     A = Jacobi(2,2) \ (D*S)
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
 
@@ -267,4 +304,55 @@ end
     Δ = L'L
     @test_broken Δ isa MulMatrix
     @test_broken bandwidths(Δ) == (0,0)
+end
+
+
+@testset "Chebyshev evaluation" begin
+    P = Chebyshev()
+    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.1]
+    for N = 1:10
+        @test @inferred(P[0.1,Base.OneTo(N)]) ≈ @inferred(P[0.1,1:N]) ≈ [cos(n*acos(0.1)) for n = 0:N-1]
+        @test @inferred(P[0.1,N]) ≈ cos((N-1)*acos(0.1))
+    end
+    @test P[0.1,[2,5,10]] ≈ [0.1,cos(4acos(0.1)),cos(9acos(0.1))]
+
+    P = Ultraspherical(1)
+    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.2]
+    for N = 1:10
+        @test @inferred(P[0.1,Base.OneTo(N)]) ≈ @inferred(P[0.1,1:N]) ≈ [sin((n+1)*acos(0.1))/sin(acos(0.1)) for n = 0:N-1]
+        @test @inferred(P[0.1,N]) ≈ sin(N*acos(0.1))/sin(acos(0.1))
+    end
+    @test P[0.1,[2,5,10]] ≈ [0.2,sin(5acos(0.1))/sin(acos(0.1)),sin(10acos(0.1))/sin(acos(0.1))]
+
+    P = Ultraspherical(2)
+    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.4]
+    @test @inferred(P[0.1,Base.OneTo(3)]) == [1.0,0.4,-1.88]
+end
+
+@testset "Collocation" begin
+    P = Chebyshev()
+    D = Derivative(axes(P,1))
+    n = 300
+    x = cos.((1:n-1) .* π ./ (n-1))
+    cfs = [P[-1,1:n]'; (D*P)[x,1:n] - P[x,1:n]] \ [exp(-1); zeros(n-1)]
+    u = P[:,1:n]*cfs
+    @test u[0.1] ≈ exp(0.1)
+
+    P = Chebyshev()
+    D = Derivative(axes(P,1))
+    D2 = D*(D*P) # could be D^2*P in the future
+    n = 300
+    x = cos.((1:n-2) .* π ./ (n-1)) # interior Chebyshev points 
+    C = [P[-1,1:n]';
+         D2[x,1:n] + P[x,1:n];
+         P[1,1:n]']
+    cfs = C \ [1; zeros(n-2); 2] # Chebyshev coefficients
+    u = P[:,1:n]*cfs  # interpret in basis
+    @test u[0.1] ≈ (3cos(0.1)sec(1) + csc(1)sin(0.1))/2
 end

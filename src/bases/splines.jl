@@ -36,6 +36,22 @@ function getindex(B::HeavisideSpline{T}, x::Real, k::Int) where T
     return one(T)
 end
 
+## Sub-bases
+
+
+## Mass matrix
+
+ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:LinearSpline}) = 
+    SimplifyStyle()    
+
+
+function similar(AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
+    n = size(AB,1)
+    SymTridiagonal(Vector{T}(undef, n), Vector{T}(undef, n-1))
+end
+#
+materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
+    copyto!(similar(M, eltype(M)), M)
 
 function copyto!(dest::SymTridiagonal,
                  AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) where T
@@ -59,31 +75,23 @@ function copyto!(dest::SymTridiagonal,
     dest
 end
 
-## Sub-bases
 
-
-## Mass matrix
-function similar(AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
-    n = size(AB,1)
-    SymTridiagonal(Vector{T}(undef, n), Vector{T}(undef, n-1))
-end
-#
-materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
-    copyto!(similar(M, eltype(M)), M)
-
-function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:HeavisideSpline},<:HeavisideSpline})
-    Ac, B = M.args
-    axes(Ac,2) == axes(B,1) || throw(DimensionMismatch("axes must be same"))
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:HeavisideSpline}, B::HeavisideSpline)
     A = parent(Ac)
     A.points == B.points || throw(ArgumentError("Cannot multiply incompatible splines"))
     Diagonal(diff(A.points))
 end
 
+
 ## Derivative
-function copyto!(dest::MulQuasiMatrix{<:Any,<:QMul2{<:HeavisideSpline,<:Any}},
+ApplyStyle(::typeof(*), ::Type{<:Derivative}, ::Type{<:LinearSpline}) = SimplifyStyle()    
+
+
+
+function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
                  M::QMul2{<:Derivative,<:LinearSpline})
     D, L = M.args
-    H, A = dest.applied.args
+    H, A = dest.args
     x = H.points
 
     axes(dest) == axes(M) || throw(DimensionMismatch("axes must be same"))
@@ -100,9 +108,17 @@ end
 function similar(M::QMul2{<:Derivative,<:LinearSpline}, ::Type{T}) where T
     D, B = M.args
     n = size(B,2)
-    MulQuasiMatrix(HeavisideSpline{T}(B.points),
+    ApplyQuasiMatrix(*, HeavisideSpline{T}(B.points),
         BandedMatrix{T}(undef, (n-1,n), (0,1)))
 end
 
 materialize(M::QMul2{<:Derivative,<:LinearSpline}) =
     copyto!(similar(M, eltype(M)), M)
+
+ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:QuasiAdjoint{<:Any,<:Derivative}}) = SimplifyStyle()        
+
+function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:QuasiAdjoint{<:Any,<:Derivative}})
+    Bc,Ac = M.args
+    axes(Bc,2) == axes(Ac,1) || throw(DimensionMismatch("axes must be same"))
+    apply(*,Ac',Bc')'
+end

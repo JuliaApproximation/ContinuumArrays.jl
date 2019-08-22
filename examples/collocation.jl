@@ -1,5 +1,13 @@
-using ContinuumArrays, FillArrays, InfiniteArrays
-import ContinuumArrays.QuasiArrays: Inclusion, QuasiDiagonal
+using ContinuumArrays, QuasiArrays, FillArrays, InfiniteArrays
+import QuasiArrays: Inclusion, QuasiDiagonal
+
+using Plots; pyplot();
+
+S = LinearSpline(range(0,1; length=10))
+xx = range(0,1; length=1000)
+
+S = Jacobi(true,true)
+
 
 P = Legendre()
 X = QuasiDiagonal(Inclusion(-1..1))

@@ -1,19 +1,19 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, BandedMatrices, InfiniteArrays, DomainSets
+using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, InfiniteArrays, DomainSets, InfiniteLinearAlgebra, QuasiArrays
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
-                IndexStyle, IndexLinear, ==, OneTo, tail
+                IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!
 import Base.Broadcast: materialize
-import LazyArrays: Mul2, MemoryLayout, Applied, ApplyStyle, flatten, _flatten
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
+import FillArrays: AbstractFill, getindex_value
 
-include("QuasiArrays/QuasiArrays.jl")
-using .QuasiArrays
-import .QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, slice, Inclusion, SubQuasiArray,
+import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
-                    ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle
+                    ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, quasimulapplystyle, LazyLayout
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre,
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre, Chebyshev, Ultraspherical,
             fullmaterialize
 
 ####
@@ -24,8 +24,8 @@ struct AlephInfinity{N} <: Integer end
 const ℵ₁ = AlephInfinity{1}()
 
 
-const QMul2{A,B} = Mul{<:Any, <:Tuple{A,B}}
-const QMul3{A,B,C} = Mul{<:Any, <:Tuple{A,B,C}}
+const QMul2{A,B} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B}}
+const QMul3{A,B,C} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B,C}}
 
 cardinality(::AbstractInterval) = ℵ₁
 *(ℵ::AlephInfinity) = ℵ
