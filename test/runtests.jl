@@ -91,6 +91,7 @@ end
     D = Derivative(axes(L,1))
     @test ApplyStyle(*,typeof(D),typeof(L)) isa SimplifyStyle
     @test D*L isa MulQuasiMatrix
+    @test length((D*L).args) == 2
     @test eltype(D*L) == Float64
 
     M = applied(*, (D*L).applied.args..., [1,2,4])
@@ -129,6 +130,7 @@ end
     @test (L'D') isa MulQuasiMatrix
 
     A = (L'D') * (D*L)
+    @test A isa BandedMatrix
     @test A == (D*L)'*(D*L) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
     @test bandwidths(A) == (1,1)
 end
@@ -166,6 +168,7 @@ end
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
     D = Derivative(axes(L,1))
     Δ = -((D*B)'*(D*B)) # Weak Laplacian
+    @test Δ isa BandedMatrix
 
     @test B'D' isa MulQuasiMatrix
     @test length((B'D').args) == 2
@@ -174,7 +177,7 @@ end
     @test Δ == -(B'D'D*B)
     @test Δ == -((B'D')*(D*B))
     @test_broken Δ == -B'*(D'D)*B
-    @test_broken Δ == -(B'*(D'D)*B)
+    @test Δ == -(B'*(D'D)*B)
 
     f = L*exp.(L.points) # project exp(x)
     u = B * (Δ \ (B'f))
@@ -298,6 +301,7 @@ end
     A = D*W*S[:,1:N]
     @test A.args[1] == P    
     @test P\((D*W)*S[:,1:N]) isa AbstractMatrix
+    @test P\(D*W*S[:,1:N]) isa AbstractMatrix
 
     L = D*W*S
     Δ = L'L
@@ -313,9 +317,11 @@ end
     A  = *((L').args..., L.args...)
     @test A isa MulQuasiMatrix
 
-    Δ = L'L
-    @test Δ isa MulMatrix
-    @test bandwidths(Δ) == (0,0)
+    @test apply(*,L',L) isa QuasiArrays.ApplyQuasiArray
+
+    @test_skip Δ = L'L
+    @test_skip Δ isa MulMatrix
+    @test_skip bandwidths(Δ) == (0,0)
 end
 
 @testset "Chebyshev evaluation" begin
@@ -350,7 +356,7 @@ end
     P = Chebyshev()
     D = Derivative(axes(P,1))
     n = 300
-    x = cos.((1:n-1) .* π ./ (n-1))
+    x = cos.((0:n-2) .* π ./ (n-2))
     cfs = [P[-1,1:n]'; (D*P)[x,1:n] - P[x,1:n]] \ [exp(-1); zeros(n-1)]
     u = P[:,1:n]*cfs
     @test u[0.1] ≈ exp(0.1)
