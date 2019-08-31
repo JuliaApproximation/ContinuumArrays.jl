@@ -36,7 +36,7 @@ end
 # special case for Chebyshev
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractVector}}, x) where T
     isempty(v) && return v
-    c0,c∞ = c.arrays
+    c0,c∞ = c.args
     v[1] = one(T) # assume OPs are normalized to one for now
     length(v) == 1 && return v
     v[2] = x/c0
@@ -48,7 +48,7 @@ end
 
 function forwardrecurrence!(v::AbstractVector{T}, b_v::AbstractFill, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, x) where T
     isempty(v) && return v
-    c0,c∞_v = c.arrays
+    c0,c∞_v = c.args
     b = getindex_value(b_v)
     c∞ = getindex_value(c∞_v) 
     mbc  = -b/c∞
@@ -64,7 +64,7 @@ end
 
 _vec(a) = vec(a)
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
-bands(J) = _vec.(J.data.arrays)
+bands(J) = _vec.(J.data.args)
 
 function getindex(P::OrthogonalPolynomial{T}, x::Real, n::OneTo) where T
     J = jacobioperator(P)

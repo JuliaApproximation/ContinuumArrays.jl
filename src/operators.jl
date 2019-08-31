@@ -2,6 +2,8 @@
 
 struct SimplifyStyle <: AbstractQuasiArrayApplyStyle end
 
+copy(A::Applied{SimplifyStyle}) = error("Override copy(::$(typeof(A)))")
+
 function removesubtype(typ) 
     if typ isa Expr && typ.head == :(<:) 
         typ.args[1]
@@ -31,9 +33,8 @@ macro simplify(qt)
         if length(qt.args[1].args) == 3
             ret = quote
                 LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = ContinuumArrays.SimplifyStyle()
-                function materialize(M::ContinuumArrays.QMul2{<:$Atyp,<:$Btyp})
+                function Base.copy(M::ContinuumArrays.QMul2{<:$Atyp,<:$Btyp})
                     $Aname,$Bname = M.args
-                    axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
                     $mat
                 end
             end
@@ -42,9 +43,8 @@ macro simplify(qt)
                 ret = quote
                     $ret
                     LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Aadj}, ::Type{<:$Badj}) = ContinuumArrays.SimplifyStyle()
-                    function materialize(M::ContinuumArrays.QMul2{<:$Badj,<:$Aadj})
+                    function Base.copy(M::ContinuumArrays.QMul2{<:$Badj,<:$Aadj})
                         Bc,Ac = M.args
-                        axes(Bc,2) == axes(Ac,1) || throw(DimensionMismatch("axes must be same"))
                         apply(*,Ac',Bc')'
                     end
                 end
@@ -56,10 +56,8 @@ macro simplify(qt)
             Cname,Ctyp = qt.args[1].args[4].args
             esc(quote
             LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}, ::Type{<:$Ctyp}) = ContinuumArrays.SimplifyStyle()
-            function materialize(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp})
+            function Base.copy(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp})
                 $Aname,$Bname,$Cname = M.args
-                axes($Aname,2) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
-                axes($Bname,2) == axes($Cname,1) || throw(DimensionMismatch("axes must be same"))
                 $mat
             end
          end)
@@ -73,9 +71,8 @@ macro simplify(qt)
             Bname,Btyp = qt.args[1].args[3].args
             esc(quote
                 LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = SimplifyStyle()
-                function materialize(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:$Btyp}})
+                function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:$Btyp}})
                     $Aname,$Bname = M.args
-                    axes($Aname,1) == axes($Bname,1) || throw(DimensionMismatch("axes must be same"))
                     $mat
                 end
             end)
@@ -89,11 +86,9 @@ macro simplify(qt)
             if length(qt.args[1].args[3].args) == 3
                 esc(quote
                     LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:ContinuumArrays.QMul2{<:$Btyp,<:$Ctyp}}) = ContinuumArrays.SimplifyStyle()
-                    function materialize(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:ContinuumArrays.QMul2{<:$Btyp,<:$Ctyp}}})
+                    function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:ContinuumArrays.QMul2{<:$Btyp,<:$Ctyp}}})
                         $Aname,BC = M.args
                         $Bname,$Cname = BC.args
-                        (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1)) || 
-                            throw(DimensionMismatch("axes must be same"))
                         $mat
                     end
                 end)
@@ -102,12 +97,9 @@ macro simplify(qt)
                 Dname,Dtyp = qt.args[1].args[3].args[4].args   
                 esc(quote
                     ApplyStyle(::typeof(\),::Type{<:$Atyp}, ::Type{<:ContinuumArrays.QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}) = ContinuumArrays.SimplifyStyle()
-                    function materialize(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:ContinuumArrays.QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}})
+                    function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:ContinuumArrays.QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}})
                         $Aname,BC = M.args
                         $Bname,$Cname,$Dname = BC.args
-                        (axes($Aname,1) == axes($Bname,1) && axes($Bname,2) == axes($Cname,1) &&
-                        axes($Cname,2) == axes($Dname,1)) || 
-                            throw(DimensionMismatch("axes must be same"))
                         $mat
                     end
                 end)
@@ -161,9 +153,8 @@ axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis
 
 
-function materialize(M::QMul2{<:Derivative,<:SubQuasiArray})
+function copy(M::QMul2{<:Derivative,<:SubQuasiArray})
     A, B = M.args
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     P = parent(B)
     (Derivative(axes(P,1))*P)[parentindices(B)...]
 end

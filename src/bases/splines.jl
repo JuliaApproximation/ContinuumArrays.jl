@@ -50,7 +50,7 @@ function similar(AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline},
     SymTridiagonal(Vector{T}(undef, n), Vector{T}(undef, n-1))
 end
 #
-materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
+copy(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
     copyto!(similar(M, eltype(M)), M)
 
 function copyto!(dest::SymTridiagonal,
@@ -112,13 +112,12 @@ function similar(M::QMul2{<:Derivative,<:LinearSpline}, ::Type{T}) where T
         BandedMatrix{T}(undef, (n-1,n), (0,1)))
 end
 
-materialize(M::QMul2{<:Derivative,<:LinearSpline}) =
+copy(M::QMul2{<:Derivative,<:LinearSpline}) =
     copyto!(similar(M, eltype(M)), M)
 
 ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:QuasiAdjoint{<:Any,<:Derivative}}) = SimplifyStyle()        
 
-function materialize(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:QuasiAdjoint{<:Any,<:Derivative}})
+function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:QuasiAdjoint{<:Any,<:Derivative}})
     Bc,Ac = M.args
-    axes(Bc,2) == axes(Ac,1) || throw(DimensionMismatch("axes must be same"))
     apply(*,Ac',Bc')'
 end

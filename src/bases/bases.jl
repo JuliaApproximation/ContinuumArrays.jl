@@ -15,9 +15,8 @@ _multup(a) = a
 ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
 ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
 
-function materialize(P::Ldiv{<:Any,<:Any,<:Basis,<:Basis})
+function copy(P::Ldiv{<:Any,<:Any,<:Basis,<:Basis})
     A, B = P.A, P.B
-    axes(A) == axes(B) || throw(DimensionMismatch("axes of bases must match"))
     A == B || throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
     Eye(size(A,2))
 end
