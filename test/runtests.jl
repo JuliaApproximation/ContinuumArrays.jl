@@ -280,8 +280,8 @@ end
 
     M = ApplyMatrix{Float64}(*,A,B)
     M̃ = M[1:10,1:10]
-    @test_broken M̃ isa BandedMatrix
-    @test_broken bandwidths(M̃) == (2,0)
+    @test M̃ isa BandedMatrix
+    @test bandwidths(M̃) == (2,0)
 
     @test A*B isa MulArray
 
@@ -314,7 +314,7 @@ end
     L = D*W*S
     Δ = L'L
     @test Δ isa MulMatrix
-    @test_broken Δ[1:3,1:3] isa BandedMatrix
+    @test Δ[1:3,1:3] isa BandedMatrix
     @test bandwidths(Δ) == (0,0)
 
     L = D*W*S[:,1:N]
