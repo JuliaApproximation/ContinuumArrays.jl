@@ -22,6 +22,17 @@ abstract type OrthogonalPolynomial{T} <: Basis{T} end
 #     return v[r.+1]
 # end    
 
+function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, a::AbstractVector, c::AbstractVector, x) where T
+    isempty(v) && return v
+    v[1] = one(T) # assume OPs are normalized to one for now
+    length(v) == 1 && return v
+    v[2] = (x-a[1])/c[1]
+    @inbounds for n=3:length(v)
+        v[n] = muladd(x-a[n-1],v[n-1],-b[n-1]*v[n-2])/c[n-1]
+    end
+    v
+end
+
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, ::Zeros{<:Any,1}, c::AbstractVector, x) where T
     isempty(v) && return v
     v[1] = one(T) # assume OPs are normalized to one for now
