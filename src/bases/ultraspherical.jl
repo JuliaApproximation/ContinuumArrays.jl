@@ -1,6 +1,6 @@
 struct ChebyshevWeight{T} <: AbstractJacobiWeight{T} end
 
-function getindex(w::ChebyshevWeight, x::Real)
+function getindex(w::ChebyshevWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())
     1/sqrt(1-x^2)
 end
@@ -9,7 +9,7 @@ struct UltrasphericalWeight{T,Λ} <: AbstractJacobiWeight{T}
     λ::Λ
 end
 
-function getindex(w::UltrasphericalWeight, x::Real)
+function getindex(w::UltrasphericalWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())
     (1-x^2)^(w.λ-one(w.λ)/2)
 end

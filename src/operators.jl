@@ -127,7 +127,7 @@ IndexStyle(::Type{<:DiracDelta}) = IndexLinear()
 
 ==(a::DiracDelta, b::DiracDelta) = a.axis == b.axis && a.x == b.x
 
-function getindex(δ::DiracDelta{T}, x::Real) where T
+function getindex(δ::DiracDelta{T}, x::Number) where T
     x ∈ δ.axis || throw(BoundsError())
     x == δ.x ? inv(zero(T)) : zero(T)
 end

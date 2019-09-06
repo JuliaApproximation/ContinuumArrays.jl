@@ -2,25 +2,7 @@ abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
 @inline jacobioperator(P::OrthogonalPolynomial) =
     materialize(applied(\, P, applied(*, Diagonal(axes(P,1)), P)))
-
-# function forwardrecurrence(::Type{T},S::Space,r::AbstractRange,x::Number) where T
-#     if isempty(r)
-#         return T[]
-#     end
-#     n=maximum(r)+1
-#     v=Vector{T}(undef, n)  # x may be complex
-#     if n > 0
-#         v[1]=1
-#         if n > 1
-#             v[2] = muladd(recA(T,S,0),x,recB(T,S,0))
-#             @inbounds for k=2:n-1
-#                 v[k+1]=muladd(muladd(recA(T,S,k-1),x,recB(T,S,k-1)),v[k],-recC(T,S,k-1)*v[k-1])
-#             end
-#         end
-#     end
-
-#     return v[r.+1]
-# end    
+  
 
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, a::AbstractVector, c::AbstractVector, x) where T
     isempty(v) && return v
@@ -77,7 +59,7 @@ _vec(a) = vec(a)
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
 bands(J) = _vec.(J.data.args)
 
-function getindex(P::OrthogonalPolynomial{T}, x::Real, n::OneTo) where T
+function getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T
     J = jacobioperator(P)
     b,a,c = bands(J)
     forwardrecurrence!(similar(n,T),b,a,c,x)
@@ -93,10 +75,10 @@ function getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::OneTo) where
     V
 end
 
-getindex(P::OrthogonalPolynomial, x::Real, n::AbstractVector{<:Integer}) =
+getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) =
     P[x,OneTo(maximum(n))][n]
 
 getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer}) =
     P[x,OneTo(maximum(n))][:,n]    
 
-getindex(P::OrthogonalPolynomial, x::Real, n::Real) = P[x,OneTo(n)][end]
+getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
