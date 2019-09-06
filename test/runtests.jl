@@ -1,7 +1,8 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays, ForwardDiff
 import ContinuumArrays: ℵ₁, materialize, Chebyshev, Ultraspherical, jacobioperator, SimplifyStyle
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LmaterializeApplyStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport
+import ForwardDiff: Dual
 
 
 @testset "Inclusion" begin
@@ -380,4 +381,18 @@ end
     cfs = C \ [1; zeros(n-2); 2] # Chebyshev coefficients
     u = P[:,1:n]*cfs  # interpret in basis
     @test u[0.1] ≈ (3cos(0.1)sec(1) + csc(1)sin(0.1))/2
+end
+
+@testset "Auto-diff" begin
+    U = Ultraspherical(1)
+    C = Ultraspherical(2)
+
+    f = x -> Chebyshev{eltype(x)}()[x,5]
+    @test ForwardDiff.derivative(f,0.1) ≈ 4*U[0.1,4]
+    f = x -> Chebyshev{eltype(x)}()[x,5][1]
+    @test ForwardDiff.gradient(f,[0.1]) ≈ [4*U[0.1,4]]
+    @test ForwardDiff.hessian(f,[0.1]) ≈ [8*C[0.1,3]]
+
+    f = x -> Chebyshev{eltype(x)}()[x,1:5]
+    @test ForwardDiff.derivative(f,0.1) ≈ [0;(1:4).*U[0.1,1:4]]
 end

@@ -12,7 +12,7 @@ axes(B::Spline{o}) where o =
     (Inclusion(first(B.points)..last(B.points)), OneTo(length(B.points)+o-1))
 ==(A::Spline{o}, B::Spline{o}) where o = A.points == B.points
 
-function getindex(B::LinearSpline{T}, x::Real, k::Int) where T
+function getindex(B::LinearSpline{T}, x::Number, k::Int) where T
     x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)|| throw(BoundsError())
 
     p = B.points
@@ -25,7 +25,7 @@ function getindex(B::LinearSpline{T}, x::Real, k::Int) where T
     return (x-p[k+1])/(p[k]-p[k+1]) # x ≥ p[k]
 end
 
-function getindex(B::HeavisideSpline{T}, x::Real, k::Int) where T
+function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
     x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)|| throw(BoundsError())
 
     p = B.points

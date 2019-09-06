@@ -9,7 +9,7 @@ end
 JacobiWeight(b::T, a::V) where {T,V} = JacobiWeight{promote_type(T,V)}(b,a)
 
 axes(::AbstractJacobiWeight) = (Inclusion(ChebyshevInterval()),)
-function getindex(w::JacobiWeight, x::Real)
+function getindex(w::JacobiWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())
     (1-x)^w.a * (1+x)^w.b
 end

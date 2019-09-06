@@ -31,7 +31,7 @@ cardinality(::AbstractInterval) = ℵ₁
 *(ℵ::AlephInfinity) = ℵ
 
 
-checkindex(::Type{Bool}, inds::AbstractInterval, i::Real) = (leftendpoint(inds) <= i) & (i <= rightendpoint(inds))
+checkindex(::Type{Bool}, inds::AbstractInterval, i::Number) = (leftendpoint(inds) <= i) & (i <= rightendpoint(inds))
 checkindex(::Type{Bool}, inds::AbstractInterval, i::Inclusion) = i.domain ⊆ inds
 function checkindex(::Type{Bool}, inds::AbstractInterval, I::AbstractArray)
     @_inline_meta
