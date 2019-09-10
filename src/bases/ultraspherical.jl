@@ -32,14 +32,9 @@ Ultraspherical(λ::Λ) where Λ = Ultraspherical{Float64,Λ}(λ)
 # Jacobi Matrix
 ########
 
-@simplify function \(C::Chebyshev, *(X::Identity, C2::Chebyshev))
-    T = promote_type(eltype(C), eltype(X), eltype(C2))
-    _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), Zeros(1,∞), Hcat(one(T), Fill(one(T)/2,1,∞))), ∞, 1, 1)
-end
+jacobimatrix(C::Chebyshev{T}) where T = _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), Zeros(1,∞), Hcat(one(T), Fill(one(T)/2,1,∞))), ∞, 1, 1)
 
-@simplify *(X::Identity, P::Chebyshev) = ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
-
-@simplify function \(P::Ultraspherical, *(X::Identity, U::Ultraspherical))
+function jacobimatrix(P::Ultraspherical)
     T = promote_type(eltype(P), eltype(X), eltype(U))
     λ = P.λ
     λ == U.λ || throw(ArgumentError())
@@ -47,8 +42,6 @@ end
                         Zeros{T}(1,∞),
                         ((one(T):∞) ./ (2 .*((zero(T):∞) .+ λ)))'), ∞, 1, 1)
 end
-
-@simplify *(X::Identity, P::Ultraspherical) = ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
 
 
 ##########

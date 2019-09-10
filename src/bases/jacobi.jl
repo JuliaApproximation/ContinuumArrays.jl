@@ -45,8 +45,17 @@ axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 # Jacobi Matrix
 ########
 
-@simplify \(A::Legendre, *(B::Identity, C::Legendre)) =
-    _BandedMatrix(Vcat(((0:∞)./(1:2:∞))', Zeros(1,∞), ((1:∞)./(1:2:∞))'), ∞, 1,1)
+jacobimatrix(::Legendre) = _BandedMatrix(Vcat(((0:∞)./(1:2:∞))', Zeros(1,∞), ((1:∞)./(1:2:∞))'), ∞, 1,1)
+
+function jacobimatrix(J::Jacobi) 
+    b,a = J.b,J.a
+    n = 0:∞
+    B = @. 2*(n+1)*(n+a+b+1) / ((2n+a+b+1)*(2n+a+b+2))
+    A = (a^2-b^2) ./ ((2n.+a.+b).*(2n.+a.+b.+2))
+    C = @. 2*(n+a)*(n+b) / ((2n+a+b)*(2n+a+b+1))
+
+    _BandedMatrix(Vcat(C',A',B'), ∞, 1,1)
+end
 
 
 @simplify *(X::Identity, P::Legendre) = ApplyQuasiMatrix(*, P, P\(X*P))

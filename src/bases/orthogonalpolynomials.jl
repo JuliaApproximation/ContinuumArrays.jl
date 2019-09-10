@@ -1,7 +1,14 @@
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
-@inline jacobioperator(P::OrthogonalPolynomial) =
-    materialize(applied(\, P, applied(*, Diagonal(axes(P,1)), P)))
+
+
+@simplify function \(A::OrthogonalPolynomial, *(B::Identity, C::OrthogonalPolynomial))
+    A === C || error("Override  $(typeof(A)) \\ (x * $(typeof(C)))")
+    jacobimatrix(A)
+end
+
+
+@simplify *(X::Identity, P::OrthogonalPolynomial) = ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
   
 
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, a::AbstractVector, c::AbstractVector, x) where T
@@ -60,13 +67,13 @@ _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
 bands(J) = _vec.(J.data.args)
 
 function getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T
-    J = jacobioperator(P)
+    J = jacobimatrix(P)
     b,a,c = bands(J)
     forwardrecurrence!(similar(n,T),b,a,c,x)
 end
 
 function getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::OneTo) where T
-    J = jacobioperator(P)
+    J = jacobimatrix(P)
     b,a,c = bands(J)
     V = Matrix{T}(undef,length(x),length(n))
     for k = eachindex(x)

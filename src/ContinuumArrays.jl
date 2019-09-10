@@ -1,8 +1,9 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, InfiniteArrays, DomainSets, InfiniteLinearAlgebra, QuasiArrays
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
-                IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy
-import Base.Broadcast: materialize
+                IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
+                first, last
+import Base.Broadcast: materialize, BroadcastStyle
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
@@ -11,7 +12,7 @@ import FillArrays: AbstractFill, getindex_value
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
-                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre, Chebyshev, Ultraspherical,
             fullmaterialize
@@ -21,6 +22,9 @@ export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeig
 ####
 struct AlephInfinity{N} <: Integer end
 
+==(::AlephInfinity, ::Int) = false
+==(::Int, ::AlephInfinity) = false
+
 const ℵ₁ = AlephInfinity{1}()
 
 
@@ -29,6 +33,9 @@ const QMul3{A,B,C} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B,C}}
 
 cardinality(::AbstractInterval) = ℵ₁
 *(ℵ::AlephInfinity) = ℵ
+
+first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
+last(S::Inclusion{<:Any,<:AbstractInterval}) = rightendpoint(S.domain)
 
 
 checkindex(::Type{Bool}, inds::AbstractInterval, i::Number) = (leftendpoint(inds) <= i) & (i <= rightendpoint(inds))
@@ -52,7 +59,7 @@ function materialize(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:Abstra
     A*P
 end
 
-
+BroadcastStyle(::Type{<:Inclusion{<:Any,<:AbstractInterval}}) = LazyQuasiArrayStyle{1}()
 
 include("operators.jl")
 include("bases/bases.jl")
