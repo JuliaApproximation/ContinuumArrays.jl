@@ -109,7 +109,7 @@ end
     x = 0.1
     @test S[x,1] === 1.0
     X = jacobimatrix(S)
-    @test X[1,1] ≈ (b^2-a^2)/((a+b)*(a+b+2))
+    @test X[1,1] ≈ (a^2-b^2)/((a+b)*(a+b+2))
     @test X[2,1] ≈ 2/(a+b+2)
     @test S[x,2] ≈ 0.065
     @test S[x,10] ≈ 0.22071099583604945
