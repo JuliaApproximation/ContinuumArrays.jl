@@ -14,7 +14,9 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, JacobiWeight, Jacobi, Legendre, Chebyshev, Ultraspherical,
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, 
+            Jacobi, Legendre, Chebyshev, Ultraspherical,
+            JacobiWeight, ChebyshevWeight, UltrasphericalWeight,
             fullmaterialize
 
 ####

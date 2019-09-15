@@ -13,7 +13,7 @@ end
 
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, a::AbstractVector, c::AbstractVector, x) where T
     isempty(v) && return v
-    v[1] = one(T) # assume OPs are normalized to one for now
+    v[1] = one(x) # assume OPs are normalized to one for now
     length(v) == 1 && return v
     v[2] = (x-a[1])/c[1]
     @inbounds for n=3:length(v)
@@ -24,7 +24,7 @@ end
 
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, ::Zeros{<:Any,1}, c::AbstractVector, x) where T
     isempty(v) && return v
-    v[1] = one(T) # assume OPs are normalized to one for now
+    v[1] = one(x) # assume OPs are normalized to one for now
     length(v) == 1 && return v
     v[2] = x/c[1]
     @inbounds for n=3:length(v)
@@ -37,7 +37,7 @@ end
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractVector}}, x) where T
     isempty(v) && return v
     c0,c∞ = c.args
-    v[1] = one(T) # assume OPs are normalized to one for now
+    v[1] = one(x) # assume OPs are normalized to one for now
     length(v) == 1 && return v
     v[2] = x/c0
     @inbounds for n=3:length(v)
@@ -53,7 +53,7 @@ function forwardrecurrence!(v::AbstractVector{T}, b_v::AbstractFill, ::Zeros{<:A
     c∞ = getindex_value(c∞_v) 
     mbc  = -b/c∞
     xc = x/c∞
-    v[1] = one(T) # assume OPs are normalized to one for now
+    v[1] = one(x) # assume OPs are normalized to one for now
     length(v) == 1 && return v
     v[2] = x/c0
     @inbounds for n=3:length(v)

@@ -51,7 +51,7 @@ function jacobimatrix(J::Jacobi)
     b,a = J.b,J.a
     n = 0:∞
     B = @. 2*(n+1)*(n+a+b+1) / ((2n+a+b+1)*(2n+a+b+2))
-    A = (a^2-b^2) ./ ((2n.+a.+b).*(2n.+a.+b.+2))
+    A = Vcat((a-b) / (a+b+2), (a^2-b^2) ./ ((2n.+a.+b.+2).*(2n.+a.+b.+4)))
     C = @. 2*(n+a)*(n+b) / ((2n+a+b)*(2n+a+b+1))
 
     _BandedMatrix(Vcat(C',A',B'), ∞, 1,1)

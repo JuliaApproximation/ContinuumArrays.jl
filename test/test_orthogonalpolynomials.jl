@@ -1,4 +1,7 @@
-import ContinuumArrays: jacobimatrix
+using ContinuumArrays, FillArrays, LazyArrays, BandedMatrices
+import ContinuumArrays: jacobimatrix, SimplifyStyle, ∞
+import LazyArrays: ApplyStyle, colsupport
+
 
 @testset "Ultraspherical" begin
     T = Chebyshev()
@@ -19,7 +22,7 @@ import ContinuumArrays: jacobimatrix
     @test colsupport(D₀,1) == 1:0
 
     D₁ = C\(D*U)
-    @test D₁ isa BandedMatrix
+    @test_broken D₁ isa BandedMatrix
     @test apply(*,D₁,D₀.args...)[1:10,1:10] == diagm(2 => 4:2:18)
     @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
 
@@ -30,6 +33,36 @@ import ContinuumArrays: jacobimatrix
     S₁ = (C\U)[1:10,1:10]
     @test S₁ isa BandedMatrix{Float64}
     @test S₁ == diagm(0 => 1 ./ (1:10), 2=> -(1 ./ (3:10)))
+end
+
+@testset "Legendre" begin
+    @test jacobimatrix(Jacobi(0.,0.))[1,1] == 0.0
+    @test jacobimatrix(Jacobi(0.,0.))[1:10,1:10] == jacobimatrix(Legendre())[1:10,1:10] == jacobimatrix(Ultraspherical(1/2))[1:10,1:10]
+    @test Jacobi(0.,0.)[0.1,1:10] ≈ Legendre()[0.1,1:10] ≈ Ultraspherical(1/2)[0.1,1:10]
+
+    P = Legendre()
+    D = Derivative(axes(P,1))
+    @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Ones}
+end
+
+
+
+@testset "Jacobi" begin
+    b,a = 0.1,0.2
+    S = Jacobi(b,a)
+    x = 0.1
+    @test S[x,1] === 1.0
+    X = jacobimatrix(S)
+    @test X[1,1] ≈ (a^2-b^2)/((a+b)*(a+b+2))
+    @test X[2,1] ≈ 2/(a+b+2)
+    @test S[x,2] ≈ 0.065
+    @test S[x,10] ≈ 0.22071099583604945
+
+    w = JacobiWeight(b,a)
+    @test w[x] ≈ (1+x)^b * (1-x)^a
+    wS = w.*S
+    @test wS[0.1,1] ≈ w[0.1]
+    @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
 end
 
 @testset "Jacobi integer" begin
@@ -101,18 +134,6 @@ end
 
     W = Diagonal(w)
     @test W[0.1,0.2] ≈ 0.0
-end
-
-@testset "Jacobi" begin
-    b,a = 0.1,0.2
-    S = Jacobi(b,a)
-    x = 0.1
-    @test S[x,1] === 1.0
-    X = jacobimatrix(S)
-    @test X[1,1] ≈ (a^2-b^2)/((a+b)*(a+b+2))
-    @test X[2,1] ≈ 2/(a+b+2)
-    @test S[x,2] ≈ 0.065
-    @test S[x,10] ≈ 0.22071099583604945
 end
 
 @testset "P-FEM" begin

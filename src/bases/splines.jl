@@ -31,9 +31,10 @@ function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
     p = B.points
     n = length(p)
 
-    x < p[k] && return zero(T)
-    k < n && x > p[k+1] && return zero(T)
-    return one(T)
+    p[k] < x < p[k+1] && return one(T)
+    p[k] == x && return one(T)/2
+    p[k+1] == x && return one(T)/2
+    return zero(T)
 end
 
 ## Sub-bases

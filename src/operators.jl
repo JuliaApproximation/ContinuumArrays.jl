@@ -151,6 +151,7 @@ Derivative(axis) = Derivative{Float64}(axis)
 
 axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis
+copy(D::Derivative) = Derivative(copy(D.axis))
 
 
 function copy(M::QMul2{<:Derivative,<:SubQuasiArray})
