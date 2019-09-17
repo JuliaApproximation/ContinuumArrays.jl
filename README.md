@@ -1,6 +1,9 @@
 # ContinuumArrays.jl
 A package for representing quasi arrays with continuous dimensions
 
+[![Build Status](https://travis-ci.org/JuliaApproximation/ContinuumArrays.jl.svg?branch=master)](https://travis-ci.org/JuliaApproximation/ContinuumArrays.jl)
+[![codecov](https://codecov.io/gh/JuliaApproximation/ContinuumArrays.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaApproximation/ContinuumArrays.jl)
+
 
 A quasi array as implemented in [QuasiArrays.jl](https://github.com/JuliaApproximation/QuasiArrays.jl) is a 
 generalization of an array that allows non-integer indexing via general axes. This package adds support for
