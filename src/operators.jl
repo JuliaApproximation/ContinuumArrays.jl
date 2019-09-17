@@ -70,7 +70,7 @@ macro simplify(qt)
         if qt.args[1].args[3].head == :(::) # A \ B
             Bname,Btyp = qt.args[1].args[3].args
             esc(quote
-                LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = SimplifyStyle()
+                LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = ContinuumArrays.SimplifyStyle()
                 function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:$Btyp}})
                     $Aname,$Bname = M.args
                     $mat
