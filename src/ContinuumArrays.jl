@@ -1,8 +1,8 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, InfiniteArrays, DomainSets, InfiniteLinearAlgebra, QuasiArrays
+using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, DomainSets, QuasiArrays
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last
+                first, last, show
 import Base.Broadcast: materialize, BroadcastStyle
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
@@ -14,10 +14,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, 
-            Jacobi, Legendre, Chebyshev, Ultraspherical,
-            JacobiWeight, ChebyshevWeight, UltrasphericalWeight,
-            fullmaterialize
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion
 
 ####
 # Interval indexing support
@@ -28,6 +25,9 @@ struct AlephInfinity{N} <: Integer end
 ==(::Int, ::AlephInfinity) = false
 
 const ℵ₁ = AlephInfinity{1}()
+
+show(io::IO, F::AlephInfinity{1}) where N =
+    print(io, "ℵ₁")
 
 
 const QMul2{A,B} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B}}

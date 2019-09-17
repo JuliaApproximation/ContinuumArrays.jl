@@ -1,5 +1,5 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, InfiniteArrays, ForwardDiff
-import ContinuumArrays: ℵ₁, materialize, Chebyshev, Ultraspherical, jacobioperator, SimplifyStyle
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, ForwardDiff
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle, LmaterializeApplyStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport
 import ForwardDiff: Dual
@@ -205,4 +205,3 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
-include("test_orthogonalpolynomials.jl")

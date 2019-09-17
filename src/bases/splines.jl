@@ -1,4 +1,3 @@
-
 struct Spline{order,T} <: Basis{T}
     points::Vector{T}
 end
