@@ -4,7 +4,6 @@ version = "0.0.1"
 
 [deps]
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
-ContinuumArrays = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
 IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
