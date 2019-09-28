@@ -1,6 +1,8 @@
 abstract type Basis{T} <: LazyQuasiMatrix{T} end
 
 
+const WeightedBasis{T, A<:AbstractQuasiVector, B<:Basis} = BroadcastQuasiMatrix{T,typeof(*),<:Tuple{A,B}}
+
 MemoryLayout(::Type{<:Basis}) = LazyLayout()
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
