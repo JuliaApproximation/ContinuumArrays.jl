@@ -24,6 +24,8 @@ struct AlephInfinity{N} <: Integer end
 ==(::AlephInfinity, ::Int) = false
 ==(::Int, ::AlephInfinity) = false
 
+*(::AlephInfinity{N}, ::AlephInfinity{N}) where N = AlephInfinity{N}()
+
 const ℵ₁ = AlephInfinity{1}()
 
 show(io::IO, F::AlephInfinity{1}) where N =
