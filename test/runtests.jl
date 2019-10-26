@@ -7,8 +7,8 @@ import ForwardDiff: Dual
 
 @testset "Inclusion" begin
     x = Inclusion(-1..1)
-    @test_throws InexactError x[0.1]
-    @test x[0.0] === 0
+    @test x[0.1] === 0.1
+    @test x[0.0] === 0.0
     x = Inclusion(-1.0..1)
     X = QuasiDiagonal(x)
     @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
