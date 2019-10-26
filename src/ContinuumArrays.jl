@@ -64,6 +64,8 @@ function materialize(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:Abstra
 end
 
 BroadcastStyle(::Type{<:Inclusion{<:Any,<:AbstractInterval}}) = LazyQuasiArrayStyle{1}()
+BroadcastStyle(::Type{<:QuasiAdjoint{<:Any,<:Inclusion{<:Any,<:AbstractInterval}}}) = LazyQuasiArrayStyle{2}()
+BroadcastStyle(::Type{<:QuasiTranspose{<:Any,<:Inclusion{<:Any,<:AbstractInterval}}}) = LazyQuasiArrayStyle{2}()
 
 include("operators.jl")
 include("bases/bases.jl")

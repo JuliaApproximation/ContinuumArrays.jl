@@ -11,7 +11,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
-BandedMatrices = "0.12"
+BandedMatrices = "0.12, 0.13"
 FillArrays = "0.7"
 IntervalSets = "0.3.1"
 LazyArrays = "0.12"
