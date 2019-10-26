@@ -222,4 +222,14 @@ end
     @test (y .- 1)[0.1] == y[0.1]-1
     @test (1 .- y)[0.1] == 1-y[0.1]
     @test L[y,:][0.1,:] == L[2*0.1-1,:]
+
+    @test findfirst(isequal(0.1),x) == findlast(isequal(0.1),x) == 0.1
+    @test findall(isequal(0.1), x) == [0.1]
+    @test findfirst(isequal(2),x) == findlast(isequal(2),x) == nothing
+    @test findall(isequal(2), x) == Float64[]
+
+    @test findfirst(isequal(0.2),y) == findlast(isequal(0.2),y) == 0.6
+    @test findfirst(isequal(2.3),y) == findlast(isequal(2.3),y) == nothing
+    @test findall(isequal(0.2),y) == [0.6]
+    @test findall(isequal(2),y) == Float64[]
 end

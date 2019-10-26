@@ -2,7 +2,7 @@ module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, show, isempty
+                first, last, show, isempty, findfirst, findlast, findall
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
@@ -41,6 +41,15 @@ cardinality(::AbstractInterval) = ℵ₁
 Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
 first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
 last(S::Inclusion{<:Any,<:AbstractInterval}) = rightendpoint(S.domain)
+
+for find in (:findfirst, :findlast)
+    @eval $find(f::Base.Fix2{typeof(isequal)}, d::Inclusion) = f.x in d.domain ? f.x : nothing
+end
+
+function findall(f::Base.Fix2{typeof(isequal)}, d::Inclusion) 
+    r = findfirst(f,d)
+    r === nothing ? eltype(d)[] : [r]
+end
 
 
 function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::Inclusion{<:Any,<:AbstractInterval})
@@ -107,6 +116,14 @@ function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::
     @_propagate_inbounds_meta
     isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
 end
+
+
+for find in (:findfirst, :findlast, :findall)
+    @eval $find(f::Base.Fix2{typeof(isequal)}, d::AffineMap) = $find(isequal(d.A \ (f.x .- d.b)), d.x)
+end
+
+
+
 
 include("operators.jl")
 include("bases/bases.jl")
