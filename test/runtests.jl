@@ -1,5 +1,5 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, ForwardDiff
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineMap
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle, LmaterializeApplyStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport
 import ForwardDiff: Dual
@@ -205,3 +205,21 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
+@testset "Change-of-variables" begin
+    L = LinearSpline(range(-1,stop=1,length=10))
+    x = Inclusion(0..1) 
+    @test 2x isa AffineMap
+    @test (2x)[0.1] == 0.2
+    @test_throws BoundsError (2x)[2]
+    y = 2x .- 1
+    @test y isa AffineMap
+    @test y[0.1] == 2*(0.1)-1
+    @test y/2 isa AffineMap
+    @test 2\y isa AffineMap
+    @test (y/2)[0.1] == (2\y)[0.1] == -0.4
+    @test y .+ 1 isa AffineMap
+    @test (y .+ 1)[0.1] == (1 .+ y)[0.1]
+    @test (y .- 1)[0.1] == y[0.1]-1
+    @test (1 .- y)[0.1] == 1-y[0.1]
+    @test L[y,:][0.1,:] == L[2*0.1-1,:]
+end
