@@ -1,6 +1,6 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
-import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -,
+import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last, show, isempty, findfirst, findlast, findall
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
@@ -94,6 +94,7 @@ AffineMap(A, x::AffineMap, b) = AffineMap(A*x.A, x.x, A*x.b .+ b)
 axes(A::AffineMap) = axes(A.x)
 getindex(A::AffineMap, k::Number) = A.A*A.x[k] .+ A.b    
 isempty(A::AffineMap) = isempty(A.x)
+==(a::AffineMap, b::AffineMap) = a.A == b.A && a.x == b.x && a.b == b.b
 
 BroadcastStyle(::Type{<:AffineMap}) = LazyQuasiArrayStyle{1}()
 

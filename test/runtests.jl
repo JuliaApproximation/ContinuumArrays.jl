@@ -232,4 +232,11 @@ end
     @test findfirst(isequal(2.3),y) == findlast(isequal(2.3),y) == nothing
     @test findall(isequal(0.2),y) == [0.6]
     @test findall(isequal(2),y) == Float64[]
+
+    D = Derivative(axes(L,1))
+    H = HeavisideSpline(L.points)
+    @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
+    D = Derivative(x)
+    @test (D*L[y,:])[0.1,1] ≈ -9
+    H[y,:]
 end
