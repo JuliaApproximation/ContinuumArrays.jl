@@ -1,7 +1,7 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, ForwardDiff
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
 import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineMap
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle, LmaterializeApplyStyle
-import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport
+import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments
 import ForwardDiff: Dual
 
 
@@ -236,7 +236,12 @@ end
     D = Derivative(axes(L,1))
     H = HeavisideSpline(L.points)
     @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
+
+    a,b = arguments((D*L)[y,:])
+    @test H[y,:]\a == Eye(9)
+    @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
+
     D = Derivative(x)
     @test (D*L[y,:])[0.1,1] ≈ -9
-    H[y,:]
+    @test H[y,:] \ (D*L[y,:]) ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 end
