@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineMap
-import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle, LmaterializeApplyStyle
-import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineMap, BasisLayout, AdjointBasisLayout
+import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
+import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout
 import ForwardDiff: Dual
 
 
@@ -47,7 +47,7 @@ end
     @test all(H[[1.1,2.1], 1:2] .=== [1.0 0.0; 0.0 1.0])
 
     @test_throws BoundsError H[[0.1,2.1], 1]
-
+    @test MemoryLayout(typeof(H)) == BasisLayout()
     @test ApplyStyle(*, typeof(H), typeof([1,2])) isa LazyQuasiArrayApplyStyle
     f = H*[1,2]
     @test axes(f) == (Inclusion(1.0..3.0),)
@@ -133,6 +133,8 @@ end
     @test last(M.args) isa BandedMatrix
 
     @test ApplyStyle(*, typeof(L'), typeof(D')) == SimplifyStyle()
+    @test apply(*,L',D') isa MulQuasiMatrix
+    @test MemoryLayout(typeof(L')) isa AdjointBasisLayout
     @test (L'D') isa MulQuasiMatrix
 
     A = (L'D') * (D*L)
@@ -158,21 +160,37 @@ end
 
     B = @view L[:,2:end-1]
     @test B[0.1,:] == [0.1]
-end
 
-@testset "Subindex of splines" begin
-    L = LinearSpline(range(0,stop=1,length=10))
-    @test L[:,2:end-1] isa MulQuasiMatrix
-    @test L[:,2:end-1][0.1,1] == L[0.1,2]
-    v = randn(8)
-    f = L[:,2:end-1] * v
-    @test f[0.1] ≈ (L*[0; v; 0])[0.1]
+    L = LinearSpline([1,2,3,4])
+    @test L[:,2:3] isa SubQuasiArray
+    @test axes(L[:,2:3]) ≡ (Inclusion(1.0..4), Base.OneTo(2))
+    @test L[:,2:3][1.1,1] == L[1.1,2]
+    @test_throws BoundsError L[0.1,1]
+    @test_throws BoundsError L[1.1,0]
+
+    @test MemoryLayout(typeof(L[:,2:3])) isa ApplyLayout{typeof(*)}
+    @test L\L[:,2:3] isa BandedMatrix
+    @test L\L[:,2:3] == [0 0; 1 0; 0 1.0; 0 0]
+
+    @testset "Subindex of splines" begin
+        L = LinearSpline(range(0,stop=1,length=10))
+        @test L[:,2:end-1] isa SubQuasiArray
+        @test L[:,2:end-1][0.1,1] == L[0.1,2]
+        v = randn(8)
+        f = L[:,2:end-1] * v
+        @test f[0.1] ≈ (L*[0; v; 0])[0.1]
+    end
 end
 
 @testset "Poisson" begin
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
+    @test (B'B) == (L'L)[2:end-1,2:end-1]
     D = Derivative(axes(L,1))
+    @test apply(*,D,B) isa SubQuasiArray
+    @test D*B isa MulQuasiMatrix
+    @test apply(*,D,B)[0.1,1] == (D*B)[0.1,1] == 9
+    @test apply(*,D,B)[0.2,1] == (D*B)[0.2,1] == -9
     Δ = -((D*B)'*(D*B)) # Weak Laplacian
     @test Δ isa BandedMatrix
 
@@ -190,7 +208,6 @@ end
 
     @test u[0.1] ≈ -0.06612902692412974
 end
-
 
 @testset "Helmholtz" begin
     L = LinearSpline(range(0,stop=1,length=10))
@@ -237,6 +254,7 @@ end
     H = HeavisideSpline(L.points)
     @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 
+    @test MemoryLayout(typeof(L[y,:])) isa BasisLayout
     a,b = arguments((D*L)[y,:])
     @test H[y,:]\a == Eye(9)
     @test H[y,:] \ (D*L)[y,:] isa BandedMatrix

@@ -4,13 +4,14 @@ import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, 
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last, show, isempty, findfirst, findlast, findall
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, arguments,
+                        subarraylayout, ApplyLayout, BroadcastLayout, combine_mul_styles
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value
 
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
-                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
+                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, quasimulapplystyle,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
 
@@ -57,15 +58,6 @@ function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::
     isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
 end
 
-
-# we represent as a Mul with a banded matrix
-function materialize(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
-    A = parent(V)
-    _,jr = parentindices(V)
-    first(jr) ≥ 1 || throw(BoundsError())
-    P = _BandedMatrix(Ones{Int}(1,length(jr)), axes(A,2), first(jr)-1,1-first(jr))
-    A*P
-end
 
 BroadcastStyle(::Type{<:Inclusion{<:Any,<:AbstractInterval}}) = LazyQuasiArrayStyle{1}()
 BroadcastStyle(::Type{<:QuasiAdjoint{<:Any,<:Inclusion{<:Any,<:AbstractInterval}}}) = LazyQuasiArrayStyle{2}()
@@ -117,7 +109,6 @@ function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::
     @_propagate_inbounds_meta
     isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
 end
-
 
 for find in (:findfirst, :findlast, :findall)
     @eval $find(f::Base.Fix2{typeof(isequal)}, d::AffineMap) = $find(isequal(d.A \ (f.x .- d.b)), d.x)
