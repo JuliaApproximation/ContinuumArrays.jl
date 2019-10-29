@@ -1,5 +1,5 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineMap, BasisLayout, AdjointBasisLayout
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout
 import ForwardDiff: Dual
@@ -223,22 +223,20 @@ end
 end
 
 @testset "Change-of-variables" begin
-    L = LinearSpline(range(-1,stop=1,length=10))
     x = Inclusion(0..1) 
-    @test 2x isa AffineMap
+    @test 2x isa AffineQuasiVector
     @test (2x)[0.1] == 0.2
     @test_throws BoundsError (2x)[2]
     y = 2x .- 1
-    @test y isa AffineMap
+    @test y isa AffineQuasiVector
     @test y[0.1] == 2*(0.1)-1
-    @test y/2 isa AffineMap
-    @test 2\y isa AffineMap
+    @test y/2 isa AffineQuasiVector
+    @test 2\y isa AffineQuasiVector
     @test (y/2)[0.1] == (2\y)[0.1] == -0.4
-    @test y .+ 1 isa AffineMap
+    @test y .+ 1 isa AffineQuasiVector
     @test (y .+ 1)[0.1] == (1 .+ y)[0.1]
     @test (y .- 1)[0.1] == y[0.1]-1
     @test (1 .- y)[0.1] == 1-y[0.1]
-    @test L[y,:][0.1,:] == L[2*0.1-1,:]
 
     @test findfirst(isequal(0.1),x) == findlast(isequal(0.1),x) == 0.1
     @test findall(isequal(0.1), x) == [0.1]
@@ -249,6 +247,9 @@ end
     @test findfirst(isequal(2.3),y) == findlast(isequal(2.3),y) == nothing
     @test findall(isequal(0.2),y) == [0.6]
     @test findall(isequal(2),y) == Float64[]
+
+    L = LinearSpline(range(-1,stop=1,length=10))
+    @test L[y,:][0.1,:] == L[2*0.1-1,:]
 
     D = Derivative(axes(L,1))
     H = HeavisideSpline(L.points)
@@ -261,5 +262,6 @@ end
 
     D = Derivative(x)
     @test (D*L[y,:])[0.1,1] ≈ -9
+    @test H[y,:] \ (D*L[y,:]) isa BandedMatrix
     @test H[y,:] \ (D*L[y,:]) ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 end

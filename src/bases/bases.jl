@@ -1,15 +1,19 @@
 abstract type Basis{T} <: LazyQuasiMatrix{T} end
+abstract type Weight{T} <: LazyQuasiVector{T} end
 
 
 const WeightedBasis{T, A<:AbstractQuasiVector, B<:Basis} = BroadcastQuasiMatrix{T,typeof(*),<:Tuple{A,B}}
 
+struct WeightLayout <: MemoryLayout end
 struct BasisLayout <: MemoryLayout end
 struct AdjointBasisLayout <: MemoryLayout end
 
 MemoryLayout(::Type{<:Basis}) = BasisLayout()
+MemoryLayout(::Type{<:Weight}) = WeightLayout()
 
 adjointlayout(::Type, ::BasisLayout) = AdjointBasisLayout()
 transposelayout(::Type{<:Real}, ::BasisLayout) = AdjointBasisLayout()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = BasisLayout()
 
 combine_mul_styles(::BasisLayout) = LazyQuasiArrayApplyStyle()
 combine_mul_styles(::AdjointBasisLayout) = LazyQuasiArrayApplyStyle()
@@ -44,6 +48,18 @@ for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
             Eye(size(A,2))
         end
 
+        function copy(P::Ldiv{<:Any,<:Any,<:SubQuasiArray{<:Any,2,<:$Bas1,<:Tuple{<:AffineQuasiVector,<:Slice}},
+                                          <:SubQuasiArray{<:Any,2,<:$Bas2,<:Tuple{<:AffineQuasiVector,<:Slice}}})
+            A, B = P.A, P.B
+            parent(A)\parent(B)
+        end   
+        function copy(P::Ldiv{<:Any,<:Any,<:SubQuasiArray{<:Any,2,<:$Bas1,<:Tuple{<:AffineQuasiVector,<:Slice}},
+                                          <:SubQuasiArray{<:Any,2,<:$Bas2,<:Tuple{<:AffineQuasiVector,<:Any}}})
+            A, B = P.A, P.B
+            # use lazy_getindex to avoid sparse arrays
+            lazy_getindex(parent(A)\parent(B),:,parentindices(B)[2])
+        end        
+
         function ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2})
             all(parentindices(A) == parentindices(B)) && parent(A) == parent(B)
         end
@@ -64,7 +80,7 @@ function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatri
     (Derivative(axes(P,1))*P)[parentindices(B)...]
 end
 
-function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AffineMap,<:Any}}})
+function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AffineQuasiVector,<:Any}}})
     A, B = M.args
     P = parent(B)
     kr,jr = parentindices(B)
@@ -82,7 +98,7 @@ end
 
 # we represent as a Mul with a banded matrix
 subarraylayout(::BasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = ApplyLayout{typeof(*)}()
-subarraylayout(::BasisLayout, ::Type{<:Tuple{<:AffineMap,<:AbstractUnitRange}}) = BasisLayout()
+subarraylayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}}) = BasisLayout()
 function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
     A = parent(V)
     _,jr = parentindices(V)
