@@ -67,6 +67,23 @@ for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
 end
 
 
+# expansion
+grid(P) = error("Overload Grid")
+function transform(L)
+    p = grid(L)
+    p,L[p,:]
+end
+
+function copy(L::Ldiv{BasisLayout,<:Any,<:Any,<:AbstractQuasiVector})
+    p,T = transform(L.A)
+    T \ L.B[p]
+end
+
+function copy(L::Ldiv{BasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
+    p,T = transform(L.A)
+     T \ L.B[p]
+end
+
 ## materialize views
 
 # materialize(S::SubQuasiArray{<:Any,2,<:ApplyQuasiArray{<:Any,2,typeof(*),<:Tuple{<:Basis,<:Any}}}) =

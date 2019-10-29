@@ -29,7 +29,7 @@ end
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
 
-    @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1.0..3.0), Base.OneTo(2))
+    @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1..3), Base.OneTo(2))
     @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
 
     @test_throws BoundsError H[0.1, 1]
@@ -163,7 +163,7 @@ end
 
     L = LinearSpline([1,2,3,4])
     @test L[:,2:3] isa SubQuasiArray
-    @test axes(L[:,2:3]) ≡ (Inclusion(1.0..4), Base.OneTo(2))
+    @test axes(L[:,2:3]) ≡ (Inclusion(1..4), Base.OneTo(2))
     @test L[:,2:3][1.1,1] == L[1.1,2]
     @test_throws BoundsError L[0.1,1]
     @test_throws BoundsError L[1.1,0]
