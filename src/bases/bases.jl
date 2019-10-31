@@ -79,6 +79,9 @@ function copy(L::Ldiv{BasisLayout,<:Any,<:Any,<:AbstractQuasiVector})
     T \ L.B[p]
 end
 
+copy(L::Ldiv{BasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
+    copy(Ldiv{LazyLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+
 function copy(L::Ldiv{BasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
     p,T = transform(L.A)
      T \ L.B[p]
