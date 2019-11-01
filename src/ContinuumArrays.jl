@@ -86,6 +86,7 @@ AffineQuasiVector(A, x::AffineQuasiVector, b) = AffineQuasiVector(A*x.A, x.x, A*
 
 axes(A::AffineQuasiVector) = axes(A.x)
 getindex(A::AffineQuasiVector, k::Number) = A.A*A.x[k] .+ A.b    
+inbounds_getindex(A::AffineQuasiVector{<:Any,<:Any,<:Inclusion}, k::Number) = A.A*k .+ A.b
 isempty(A::AffineQuasiVector) = isempty(A.x)
 ==(a::AffineQuasiVector, b::AffineQuasiVector) = a.A == b.A && a.x == b.x && a.b == b.b
 

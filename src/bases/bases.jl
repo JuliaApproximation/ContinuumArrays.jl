@@ -110,9 +110,13 @@ end
 function copy(L::Ldiv{BasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix}) 
     args = arguments(L.B)
     # this is a temporary hack
-    @assert args[1] isa AbstractQuasiMatrix
-    @assert args[2] isa Number
-    broadcast(*, L.A \  first(args),  tail(args)...)
+    if args isa Tuple{AbstractQuasiMatrix,Number}
+        broadcast(*, L.A \  first(args),  last(args))
+    elseif args isa Tuple{Number,AbstractQuasiMatrix}
+        broadcast(*, first(args),  L.A \ last(args))
+    else
+        error("Not implemented")
+    end
 end
 
 
