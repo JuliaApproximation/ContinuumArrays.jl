@@ -25,14 +25,22 @@ _multup(a::Tuple) = Mul(a...)
 _multup(a) = a
 
 
-==(A::Basis, B::Basis) = axes(A) ≠ axes(B) ||
-    throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
+function ==(A::Basis, B::Basis) 
+    axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
+    false
+end
+
 
 ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
 ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
 ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
 ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
 
+copy(L::Ldiv{BasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
+function copy(L::Ldiv{BasisLayout,BroadcastLayout{typeof(-)}}) 
+    a,b = arguments(L.B)
+    (L.A\a)-(L.A\b)
+end
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
     @eval begin
@@ -111,9 +119,9 @@ function copy(L::Ldiv{BasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatr
     args = arguments(L.B)
     # this is a temporary hack
     if args isa Tuple{AbstractQuasiMatrix,Number}
-        broadcast(*, L.A \  first(args),  last(args))
+        (L.A \  first(args))*last(args)
     elseif args isa Tuple{Number,AbstractQuasiMatrix}
-        broadcast(*, first(args),  L.A \ last(args))
+        first(args)*(L.A \ last(args))
     else
         error("Not implemented")
     end
