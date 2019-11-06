@@ -16,7 +16,7 @@ FillArrays = "0.8"
 IntervalSets = "0.3.1"
 LazyArrays = "0.13"
 julia = "1.1"
-QuasiArrays = "0.0.2"
+QuasiArrays = "0.0.3"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
