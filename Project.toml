@@ -11,16 +11,16 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
-BandedMatrices = "0.13"
+BandedMatrices = "0.14"
 FillArrays = "0.8"
 IntervalSets = "0.3.1"
-LazyArrays = "0.13"
+LazyArrays = "0.14"
+QuasiArrays = "0.0.3, 0.0.4"
 julia = "1.1"
-QuasiArrays = "0.0.3"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test","ForwardDiff"]
+test = ["Test", "ForwardDiff"]
