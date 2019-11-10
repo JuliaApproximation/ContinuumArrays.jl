@@ -129,8 +129,8 @@ end
 
 
 # we represent as a Mul with a banded matrix
-subarraylayout(::BasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = ApplyLayout{typeof(*)}()
-subarraylayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}}) = BasisLayout()
+sublayout(::BasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = ApplyLayout{typeof(*)}()
+sublayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}}) = BasisLayout()
 function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
     A = parent(V)
     _,jr = parentindices(V)
