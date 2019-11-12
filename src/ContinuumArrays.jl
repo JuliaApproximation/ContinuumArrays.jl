@@ -96,7 +96,7 @@ for op in(:*, :\, :+, :-)
     @eval broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), a::Number, x::Inclusion) = broadcast($op, a, AffineQuasiVector(x))
 end
 for op in(:/, :+, :-)
-    @eval broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), x::Inclusion, a::Number) = broadcast(*, AffineQuasiVector(x), a)
+    @eval broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), x::Inclusion, a::Number) = broadcast($op, AffineQuasiVector(x), a)
 end
 
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(*), a::Number, x::AffineQuasiVector) = AffineQuasiVector(a, x)
