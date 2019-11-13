@@ -1,9 +1,10 @@
-struct Spline{order,T} <: Basis{T}
-    points::Vector{T}
+struct Spline{order,T,P<:AbstractVector} <: Basis{T}
+    points::P
 end
+Spline{o,T}(pts::P) where {o,T,P} = Spline{o,T,P}(pts)
 
-const LinearSpline{T} = Spline{1,T}
-const HeavisideSpline{T} = Spline{0,T}
+const LinearSpline = Spline{1}
+const HeavisideSpline = Spline{0}
 
 Spline{o}(pts::AbstractVector{T}) where {o,T} = Spline{o,float(T)}(pts)
 
@@ -35,6 +36,9 @@ function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
     p[k+1] == x && return one(T)/2
     return zero(T)
 end
+
+grid(L::LinearSpline) = L.points
+transform(L::LinearSpline{T}) where T = grid(L),Eye{T}(size(L,2))
 
 ## Sub-bases
 
