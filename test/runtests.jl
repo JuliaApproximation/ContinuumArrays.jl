@@ -7,8 +7,8 @@ import ForwardDiff: Dual
 
 @testset "Inclusion" begin
     x = Inclusion(-1..1)
-    @test_throws InexactError x[0.1]
-    @test x[0.0] === 0
+    @test x[0.1] === 0.1
+    @test x[0.0] === 0.0
     x = Inclusion(-1.0..1)
     X = QuasiDiagonal(x)
     @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
@@ -29,7 +29,7 @@ end
 @testset "HeavisideSpline" begin
     H = HeavisideSpline([1,2,3])
 
-    @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1.0..3.0), Base.OneTo(2))
+    @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1..3), Base.OneTo(2))
     @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
 
     @test_throws BoundsError H[0.1, 1]
@@ -47,7 +47,7 @@ end
     @test all(H[[1.1,2.1], 1:2] .=== [1.0 0.0; 0.0 1.0])
 
     @test_throws BoundsError H[[0.1,2.1], 1]
-
+    @test MemoryLayout(typeof(H)) == BasisLayout()
     @test ApplyStyle(*, typeof(H), typeof([1,2])) isa LazyQuasiArrayApplyStyle
     f = H*[1,2]
     @test axes(f) == (Inclusion(1.0..3.0),)
@@ -70,7 +70,7 @@ end
     @test L[2.1,2] ≈ 0.9
     @test L[2.1,3] == L'[3,2.1] == transpose(L)[3,2.1] ≈ 0.1
     @test_throws BoundsError L[3.1,2]
-    
+
     @test L[[1.1,2.1], 1] == L'[1,[1.1,2.1]] == transpose(L)[1,[1.1,2.1]] ≈ [0.9,0.0]
     @test L[1.1,1:2] ≈ [0.9,0.1]
     @test L[[1.1,2.1], 1:2] ≈ [0.9 0.1; 0.0 0.9]
@@ -133,6 +133,8 @@ end
     @test last(M.args) isa BandedMatrix
 
     @test ApplyStyle(*, typeof(L'), typeof(D')) == SimplifyStyle()
+    @test apply(*,L',D') isa MulQuasiMatrix
+    @test MemoryLayout(typeof(L')) isa AdjointBasisLayout
     @test (L'D') isa MulQuasiMatrix
 
     A = (L'D') * (D*L)
@@ -158,7 +160,6 @@ end
 
     B = @view L[:,2:end-1]
     @test B[0.1,:] == [0.1]
-end
 
     L = LinearSpline([1,2,3,4])
     @test L[:,2:3] isa SubQuasiArray
@@ -184,7 +185,12 @@ end
 @testset "Poisson" begin
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
+    @test (B'B) == (L'L)[2:end-1,2:end-1]
     D = Derivative(axes(L,1))
+    @test apply(*,D,B) isa SubQuasiArray
+    @test D*B isa MulQuasiMatrix
+    @test apply(*,D,B)[0.1,1] == (D*B)[0.1,1] == 9
+    @test apply(*,D,B)[0.2,1] == (D*B)[0.2,1] == -9
     Δ = -((D*B)'*(D*B)) # Weak Laplacian
     @test Δ isa BandedMatrix
 
@@ -203,7 +209,6 @@ end
     @test u[0.1] ≈ -0.06612902692412974
 end
 
-
 @testset "Helmholtz" begin
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
@@ -217,3 +222,46 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
+@testset "Change-of-variables" begin
+    x = Inclusion(0..1)
+    @test 2x isa AffineQuasiVector
+    @test (2x)[0.1] == 0.2
+    @test_throws BoundsError (2x)[2]
+    y = 2x .- 1
+    @test y isa AffineQuasiVector
+    @test y[0.1] == 2*(0.1)-1
+    @test y/2 isa AffineQuasiVector
+    @test 2\y isa AffineQuasiVector
+    @test (y/2)[0.1] == (2\y)[0.1] == -0.4
+    @test y .+ 1 isa AffineQuasiVector
+    @test (y .+ 1)[0.1] == (1 .+ y)[0.1]
+    @test (y .- 1)[0.1] == y[0.1]-1
+    @test (1 .- y)[0.1] == 1-y[0.1]
+
+    @test findfirst(isequal(0.1),x) == findlast(isequal(0.1),x) == 0.1
+    @test findall(isequal(0.1), x) == [0.1]
+    @test findfirst(isequal(2),x) == findlast(isequal(2),x) == nothing
+    @test findall(isequal(2), x) == Float64[]
+
+    @test findfirst(isequal(0.2),y) == findlast(isequal(0.2),y) == 0.6
+    @test findfirst(isequal(2.3),y) == findlast(isequal(2.3),y) == nothing
+    @test findall(isequal(0.2),y) == [0.6]
+    @test findall(isequal(2),y) == Float64[]
+
+    L = LinearSpline(range(-1,stop=1,length=10))
+    @test L[y,:][0.1,:] == L[2*0.1-1,:]
+
+    D = Derivative(axes(L,1))
+    H = HeavisideSpline(L.points)
+    @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
+
+    @test MemoryLayout(typeof(L[y,:])) isa BasisLayout
+    a,b = arguments((D*L)[y,:])
+    @test H[y,:]\a == Eye(9)
+    @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
+
+    D = Derivative(x)
+    @test (D*L[y,:])[0.1,1] ≈ -9
+    @test H[y,:] \ (D*L[y,:]) isa BandedMatrix
+    @test H[y,:] \ (D*L[y,:]) ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
+end

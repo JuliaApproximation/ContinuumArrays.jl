@@ -154,12 +154,6 @@ axes(D::Derivative) = (D.axis, D.axis)
 copy(D::Derivative) = Derivative(copy(D.axis))
 
 
-function copy(M::QMul2{<:Derivative,<:SubQuasiArray})
-    A, B = M.args
-    P = parent(B)
-    (Derivative(axes(P,1))*P)[parentindices(B)...]
-end
-
 
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
 #     f::F

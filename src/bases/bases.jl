@@ -1,4 +1,5 @@
 abstract type Basis{T} <: LazyQuasiMatrix{T} end
+abstract type Weight{T} <: LazyQuasiVector{T} end
 
 
 const WeightedBasis{T, A<:AbstractQuasiVector, B<:Basis} = BroadcastQuasiMatrix{T,typeof(*),<:Tuple{A,B}}
@@ -27,14 +28,19 @@ _multup(a::Tuple) = Mul(a...)
 _multup(a) = a
 
 
-==(A::Basis, B::Basis) = axes(A) ≠ axes(B) ||
-    throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
+function ==(A::Basis, B::Basis)
+    axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
+    false
+end
+
 
 ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
 ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
+ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
+ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
-function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}}) 
+function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
     a,b = arguments(L.B)
     (L.A\a)-(L.A\b)
 end
@@ -48,7 +54,7 @@ for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
         end
         function copy(P::Ldiv{<:Any,<:Any,<:SubQuasiArray{<:Any,2,<:$Bas1},<:SubQuasiArray{<:Any,2,<:$Bas2}})
             A, B = P.A, P.B
-            (parent(A) == parent(B) && parentindices(A) == parentindices(B)) || 
+            (parent(A) == parent(B) && parentindices(A) == parentindices(B)) ||
                 throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
             Eye(size(A,2))
         end
@@ -57,13 +63,13 @@ for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
                                           <:SubQuasiArray{<:Any,2,<:$Bas2,<:Tuple{<:AffineQuasiVector,<:Slice}}})
             A, B = P.A, P.B
             parent(A)\parent(B)
-        end   
+        end
         function copy(P::Ldiv{<:Any,<:Any,<:SubQuasiArray{<:Any,2,<:$Bas1,<:Tuple{<:AffineQuasiVector,<:Slice}},
                                           <:SubQuasiArray{<:Any,2,<:$Bas2,<:Tuple{<:AffineQuasiVector,<:Any}}})
             A, B = P.A, P.B
             # use lazy_getindex to avoid sparse arrays
             lazy_getindex(parent(A)\parent(B),:,parentindices(B)[2])
-        end        
+        end
 
         function ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2})
             all(parentindices(A) == parentindices(B)) && parent(A) == parent(B)
@@ -98,7 +104,7 @@ end
 #     *(arguments(S)...)
 
 
-# Differentiation of sub-arrays 
+# Differentiation of sub-arrays
 function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}})
     A, B = M.args
     P = parent(B)
@@ -112,7 +118,7 @@ function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatri
     (Derivative(axes(P,1))*P*kr.A)[kr,jr]
 end
 
-function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix}) 
+function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix})
     args = arguments(L.B)
     # this is a temporary hack
     if args isa Tuple{AbstractQuasiMatrix,Number}
