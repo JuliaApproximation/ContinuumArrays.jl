@@ -8,18 +8,23 @@ struct WeightLayout <: MemoryLayout end
 abstract type AbstractBasisLayout <: MemoryLayout end
 struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
-struct AdjointBasisLayout <: MemoryLayout end
+
+abstract type AbstractAdjointBasisLayout <: MemoryLayout end
+struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
+struct AdjointSubBasisLayout <: AbstractAdjointBasisLayout end
 
 MemoryLayout(::Type{<:Basis}) = BasisLayout()
 MemoryLayout(::Type{<:Weight}) = WeightLayout()
 
-adjointlayout(::Type, ::AbstractBasisLayout) = AdjointBasisLayout()
-transposelayout(::Type{<:Real}, ::AbstractBasisLayout) = AdjointBasisLayout()
+adjointlayout(::Type, ::BasisLayout) = AdjointBasisLayout()
+transposelayout(::Type{<:Real}, ::BasisLayout) = AdjointBasisLayout()
+adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
+transposelayout(::Type{<:Real}, ::SubBasisLayout) = AdjointSubBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = BasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = SubBasisLayout()
 
 combine_mul_styles(::AbstractBasisLayout) = LazyQuasiArrayApplyStyle()
-combine_mul_styles(::AdjointBasisLayout) = LazyQuasiArrayApplyStyle()
+combine_mul_styles(::AbstractAdjointBasisLayout) = LazyQuasiArrayApplyStyle()
 
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
@@ -140,8 +145,13 @@ sublayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}
 # SubLayout behaves like ApplyLayout{typeof(*)}
 
 combine_mul_styles(::SubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
-
+_arguments(::SubBasisLayout, A) = _arguments(ApplyLayout{typeof(*)}(), A)
 call(::SubBasisLayout, ::SubQuasiArray) = *
+
+combine_mul_styles(::AdjointSubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
+_arguments(::AdjointSubBasisLayout, A) = _arguments(ApplyLayout{typeof(*)}(), A)
+arguments(::AdjointSubBasisLayout, A) = arguments(ApplyLayout{typeof(*)}(), A)
+call(::AdjointSubBasisLayout, ::SubQuasiArray) = *
 
 function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
     A = parent(V)
