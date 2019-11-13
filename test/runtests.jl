@@ -1,7 +1,7 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test, ForwardDiff
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle
-import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle, LmaterializeApplyStyle
-import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout
+import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
+import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout
 import ForwardDiff: Dual
 
 
@@ -160,13 +160,25 @@ end
     @test B[0.1,:] == [0.1]
 end
 
-@testset "Subindex of splines" begin
-    L = LinearSpline(range(0,stop=1,length=10))
-    @test L[:,2:end-1] isa MulQuasiMatrix
-    @test L[:,2:end-1][0.1,1] == L[0.1,2]
-    v = randn(8)
-    f = L[:,2:end-1] * v
-    @test f[0.1] ≈ (L*[0; v; 0])[0.1]
+    L = LinearSpline([1,2,3,4])
+    @test L[:,2:3] isa SubQuasiArray
+    @test axes(L[:,2:3]) ≡ (Inclusion(1..4), Base.OneTo(2))
+    @test L[:,2:3][1.1,1] == L[1.1,2]
+    @test_throws BoundsError L[0.1,1]
+    @test_throws BoundsError L[1.1,0]
+
+    @test MemoryLayout(typeof(L[:,2:3])) isa SubBasisLayout
+    @test L\L[:,2:3] isa BandedMatrix
+    @test L\L[:,2:3] == [0 0; 1 0; 0 1.0; 0 0]
+
+    @testset "Subindex of splines" begin
+        L = LinearSpline(range(0,stop=1,length=10))
+        @test L[:,2:end-1] isa SubQuasiArray
+        @test L[:,2:end-1][0.1,1] == L[0.1,2]
+        v = randn(8)
+        f = L[:,2:end-1] * v
+        @test f[0.1] ≈ (L*[0; v; 0])[0.1]
+    end
 end
 
 @testset "Poisson" begin

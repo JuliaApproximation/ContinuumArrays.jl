@@ -2,9 +2,11 @@ module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, show
-import Base.Broadcast: materialize, BroadcastStyle
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
+                first, last, show, isempty, findfirst, findlast, findall, Slice
+import Base.Broadcast: materialize, BroadcastStyle, broadcasted
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, 
+                        adjointlayout, LdivApplyStyle, arguments, call, broadcastlayout, lazy_getindex,
+                        sublayout, ApplyLayout, BroadcastLayout, combine_mul_styles
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value
@@ -14,7 +16,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform
 
 ####
 # Interval indexing support
