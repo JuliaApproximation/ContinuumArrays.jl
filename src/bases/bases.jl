@@ -8,18 +8,19 @@ struct WeightLayout <: MemoryLayout end
 abstract type AbstractBasisLayout <: MemoryLayout end
 struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
+struct MappedBasisLayout <: AbstractBasisLayout end
 
 abstract type AbstractAdjointBasisLayout <: MemoryLayout end
 struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
 struct AdjointSubBasisLayout <: AbstractAdjointBasisLayout end
+struct AdjointMappedBasisLayout <: AbstractAdjointBasisLayout end
 
 MemoryLayout(::Type{<:Basis}) = BasisLayout()
 MemoryLayout(::Type{<:Weight}) = WeightLayout()
 
 adjointlayout(::Type, ::BasisLayout) = AdjointBasisLayout()
-transposelayout(::Type{<:Real}, ::BasisLayout) = AdjointBasisLayout()
 adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
-transposelayout(::Type{<:Real}, ::SubBasisLayout) = AdjointSubBasisLayout()
+adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = BasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = SubBasisLayout()
 
@@ -45,41 +46,44 @@ ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:Abstr
 ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
+copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
+    +(broadcast(\,Ref(L.A),arguments(L.B))...)
+
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
     a,b = arguments(L.B)
     (L.A\a)-(L.A\b)
 end
 
+function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector})
+    a,b = arguments(L.B)
+    (L.A\a)-(L.A\b)
+end
+
+function copy(P::Ldiv{BasisLayout,BasisLayout})
+    A, B = P.A, P.B
+    A == B || throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
+    Eye(size(A,2))
+end
+function copy(P::Ldiv{SubBasisLayout,SubBasisLayout})
+    A, B = P.A, P.B
+    (parent(A) == parent(B) && parentindices(A) == parentindices(B)) ||
+        throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
+    Eye(size(A,2))
+end
+
+function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
+    A, B = P.A, P.B
+    demap(A)\demap(B)
+end
+# function copy(P::Ldiv{MappedBasisLayout,SubBasisLayout})
+#     A, B = P.A, P.B
+#     # use lazy_getindex to avoid sparse arrays
+#     lazy_getindex(parent(A)\parent(B),:,parentindices(B)[2])
+# end
+
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
-    @eval begin
-        function copy(P::Ldiv{<:Any,<:Any,<:$Bas1,<:$Bas2})
-            A, B = P.A, P.B
-            A == B || throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
-            Eye(size(A,2))
-        end
-        function copy(P::Ldiv{<:Any,<:Any,<:SubQuasiArray{<:Any,2,<:$Bas1},<:SubQuasiArray{<:Any,2,<:$Bas2}})
-            A, B = P.A, P.B
-            (parent(A) == parent(B) && parentindices(A) == parentindices(B)) ||
-                throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
-            Eye(size(A,2))
-        end
-
-        function copy(P::Ldiv{<:Any,<:Any,<:SubQuasiArray{<:Any,2,<:$Bas1,<:Tuple{<:AffineQuasiVector,<:Slice}},
-                                          <:SubQuasiArray{<:Any,2,<:$Bas2,<:Tuple{<:AffineQuasiVector,<:Slice}}})
-            A, B = P.A, P.B
-            parent(A)\parent(B)
-        end
-        function copy(P::Ldiv{<:Any,<:Any,<:SubQuasiArray{<:Any,2,<:$Bas1,<:Tuple{<:AffineQuasiVector,<:Slice}},
-                                          <:SubQuasiArray{<:Any,2,<:$Bas2,<:Tuple{<:AffineQuasiVector,<:Any}}})
-            A, B = P.A, P.B
-            # use lazy_getindex to avoid sparse arrays
-            lazy_getindex(parent(A)\parent(B),:,parentindices(B)[2])
-        end
-
-        function ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2})
-            all(parentindices(A) == parentindices(B)) && parent(A) == parent(B)
-        end
-    end
+    @eval ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2}) =
+        all(parentindices(A) == parentindices(B)) && parent(A) == parent(B)
 end
 
 
@@ -138,7 +142,14 @@ end
 
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
-sublayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}}) = BasisLayout()
+sublayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
+
+demap(x) = x
+demap(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = parent(V)
+function demap(V::SubQuasiArray{<:Any,2}) 
+    kr, jr = parentindices(V)
+    demap(parent(V)[kr,:])[:,jr]
+end
 
 
 ##

@@ -1,5 +1,5 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, MappedBasisLayout
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout
 import ForwardDiff: Dual
@@ -87,6 +87,34 @@ end
     @test δ'L ≈ [0.8, 0.2, 0.0]
 
     @test L'L == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
+
+    @testset "==" begin
+        L = LinearSpline([1,2,3])
+        H = HeavisideSpline([1,2,3])
+        @test L == L
+        @test L ≠ H
+        H = HeavisideSpline([1,1.5,2.5,3])
+        @test_throws ArgumentError L == H
+    end
+
+    @testset "Adjoint layout" begin
+        L = LinearSpline([1,2,3])
+        @test MemoryLayout(typeof(L')) == AdjointBasisLayout()
+        @test [3,4,5]'*L' isa ApplyQuasiArray
+    end
+
+    @testset "Broadcast layout" begin
+        L = LinearSpline([1,2,3])
+        b = BroadcastQuasiArray(+, L*[3,4,5], L*[1.,2,3])
+        @test (L\b) == [4,6,8]
+        B = BroadcastQuasiArray(+, L, L)
+        @test L\B == 2Eye(3)
+
+        b = BroadcastQuasiArray(-, L*[3,4,5], L*[1.,2,3])
+        @test (L\b) == [2,2,2]
+        B = BroadcastQuasiArray(-, L, L)
+        @test L\B == 0Eye(3)
+    end
 end
 
 @testset "Derivative" begin
@@ -274,7 +302,7 @@ end
     H = HeavisideSpline(L.points)
     @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 
-    @test MemoryLayout(typeof(L[y,:])) isa BasisLayout
+    @test MemoryLayout(typeof(L[y,:])) isa MappedBasisLayout
     a,b = arguments((D*L)[y,:])
     @test H[y,:]\a == Eye(9)
     @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
@@ -283,4 +311,10 @@ end
     @test (D*L[y,:])[0.1,1] ≈ -9
     @test H[y,:] \ (D*L[y,:]) isa BandedMatrix
     @test H[y,:] \ (D*L[y,:]) ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
+
+    B = L[y,2:end-1]
+    @test MemoryLayout(typeof(B)) isa MappedBasisLayout
+    @test B[0.1,1] == L[2*0.1-1,2]
+    @test B\B == Eye(8)
+    @test L[y,:] \ B == Eye(10)[:,2:end-1]
 end
