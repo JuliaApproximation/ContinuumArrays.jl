@@ -2,7 +2,7 @@ module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, show, isempty, findfirst, findlast, findall, Slice
+                first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport,
                         adjointlayout, LdivApplyStyle, arguments, _arguments, call, broadcastlayout, lazy_getindex,
@@ -115,6 +115,11 @@ end
 for find in (:findfirst, :findlast, :findall)
     @eval $find(f::Base.Fix2{typeof(isequal)}, d::AffineQuasiVector) = $find(isequal(d.A \ (f.x .- d.b)), d.x)
 end
+
+minimum(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = signbit(d.A) ? last(d) : first(d)
+maximum(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = signbit(d.A) ? first(d) : last(d)
+
+union(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = Inclusion(minimum(d)..maximum(d))
 
 
 

@@ -222,7 +222,7 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
-@testset "Change-of-variables" begin
+@testset "AffineQuasiVector" begin
     x = Inclusion(0..1)
     @test 2x isa AffineQuasiVector
     @test (2x)[0.1] == 0.2
@@ -248,6 +248,25 @@ end
     @test findall(isequal(0.2),y) == [0.6]
     @test findall(isequal(2),y) == Float64[]
 
+    @test AffineQuasiVector(x)[0.1] == 0.1
+    @test minimum(y) == -1
+    @test maximum(y) == 1
+    @test union(y) == Inclusion(-1..1)
+    @test ContinuumArrays.inbounds_getindex(y,0.1) == y[0.1]
+    @test ContinuumArrays.inbounds_getindex(y,2.1) == 2*2.1 - 1
+
+    z = 1 .- x
+    @test minimum(z) == 0.0
+    @test maximum(z) == 1.0
+    @test union(z) == Inclusion(0..1)
+
+    @test !isempty(z)
+    @test z == z
+end
+
+@testset "Change-of-variables" begin
+    x = Inclusion(0..1)
+    y = 2x .- 1
     L = LinearSpline(range(-1,stop=1,length=10))
     @test L[y,:][0.1,:] == L[2*0.1-1,:]
 
