@@ -39,25 +39,22 @@ function ==(A::Basis, B::Basis)
     false
 end
 
+quasildivapplystyle(::AbstractBasisLayout, ::AbstractBasisLayout) = LdivApplyStyle()
+quasildivapplystyle(::AbstractBasisLayout, _) = LdivApplyStyle()
+quasildivapplystyle(_, ::AbstractBasisLayout) = LdivApplyStyle()
 
-ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
-ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
-ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
-ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
-    +(broadcast(\,Ref(L.A),arguments(L.B))...)
+    _transform_ldiv(L.A, L.B)
 
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
     a,b = arguments(L.B)
     (L.A\a)-(L.A\b)
 end
 
-function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector})
-    a,b = arguments(L.B)
-    (L.A\a)-(L.A\b)
-end
+copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
+    _transform_ldiv(L.A, L.B)
 
 function copy(P::Ldiv{BasisLayout,BasisLayout})
     A, B = P.A, P.B
@@ -75,11 +72,8 @@ function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
     A, B = P.A, P.B
     demap(A)\demap(B)
 end
-# function copy(P::Ldiv{MappedBasisLayout,SubBasisLayout})
-#     A, B = P.A, P.B
-#     # use lazy_getindex to avoid sparse arrays
-#     lazy_getindex(parent(A)\parent(B),:,parentindices(B)[2])
-# end
+copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
+copy(L::Ldiv{SubBasisLayout,BasisLayout}) = apply(\, ApplyQuasiArray(L.A), L.B)
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
     @eval ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2}) =
@@ -94,17 +88,27 @@ function transform(L)
     p,L[p,:]
 end
 
-function copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector})
-    p,T = transform(L.A)
-    T \ L.B[p]
+function _transform_ldiv(A, B)
+    p,T = transform(A)
+    T \ B[p]
 end
+
+copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
+    _transform_ldiv(L.A, L.B)
+
 
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
     copy(Ldiv{LazyLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 
+function copy(L::Ldiv{ApplyLayout{typeof(*)},<:AbstractBasisLayout})
+    args = arguments(L.A)
+    @assert length(args) == 2 # temporary
+    apply(\, last(args), apply(\, first(args), L.B))
+end
+
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
     p,T = transform(L.A)
-     T \ L.B[p]
+    T \ L.B[p]
 end
 
 ## materialize views
@@ -171,9 +175,6 @@ function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:Abstract
     P = _BandedMatrix(Ones{Int}(1,length(jr)), axes(A,2), first(jr)-1,1-first(jr))
     A,P
 end
-
-copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
-
 
 
 include("splines.jl")

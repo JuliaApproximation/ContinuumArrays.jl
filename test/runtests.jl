@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
 import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, MappedBasisLayout
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
-import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout
+import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivApplyStyle
 import ForwardDiff: Dual
 
 
@@ -106,6 +106,7 @@ end
     @testset "Broadcast layout" begin
         L = LinearSpline([1,2,3])
         b = BroadcastQuasiArray(+, L*[3,4,5], L*[1.,2,3])
+        @test ApplyStyle(\, typeof(L), typeof(b)) == LdivApplyStyle()
         @test (L\b) == [4,6,8]
         B = BroadcastQuasiArray(+, L, L)
         @test L\B == 2Eye(3)
