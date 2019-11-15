@@ -72,8 +72,10 @@ function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
     A, B = P.A, P.B
     demap(A)\demap(B)
 end
+
 copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
 copy(L::Ldiv{SubBasisLayout,BasisLayout}) = apply(\, ApplyQuasiArray(L.A), L.B)
+
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
     @eval ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2}) =
@@ -105,6 +107,7 @@ function copy(L::Ldiv{ApplyLayout{typeof(*)},<:AbstractBasisLayout})
     @assert length(args) == 2 # temporary
     apply(\, last(args), apply(\, first(args), L.B))
 end
+
 
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
     p,T = transform(L.A)
