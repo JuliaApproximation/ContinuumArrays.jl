@@ -1,5 +1,5 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, MappedBasisLayout
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout
 import ForwardDiff: Dual
@@ -70,7 +70,7 @@ end
     @test L[2.1,2] ≈ 0.9
     @test L[2.1,3] == L'[3,2.1] == transpose(L)[3,2.1] ≈ 0.1
     @test_throws BoundsError L[3.1,2]
-    
+
     @test L[[1.1,2.1], 1] == L'[1,[1.1,2.1]] == transpose(L)[1,[1.1,2.1]] ≈ [0.9,0.0]
     @test L[1.1,1:2] ≈ [0.9,0.1]
     @test L[[1.1,2.1], 1:2] ≈ [0.9 0.1; 0.0 0.9]
@@ -87,6 +87,34 @@ end
     @test δ'L ≈ [0.8, 0.2, 0.0]
 
     @test L'L == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
+
+    @testset "==" begin
+        L = LinearSpline([1,2,3])
+        H = HeavisideSpline([1,2,3])
+        @test L == L
+        @test L ≠ H
+        H = HeavisideSpline([1,1.5,2.5,3])
+        @test_throws ArgumentError L == H
+    end
+
+    @testset "Adjoint layout" begin
+        L = LinearSpline([1,2,3])
+        @test MemoryLayout(typeof(L')) == AdjointBasisLayout()
+        @test [3,4,5]'*L' isa ApplyQuasiArray
+    end
+
+    @testset "Broadcast layout" begin
+        L = LinearSpline([1,2,3])
+        b = BroadcastQuasiArray(+, L*[3,4,5], L*[1.,2,3])
+        @test (L\b) == [4,6,8]
+        B = BroadcastQuasiArray(+, L, L)
+        @test L\B == 2Eye(3)
+
+        b = BroadcastQuasiArray(-, L*[3,4,5], L*[1.,2,3])
+        @test (L\b) == [2,2,2]
+        B = BroadcastQuasiArray(-, L, L)
+        @test L\B == 0Eye(3)
+    end
 end
 
 @testset "Derivative" begin
@@ -168,7 +196,7 @@ end
     @test_throws BoundsError L[0.1,1]
     @test_throws BoundsError L[1.1,0]
 
-    @test MemoryLayout(typeof(L[:,2:3])) isa ApplyLayout{typeof(*)}
+    @test MemoryLayout(typeof(L[:,2:3])) isa SubBasisLayout
     @test L\L[:,2:3] isa BandedMatrix
     @test L\L[:,2:3] == [0 0; 1 0; 0 1.0; 0 0]
 
@@ -222,8 +250,8 @@ end
     @test u[0.1] ≈ 0.00012678835289369413
 end
 
-@testset "Change-of-variables" begin
-    x = Inclusion(0..1) 
+@testset "AffineQuasiVector" begin
+    x = Inclusion(0..1)
     @test 2x isa AffineQuasiVector
     @test (2x)[0.1] == 0.2
     @test_throws BoundsError (2x)[2]
@@ -248,6 +276,25 @@ end
     @test findall(isequal(0.2),y) == [0.6]
     @test findall(isequal(2),y) == Float64[]
 
+    @test AffineQuasiVector(x)[0.1] == 0.1
+    @test minimum(y) == -1
+    @test maximum(y) == 1
+    @test union(y) == Inclusion(-1..1)
+    @test ContinuumArrays.inbounds_getindex(y,0.1) == y[0.1]
+    @test ContinuumArrays.inbounds_getindex(y,2.1) == 2*2.1 - 1
+
+    z = 1 .- x
+    @test minimum(z) == 0.0
+    @test maximum(z) == 1.0
+    @test union(z) == Inclusion(0..1)
+
+    @test !isempty(z)
+    @test z == z
+end
+
+@testset "Change-of-variables" begin
+    x = Inclusion(0..1)
+    y = 2x .- 1
     L = LinearSpline(range(-1,stop=1,length=10))
     @test L[y,:][0.1,:] == L[2*0.1-1,:]
 
@@ -255,7 +302,7 @@ end
     H = HeavisideSpline(L.points)
     @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 
-    @test MemoryLayout(typeof(L[y,:])) isa BasisLayout
+    @test MemoryLayout(typeof(L[y,:])) isa MappedBasisLayout
     a,b = arguments((D*L)[y,:])
     @test H[y,:]\a == Eye(9)
     @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
@@ -264,4 +311,10 @@ end
     @test (D*L[y,:])[0.1,1] ≈ -9
     @test H[y,:] \ (D*L[y,:]) isa BandedMatrix
     @test H[y,:] \ (D*L[y,:]) ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
+
+    B = L[y,2:end-1]
+    @test MemoryLayout(typeof(B)) isa MappedBasisLayout
+    @test B[0.1,1] == L[2*0.1-1,2]
+    @test B\B == Eye(8)
+    @test L[y,:] \ B == Eye(10)[:,2:end-1]
 end

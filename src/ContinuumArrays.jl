@@ -2,10 +2,10 @@ module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, show, isempty, findfirst, findlast, findall, Slice
+                first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, 
-                        adjointlayout, LdivApplyStyle, arguments, broadcastlayout, lazy_getindex,
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport,
+                        adjointlayout, LdivApplyStyle, arguments, _arguments, call, broadcastlayout, lazy_getindex,
                         sublayout, ApplyLayout, BroadcastLayout, combine_mul_styles
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
@@ -16,7 +16,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis, grid
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform
 
 ####
 # Interval indexing support
@@ -48,7 +48,7 @@ for find in (:findfirst, :findlast)
     @eval $find(f::Base.Fix2{typeof(isequal)}, d::Inclusion) = f.x in d.domain ? f.x : nothing
 end
 
-function findall(f::Base.Fix2{typeof(isequal)}, d::Inclusion) 
+function findall(f::Base.Fix2{typeof(isequal)}, d::Inclusion)
     r = findfirst(f,d)
     r === nothing ? eltype(d)[] : [r]
 end
@@ -79,13 +79,13 @@ end
 AffineQuasiVector(A::AA, x::X, b::B) where {AA,X,B} =
     AffineQuasiVector{promote_type(eltype(AA), eltype(X), eltype(B)),AA,X,B}(A,x,b)
 
-AffineQuasiVector(A, x) = AffineQuasiVector(A, x, zero(promote_type(eltype(A),eltype(x))))    
+AffineQuasiVector(A, x) = AffineQuasiVector(A, x, zero(promote_type(eltype(A),eltype(x))))
 AffineQuasiVector(x) = AffineQuasiVector(one(eltype(x)), x)
 
 AffineQuasiVector(A, x::AffineQuasiVector, b) = AffineQuasiVector(A*x.A, x.x, A*x.b .+ b)
 
 axes(A::AffineQuasiVector) = axes(A.x)
-getindex(A::AffineQuasiVector, k::Number) = A.A*A.x[k] .+ A.b    
+getindex(A::AffineQuasiVector, k::Number) = A.A*A.x[k] .+ A.b
 inbounds_getindex(A::AffineQuasiVector{<:Any,<:Any,<:Inclusion}, k::Number) = A.A*k .+ A.b
 isempty(A::AffineQuasiVector) = isempty(A.x)
 ==(a::AffineQuasiVector, b::AffineQuasiVector) = a.A == b.A && a.x == b.x && a.b == b.b
@@ -115,6 +115,11 @@ end
 for find in (:findfirst, :findlast, :findall)
     @eval $find(f::Base.Fix2{typeof(isequal)}, d::AffineQuasiVector) = $find(isequal(d.A \ (f.x .- d.b)), d.x)
 end
+
+minimum(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = signbit(d.A) ? last(d) : first(d)
+maximum(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = signbit(d.A) ? first(d) : last(d)
+
+union(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = Inclusion(minimum(d)..maximum(d))
 
 
 
