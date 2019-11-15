@@ -84,7 +84,10 @@ end
 
 
 # expansion
-grid(P) = error("Overload Grid")
+_grid(_, P) = error("Overload Grid")
+_grid(::MappedBasisLayout, P) = findfirst.(isequal.(grid(demap(P))), Ref(parentindices(P)[1]))
+grid(P) = _grid(MemoryLayout(typeof(P)), P)
+
 function transform(L)
     p = grid(L)
     p,L[p,:]
