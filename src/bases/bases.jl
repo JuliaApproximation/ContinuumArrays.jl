@@ -74,7 +74,11 @@ function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
 end
 
 copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
-copy(L::Ldiv{SubBasisLayout,BasisLayout}) = apply(\, ApplyQuasiArray(L.A), L.B)
+function copy(L::Ldiv{SubBasisLayout,BasisLayout}) 
+    P = parent(L.A)
+    kr, jr = parentindices(L.A)
+    lazy_getindex(apply(\, P, L.B), jr, :) # avoid sparse arrays
+end
 
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
@@ -93,10 +97,12 @@ function transform(L)
     p,L[p,:]
 end
 
-function _transform_ldiv(A, B)
+function _transform_ldiv(A, B, _)
     p,T = transform(A)
     T \ B[p]
 end
+
+_transform_ldiv(A, B) = _transform_ldiv(A, B, axes(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
     _transform_ldiv(L.A, L.B)
