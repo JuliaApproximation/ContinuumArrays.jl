@@ -116,6 +116,13 @@ end
         B = BroadcastQuasiArray(-, L, L)
         @test L\B == 0Eye(3)
     end
+
+    @testset "sub-of-sub" begin
+        L = LinearSpline([1,2,3])
+        V = view(L,:,1:2)
+        V2 = view(V,1.1:0.1:2,:)
+        @test V2 == L[1.1:0.1:2,1:2]
+    end
 end
 
 @testset "Derivative" begin
