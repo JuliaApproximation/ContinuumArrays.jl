@@ -155,7 +155,7 @@ copy(D::Derivative) = Derivative(copy(D.axis))
 
 function diff(d::AbstractQuasiVector)
     x = axes(d,1)
-    apply(*, Derivative(x), d)
+    Derivative(x)*d
 end
 
 
