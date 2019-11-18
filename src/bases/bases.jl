@@ -191,5 +191,24 @@ function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:Abstract
     A,P
 end
 
+####
+# sum
+####
+
+_sum(V::AbstractQuasiArray, dims) = __sum(MemoryLayout(typeof(V)), V, dims)
+_sum(V::AbstractQuasiArray, ::Colon) = __sum(MemoryLayout(typeof(V)), V, :)
+sum(V::AbstractQuasiArray; dims=:) = _sum(V, dims)
+
+__sum(L, Vm, _) = error("Override for $L")
+function __sum(::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
+    a = arguments(V)
+    first(apply(*, sum(a[1]; dims=1), tail(a)...))
+end
+
+function __sum(::MappedBasisLayout, V::AbstractQuasiArray, dims)
+    kr, jr = parentindices(V)
+    @assert kr isa AffineQuasiVector
+    sum(demap(V); dims=dims)/kr.A
+end
 
 include("splines.jl")

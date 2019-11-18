@@ -2,7 +2,7 @@ module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
-                first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum
+                first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport,
                         adjointlayout, LdivApplyStyle, arguments, _arguments, call, broadcastlayout, lazy_getindex,
