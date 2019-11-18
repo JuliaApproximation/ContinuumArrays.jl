@@ -221,9 +221,9 @@ end
 @testset "Poisson" begin
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
-    @test (B'B) == (L'L)[2:end-1,2:end-1]
+    @test B'B == (L'L)[2:end-1,2:end-1]
     D = Derivative(axes(L,1))
-    @test apply(*,D,B) isa SubQuasiArray
+    @test apply(*,D,B) isa MulQuasiMatrix
     @test D*B isa MulQuasiMatrix
     @test apply(*,D,B)[0.1,1] == (D*B)[0.1,1] == 9
     @test apply(*,D,B)[0.2,1] == (D*B)[0.2,1] == -9

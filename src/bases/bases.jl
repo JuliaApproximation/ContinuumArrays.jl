@@ -33,6 +33,9 @@ pinv(J::Basis) = apply(pinv,J)
 _multup(a::Tuple) = Mul(a...)
 _multup(a) = a
 
+@inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
+@inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
+
 
 function ==(A::Basis, B::Basis)
     axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
@@ -46,7 +49,7 @@ quasildivapplystyle(_, ::AbstractBasisLayout) = LdivApplyStyle()
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
-    _transform_ldiv(L.A, L.B)
+    transform_ldiv(L.A, L.B)
 
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
     a,b = arguments(L.B)
@@ -54,7 +57,7 @@ function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
 end
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
-    _transform_ldiv(L.A, L.B)
+    transform_ldiv(L.A, L.B)
 
 function copy(P::Ldiv{BasisLayout,BasisLayout})
     A, B = P.A, P.B
@@ -98,19 +101,18 @@ function transform(L)
     p,L[p,:]
 end
 
-function _transform_ldiv(A, B, _)
+function transform_ldiv(A, B, _)
     p,T = transform(A)
     T \ B[p]
 end
 
-_transform_ldiv(A, B) = _transform_ldiv(A, B, axes(A))
+transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
-    _transform_ldiv(L.A, L.B)
-
+    transform_ldiv(L.A, L.B)
 
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
-    copy(Ldiv{LazyLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+    transform_ldiv(L.A, L.B)
 
 function copy(L::Ldiv{ApplyLayout{typeof(*)},<:AbstractBasisLayout})
     args = arguments(L.A)
