@@ -314,6 +314,7 @@ end
     a,b = arguments((D*L)[y,:])
     @test H[y,:]\a == Eye(9)
     @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
+    @inferred(grid(L[y,:]))
 
     D = Derivative(x)
     @test (D*L[y,:])[0.1,1] ≈ -9
