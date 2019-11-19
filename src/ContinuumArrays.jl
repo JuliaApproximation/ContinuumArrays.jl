@@ -9,7 +9,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
-import FillArrays: AbstractFill, getindex_value
+import FillArrays: AbstractFill, getindex_value, SquareEye
 
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, quasimulapplystyle,
@@ -111,13 +111,15 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(+), x::AffineQuasiVector, b::Numb
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), a::Number, x::AffineQuasiVector) = AffineQuasiVector(-one(eltype(x)), x, a)
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), x::AffineQuasiVector, b::Number) = AffineQuasiVector(one(eltype(x)), x, -b)
 
-function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::AffineQuasiVector{<:Real,<:Real,<:Inclusion{<:Real,<:AbstractInterval}})
+function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::AffineQuasiVector{<:Any,<:Any,<:Inclusion{<:Any,<:AbstractInterval}})
     @_propagate_inbounds_meta
     isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
 end
 
+igetindex(d::AffineQuasiVector, x) = d.A \ (x .- d.b)
+
 for find in (:findfirst, :findlast, :findall)
-    @eval $find(f::Base.Fix2{typeof(isequal)}, d::AffineQuasiVector) = $find(isequal(d.A \ (f.x .- d.b)), d.x)
+    @eval $find(f::Base.Fix2{typeof(isequal)}, d::AffineQuasiVector) = $find(isequal(igetindex(d, f.x)), d.x)
 end
 
 minimum(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = signbit(d.A) ? last(d) : first(d)

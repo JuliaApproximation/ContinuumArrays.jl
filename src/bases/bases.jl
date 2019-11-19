@@ -30,8 +30,8 @@ combine_mul_styles(::AbstractAdjointBasisLayout) = LazyQuasiArrayApplyStyle()
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
 
-_multup(a::Tuple) = Mul(a...)
-_multup(a) = a
+@inline _multup(a::Tuple) = Mul(a...)
+@inline _multup(a) = a
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
@@ -42,42 +42,42 @@ function ==(A::Basis, B::Basis)
     false
 end
 
-quasildivapplystyle(::AbstractBasisLayout, ::AbstractBasisLayout) = LdivApplyStyle()
-quasildivapplystyle(::AbstractBasisLayout, _) = LdivApplyStyle()
-quasildivapplystyle(_, ::AbstractBasisLayout) = LdivApplyStyle()
+@inline quasildivapplystyle(::AbstractBasisLayout, ::AbstractBasisLayout) = LdivApplyStyle()
+@inline quasildivapplystyle(::AbstractBasisLayout, _) = LdivApplyStyle()
+@inline quasildivapplystyle(_, ::AbstractBasisLayout) = LdivApplyStyle()
 
 
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
+@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
     transform_ldiv(L.A, L.B)
 
-function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
+@inline function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
     a,b = arguments(L.B)
     (L.A\a)-(L.A\b)
 end
 
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
+@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
 
 function copy(P::Ldiv{BasisLayout,BasisLayout})
     A, B = P.A, P.B
-    A == B || throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
-    Eye(size(A,2))
+    A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
+    SquareEye{eltype(P)}(size(A,2))
 end
 function copy(P::Ldiv{SubBasisLayout,SubBasisLayout})
     A, B = P.A, P.B
     (parent(A) == parent(B) && parentindices(A) == parentindices(B)) ||
-        throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
-    Eye(size(A,2))
+        throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
+    SquareEye{eltype(P)}(size(A,2))
 end
 
-function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
+@inline function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
     A, B = P.A, P.B
     demap(A)\demap(B)
 end
 
-copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
-function copy(L::Ldiv{SubBasisLayout,BasisLayout}) 
+@inline copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
+@inline function copy(L::Ldiv{SubBasisLayout,BasisLayout}) 
     P = parent(L.A)
     kr, jr = parentindices(L.A)
     lazy_getindex(apply(\, P, L.B), jr, :) # avoid sparse arrays
@@ -92,7 +92,7 @@ end
 
 # expansion
 _grid(_, P) = error("Overload Grid")
-_grid(::MappedBasisLayout, P) = findfirst.(isequal.(grid(demap(P))), Ref(parentindices(P)[1]))
+_grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(P)))
 _grid(::SubBasisLayout, P) = grid(parent(P))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
@@ -103,7 +103,7 @@ end
 
 function transform_ldiv(A, B, _)
     p,T = transform(A)
-    T \ B[p]
+    T \ convert(Array, B[p])
 end
 
 transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
