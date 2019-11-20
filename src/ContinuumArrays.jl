@@ -127,7 +127,12 @@ maximum(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = signbit(d.A) ? first(
 
 union(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = Inclusion(minimum(d)..maximum(d))
 
+const QInfAxes = Union{Inclusion,AffineQuasiVector}
 
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{<:Any,QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
 
 
 include("operators.jl")

@@ -200,6 +200,10 @@ _sum(V::AbstractQuasiArray, ::Colon) = __sum(MemoryLayout(typeof(V)), V, :)
 sum(V::AbstractQuasiArray; dims=:) = _sum(V, dims)
 
 __sum(L, Vm, _) = error("Override for $L")
+function __sum(::SubBasisLayout, Vm, dims) 
+    @assert dims == 1
+    sum(parent(Vm); dims=dims)[parentindices(Vm)[2]...]
+end
 function __sum(::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
     a = arguments(V)
     first(apply(*, sum(a[1]; dims=1), tail(a)...))
