@@ -30,56 +30,53 @@ combine_mul_styles(::AbstractAdjointBasisLayout) = LazyQuasiArrayApplyStyle()
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
 
-_multup(a::Tuple) = Mul(a...)
-_multup(a) = a
-
 
 function ==(A::Basis, B::Basis)
     axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
     false
 end
 
+@inline quasildivapplystyle(::AbstractBasisLayout, ::AbstractBasisLayout) = LdivApplyStyle()
+@inline quasildivapplystyle(::AbstractBasisLayout, _) = LdivApplyStyle()
+@inline quasildivapplystyle(_, ::AbstractBasisLayout) = LdivApplyStyle()
 
-ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
-ApplyStyle(::typeof(\), ::Type{<:Basis}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
-ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiMatrix}) = LdivApplyStyle()
-ApplyStyle(::typeof(\), ::Type{<:SubQuasiArray{<:Any,2,<:Basis}}, ::Type{<:AbstractQuasiVector}) = LdivApplyStyle()
 
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
-    +(broadcast(\,Ref(L.A),arguments(L.B))...)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
+    transform_ldiv(L.A, L.B)
 
-function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
+@inline function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
     a,b = arguments(L.B)
     (L.A\a)-(L.A\b)
 end
 
-function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector})
-    a,b = arguments(L.B)
-    (L.A\a)-(L.A\b)
-end
+@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
+    transform_ldiv(L.A, L.B)
 
 function copy(P::Ldiv{BasisLayout,BasisLayout})
     A, B = P.A, P.B
-    A == B || throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
-    Eye(size(A,2))
+    A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
+    SquareEye{eltype(P)}(size(A,2))
 end
 function copy(P::Ldiv{SubBasisLayout,SubBasisLayout})
     A, B = P.A, P.B
     (parent(A) == parent(B) && parentindices(A) == parentindices(B)) ||
-        throw(ArgumentError("Override materialize for $(typeof(A)) \\ $(typeof(B))"))
-    Eye(size(A,2))
+        throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
+    SquareEye{eltype(P)}(size(A,2))
 end
 
-function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
+@inline function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
     A, B = P.A, P.B
     demap(A)\demap(B)
 end
-# function copy(P::Ldiv{MappedBasisLayout,SubBasisLayout})
-#     A, B = P.A, P.B
-#     # use lazy_getindex to avoid sparse arrays
-#     lazy_getindex(parent(A)\parent(B),:,parentindices(B)[2])
-# end
+
+@inline copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
+@inline function copy(L::Ldiv{SubBasisLayout,BasisLayout}) 
+    P = parent(L.A)
+    kr, jr = parentindices(L.A)
+    lazy_getindex(apply(\, P, L.B), jr, :) # avoid sparse arrays
+end
+
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
     @eval ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2}) =
@@ -88,23 +85,39 @@ end
 
 
 # expansion
-grid(P) = error("Overload Grid")
+_grid(_, P) = error("Overload Grid")
+_grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(P)))
+_grid(::SubBasisLayout, P) = grid(parent(P))
+grid(P) = _grid(MemoryLayout(typeof(P)), P)
+
 function transform(L)
     p = grid(L)
     p,L[p,:]
 end
 
-function copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector})
-    p,T = transform(L.A)
-    T \ L.B[p]
+function transform_ldiv(A, B, _)
+    p,T = transform(A)
+    T \ convert(Array, B[p])
 end
 
+transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
+
+copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
+    transform_ldiv(L.A, L.B)
+
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
-    copy(Ldiv{LazyLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+    transform_ldiv(L.A, L.B)
+
+function copy(L::Ldiv{ApplyLayout{typeof(*)},<:AbstractBasisLayout})
+    args = arguments(L.A)
+    @assert length(args) == 2 # temporary
+    apply(\, last(args), apply(\, first(args), L.B))
+end
+
 
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
     p,T = transform(L.A)
-     T \ L.B[p]
+    T \ L.B[p]
 end
 
 ## materialize views
@@ -144,6 +157,9 @@ end
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
 sublayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
 
+@inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
+@inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
+
 demap(x) = x
 demap(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = parent(V)
 function demap(V::SubQuasiArray{<:Any,2}) 
@@ -172,8 +188,28 @@ function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:Abstract
     A,P
 end
 
-copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
+####
+# sum
+####
 
+_sum(V::AbstractQuasiArray, dims) = __sum(MemoryLayout(typeof(V)), V, dims)
+_sum(V::AbstractQuasiArray, ::Colon) = __sum(MemoryLayout(typeof(V)), V, :)
+sum(V::AbstractQuasiArray; dims=:) = _sum(V, dims)
 
+__sum(L, Vm, _) = error("Override for $L")
+function __sum(::SubBasisLayout, Vm, dims) 
+    @assert dims == 1
+    sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
+end
+function __sum(::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
+    a = arguments(V)
+    first(apply(*, sum(a[1]; dims=1), tail(a)...))
+end
+
+function __sum(::MappedBasisLayout, V::AbstractQuasiArray, dims)
+    kr, jr = parentindices(V)
+    @assert kr isa AffineQuasiVector
+    sum(demap(V); dims=dims)/kr.A
+end
 
 include("splines.jl")

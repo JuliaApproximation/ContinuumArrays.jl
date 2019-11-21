@@ -1,8 +1,7 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test
 import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, MappedBasisLayout
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
-import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout
-import ForwardDiff: Dual
+import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivApplyStyle
 
 
 @testset "Inclusion" begin
@@ -106,6 +105,7 @@ end
     @testset "Broadcast layout" begin
         L = LinearSpline([1,2,3])
         b = BroadcastQuasiArray(+, L*[3,4,5], L*[1.,2,3])
+        @test ApplyStyle(\, typeof(L), typeof(b)) == LdivApplyStyle()
         @test (L\b) == [4,6,8]
         B = BroadcastQuasiArray(+, L, L)
         @test L\B == 2Eye(3)
@@ -199,6 +199,8 @@ end
     @test MemoryLayout(typeof(L[:,2:3])) isa SubBasisLayout
     @test L\L[:,2:3] isa BandedMatrix
     @test L\L[:,2:3] == [0 0; 1 0; 0 1.0; 0 0]
+    @test L[:,2:3]\L isa BandedMatrix
+    @test L[:,2:3]\L == [0 1 0 0; 0 0 1 0]
 
     @testset "Subindex of splines" begin
         L = LinearSpline(range(0,stop=1,length=10))
@@ -208,14 +210,47 @@ end
         f = L[:,2:end-1] * v
         @test f[0.1] ≈ (L*[0; v; 0])[0.1]
     end
+
+    @testset "sub-of-sub" begin
+        L = LinearSpline([1,2,3])
+        V = view(L,:,1:2)
+        V2 = view(V,1.1:0.1:2,:)
+        @test V2 == L[1.1:0.1:2,1:2]
+    end
+
+    @testset "sub-colon" begin
+        L = LinearSpline([1,2,3])
+        @test L[:,1][1.1] == (L')[1,:][1.1] == L[1.1,1]
+        @test L[:,1:2][1.1,:] == (L')[1:2,:][:,1.1] == L[1.1,1:2] 
+    end
+
+    @testset "transform" begin
+        L = LinearSpline([1,2,3])
+        x = axes(L,1)
+        @test (L \ x) == [1,2,3]
+
+        L = LinearSpline(range(0,1; length=10_000))
+        x = axes(L,1)
+        @test L[0.123,:]'* (L \ exp.(x)) ≈ exp(0.123) atol=1E-9
+        @test L[0.123,2:end-1]'* (L[:,2:end-1] \ exp.(x)) ≈ exp(0.123) atol=1E-9
+    end
+end
+
+@testset "sum" begin
+    L = HeavisideSpline([1,2,3,6])
+    @test sum(L; dims=1) * [1,1,1] == [5]
+    x = Inclusion(0..1)
+    B = L[5x .+ 1,:]
+    @test sum(B; dims=1) * [1,1,1] == [1]
+    @test sum(L[:,1:2]; dims=1) * [1,1] == [2]
 end
 
 @testset "Poisson" begin
     L = LinearSpline(range(0,stop=1,length=10))
     B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
-    @test (B'B) == (L'L)[2:end-1,2:end-1]
+    @test B'B == (L'L)[2:end-1,2:end-1]
     D = Derivative(axes(L,1))
-    @test apply(*,D,B) isa SubQuasiArray
+    @test apply(*,D,B) isa MulQuasiMatrix
     @test D*B isa MulQuasiMatrix
     @test apply(*,D,B)[0.1,1] == (D*B)[0.1,1] == 9
     @test apply(*,D,B)[0.2,1] == (D*B)[0.2,1] == -9
@@ -255,6 +290,7 @@ end
     @test 2x isa AffineQuasiVector
     @test (2x)[0.1] == 0.2
     @test_throws BoundsError (2x)[2]
+
     y = 2x .- 1
     @test y isa AffineQuasiVector
     @test y[0.1] == 2*(0.1)-1
@@ -265,6 +301,8 @@ end
     @test (y .+ 1)[0.1] == (1 .+ y)[0.1]
     @test (y .- 1)[0.1] == y[0.1]-1
     @test (1 .- y)[0.1] == 1-y[0.1]
+    @test y[x] == y[:] == y
+    @test_throws BoundsError y[Inclusion(0..2)]
 
     @test findfirst(isequal(0.1),x) == findlast(isequal(0.1),x) == 0.1
     @test findall(isequal(0.1), x) == [0.1]
@@ -306,6 +344,7 @@ end
     a,b = arguments((D*L)[y,:])
     @test H[y,:]\a == Eye(9)
     @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
+    @test @inferred(grid(L[y,:])) ≈ (grid(L) .+ 1) ./ 2
 
     D = Derivative(x)
     @test (D*L[y,:])[0.1,1] ≈ -9
@@ -317,4 +356,18 @@ end
     @test B[0.1,1] == L[2*0.1-1,2]
     @test B\B == Eye(8)
     @test L[y,:] \ B == Eye(10)[:,2:end-1]
+end
+
+@testset "diff" begin
+    L = LinearSpline(range(-1,stop=1,length=10))
+    f = L * randn(size(L,2))
+    h = 0.0001; 
+    @test diff(f)[0.1] ≈ (f[0.1+h]-f[0.1])/h
+end
+
+@testset "Kernels" begin
+    x = Inclusion(0..1)
+    K = x .- x'
+    @test K[0.1,0.2] == K[Inclusion(0..0.5), Inclusion(0..0.5)][0.1,0.2] == 0.1 - 0.2
+    @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
 end

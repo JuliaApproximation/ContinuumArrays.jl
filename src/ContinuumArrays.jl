@@ -1,20 +1,20 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
-                IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum
+                IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
+                first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport,
                         adjointlayout, LdivApplyStyle, arguments, _arguments, call, broadcastlayout, lazy_getindex,
-                        sublayout, ApplyLayout, BroadcastLayout, combine_mul_styles
+                        sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
-import FillArrays: AbstractFill, getindex_value
+import FillArrays: AbstractFill, getindex_value, SquareEye
 
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, quasimulapplystyle,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
-                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, quasildivapplystyle
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform
 
@@ -86,6 +86,15 @@ AffineQuasiVector(A, x::AffineQuasiVector, b) = AffineQuasiVector(A*x.A, x.x, A*
 
 axes(A::AffineQuasiVector) = axes(A.x)
 getindex(A::AffineQuasiVector, k::Number) = A.A*A.x[k] .+ A.b
+function getindex(A::AffineQuasiVector, k::Inclusion) 
+    @boundscheck A.x[k] # throws bounds error if k ≠ x
+    A
+end
+
+getindex(A::AffineQuasiVector, ::Colon) = copy(A)
+
+copy(A::AffineQuasiVector) = A
+
 inbounds_getindex(A::AffineQuasiVector{<:Any,<:Any,<:Inclusion}, k::Number) = A.A*k .+ A.b
 isempty(A::AffineQuasiVector) = isempty(A.x)
 ==(a::AffineQuasiVector, b::AffineQuasiVector) = a.A == b.A && a.x == b.x && a.b == b.b
@@ -107,13 +116,15 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(+), x::AffineQuasiVector, b::Numb
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), a::Number, x::AffineQuasiVector) = AffineQuasiVector(-one(eltype(x)), x, a)
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), x::AffineQuasiVector, b::Number) = AffineQuasiVector(one(eltype(x)), x, -b)
 
-function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::AffineQuasiVector{<:Real,<:Real,<:Inclusion{<:Real,<:AbstractInterval}})
+function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::AffineQuasiVector{<:Any,<:Any,<:Inclusion{<:Any,<:AbstractInterval}})
     @_propagate_inbounds_meta
     isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
 end
 
+igetindex(d::AffineQuasiVector, x) = d.A \ (x .- d.b)
+
 for find in (:findfirst, :findlast, :findall)
-    @eval $find(f::Base.Fix2{typeof(isequal)}, d::AffineQuasiVector) = $find(isequal(d.A \ (f.x .- d.b)), d.x)
+    @eval $find(f::Base.Fix2{typeof(isequal)}, d::AffineQuasiVector) = $find(isequal(igetindex(d, f.x)), d.x)
 end
 
 minimum(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = signbit(d.A) ? last(d) : first(d)
@@ -121,7 +132,12 @@ maximum(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = signbit(d.A) ? first(
 
 union(d::AffineQuasiVector{<:Real,<:Real,<:Inclusion}) = Inclusion(minimum(d)..maximum(d))
 
+const QInfAxes = Union{Inclusion,AffineQuasiVector}
 
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{<:Any,QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
 
 
 include("operators.jl")

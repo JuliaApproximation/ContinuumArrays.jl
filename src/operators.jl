@@ -153,6 +153,10 @@ axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis
 copy(D::Derivative) = Derivative(copy(D.axis))
 
+function diff(d::AbstractQuasiVector)
+    x = axes(d,1)
+    Derivative(x)*d
+end
 
 
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}

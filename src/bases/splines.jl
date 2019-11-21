@@ -39,6 +39,10 @@ end
 
 grid(L::LinearSpline) = L.points
 transform(L::LinearSpline{T}) where T = grid(L),Eye{T}(size(L,2))
+function transform(V::SubQuasiArray{<:Any,2,<:LinearSpline,<:Tuple{<:Inclusion,<:Any}})
+    g, T = transform(parent(V))
+    g, qr(lazy_getindex(T,:,parentindices(V)[2])) # avoid sparse matrices of sub-diagonal
+end
 
 ## Sub-bases
 
@@ -124,4 +128,14 @@ ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:Q
 function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:QuasiAdjoint{<:Any,<:Derivative}})
     Bc,Ac = M.args
     apply(*,Ac',Bc')'
+end
+
+
+##
+# sum
+##
+
+function _sum(A::HeavisideSpline, dims)
+    @assert dims == 1
+    permutedims(diff(A.points))
 end
