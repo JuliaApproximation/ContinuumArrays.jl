@@ -4,7 +4,6 @@ version = "0.0.2"
 
 [deps]
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
-Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
 IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
@@ -13,7 +12,6 @@ QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
 BandedMatrices = "0.14.1"
-Compat = "2"
 FillArrays = "0.8.2"
 IntervalSets = "0.3.2"
 LazyArrays = "0.14.7"
@@ -21,8 +19,7 @@ QuasiArrays = "0.0.6"
 julia = "1.1"
 
 [extras]
-ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "ForwardDiff"]
+test = ["Test"]

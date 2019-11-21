@@ -90,6 +90,11 @@ function getindex(A::AffineQuasiVector, k::Inclusion)
     @boundscheck A.x[k] # throws bounds error if k ≠ x
     A
 end
+
+getindex(A::AffineQuasiVector, ::Colon) = copy(A)
+
+copy(A::AffineQuasiVector) = A
+
 inbounds_getindex(A::AffineQuasiVector{<:Any,<:Any,<:Inclusion}, k::Number) = A.A*k .+ A.b
 isempty(A::AffineQuasiVector) = isempty(A.x)
 ==(a::AffineQuasiVector, b::AffineQuasiVector) = a.A == b.A && a.x == b.x && a.b == b.b

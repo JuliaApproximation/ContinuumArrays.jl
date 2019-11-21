@@ -1,8 +1,7 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, ForwardDiff, Test
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test
 import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, MappedBasisLayout
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivApplyStyle
-import ForwardDiff: Dual
 
 
 @testset "Inclusion" begin
@@ -122,6 +121,9 @@ end
         V = view(L,:,1:2)
         V2 = view(V,1.1:0.1:2,:)
         @test V2 == L[1.1:0.1:2,1:2]
+        L = LinearSpline([1,2,3])
+        @test L[:,1][1.1] == (L')[1,:][1.1] == L[1.1,1]
+        @test L[:,1:2][1.1,:] == (L')[1:2,:][:,1.1] == L[1.1,1:2] 
     end
 end
 
@@ -263,6 +265,7 @@ end
     @test 2x isa AffineQuasiVector
     @test (2x)[0.1] == 0.2
     @test_throws BoundsError (2x)[2]
+
     y = 2x .- 1
     @test y isa AffineQuasiVector
     @test y[0.1] == 2*(0.1)-1
@@ -273,6 +276,8 @@ end
     @test (y .+ 1)[0.1] == (1 .+ y)[0.1]
     @test (y .- 1)[0.1] == y[0.1]-1
     @test (1 .- y)[0.1] == 1-y[0.1]
+    @test y[x] == y[:] == y
+    @test_throws BoundsError y[Inclusion(0..2)]
 
     @test findfirst(isequal(0.1),x) == findlast(isequal(0.1),x) == 0.1
     @test findall(isequal(0.1), x) == [0.1]
@@ -326,4 +331,18 @@ end
     @test B[0.1,1] == L[2*0.1-1,2]
     @test B\B == Eye(8)
     @test L[y,:] \ B == Eye(10)[:,2:end-1]
+end
+
+@testset "diff" begin
+    L = LinearSpline(range(-1,stop=1,length=10))
+    f = L * randn(size(L,2))
+    h = 0.0001; 
+    @test diff(f)[0.1] ≈ (f[0.1+h]-f[0.1])/h
+end
+
+@testset "Kernels" begin
+    x = Inclusion(0..1)
+    K = x .- x'
+    @test K[0.1,0.2] == K[Inclusion(0..0.5), Inclusion(0..0.5)][0.1,0.2] == 0.1 - 0.2
+    @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
 end
