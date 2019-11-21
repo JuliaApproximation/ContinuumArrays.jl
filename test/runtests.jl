@@ -115,16 +115,6 @@ end
         B = BroadcastQuasiArray(-, L, L)
         @test L\B == 0Eye(3)
     end
-
-    @testset "sub-of-sub" begin
-        L = LinearSpline([1,2,3])
-        V = view(L,:,1:2)
-        V2 = view(V,1.1:0.1:2,:)
-        @test V2 == L[1.1:0.1:2,1:2]
-        L = LinearSpline([1,2,3])
-        @test L[:,1][1.1] == (L')[1,:][1.1] == L[1.1,1]
-        @test L[:,1:2][1.1,:] == (L')[1:2,:][:,1.1] == L[1.1,1:2] 
-    end
 end
 
 @testset "Derivative" begin
@@ -209,6 +199,8 @@ end
     @test MemoryLayout(typeof(L[:,2:3])) isa SubBasisLayout
     @test L\L[:,2:3] isa BandedMatrix
     @test L\L[:,2:3] == [0 0; 1 0; 0 1.0; 0 0]
+    @test L[:,2:3]\L isa BandedMatrix
+    @test L[:,2:3]\L == [0 1 0 0; 0 0 1 0]
 
     @testset "Subindex of splines" begin
         L = LinearSpline(range(0,stop=1,length=10))
@@ -218,6 +210,39 @@ end
         f = L[:,2:end-1] * v
         @test f[0.1] ≈ (L*[0; v; 0])[0.1]
     end
+
+    @testset "sub-of-sub" begin
+        L = LinearSpline([1,2,3])
+        V = view(L,:,1:2)
+        V2 = view(V,1.1:0.1:2,:)
+        @test V2 == L[1.1:0.1:2,1:2]
+    end
+
+    @testset "sub-colon" begin
+        L = LinearSpline([1,2,3])
+        @test L[:,1][1.1] == (L')[1,:][1.1] == L[1.1,1]
+        @test L[:,1:2][1.1,:] == (L')[1:2,:][:,1.1] == L[1.1,1:2] 
+    end
+
+    @testset "transform" begin
+        L = LinearSpline([1,2,3])
+        x = axes(L,1)
+        @test (L \ x) == [1,2,3]
+
+        L = LinearSpline(range(0,1; length=10_000))
+        x = axes(L,1)
+        @test L[0.123,:]'* (L \ exp.(x)) ≈ exp(0.123) atol=1E-9
+        @test L[0.123,2:end-1]'* (L[:,2:end-1] \ exp.(x)) ≈ exp(0.123) atol=1E-9
+    end
+end
+
+@testset "sum" begin
+    L = HeavisideSpline([1,2,3,6])
+    @test sum(L; dims=1) * [1,1,1] == [5]
+    x = Inclusion(0..1)
+    B = L[5x .+ 1,:]
+    @test sum(B; dims=1) * [1,1,1] == [1]
+    @test sum(L[:,1:2]; dims=1) * [1,1] == [2]
 end
 
 @testset "Poisson" begin

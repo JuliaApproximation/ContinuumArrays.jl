@@ -30,12 +30,6 @@ combine_mul_styles(::AbstractAdjointBasisLayout) = LazyQuasiArrayApplyStyle()
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
 
-@inline _multup(a::Tuple) = Mul(a...)
-@inline _multup(a) = a
-
-@inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
-@inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
-
 
 function ==(A::Basis, B::Basis)
     axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
@@ -163,6 +157,9 @@ end
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
 sublayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
 
+@inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
+@inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
+
 demap(x) = x
 demap(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = parent(V)
 function demap(V::SubQuasiArray{<:Any,2}) 
@@ -202,7 +199,7 @@ sum(V::AbstractQuasiArray; dims=:) = _sum(V, dims)
 __sum(L, Vm, _) = error("Override for $L")
 function __sum(::SubBasisLayout, Vm, dims) 
     @assert dims == 1
-    sum(parent(Vm); dims=dims)[parentindices(Vm)[2]...]
+    sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
 function __sum(::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
     a = arguments(V)
