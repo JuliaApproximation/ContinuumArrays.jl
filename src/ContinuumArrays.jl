@@ -125,7 +125,8 @@ function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::
     isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
 end
 
-igetindex(d::AbstractAffineQuasiVector, x) = d.A \ (x .- d.b)
+affine_igetindex(d, x) = d.A \ (x .- d.b)
+igetindex(d::AbstractAffineQuasiVector, x) = affine_igetindex(d, x)
 
 for find in (:findfirst, :findlast, :findall)
     @eval $find(f::Base.Fix2{typeof(isequal)}, d::AbstractAffineQuasiVector) = $find(isequal(igetindex(d, f.x)), d.x)
@@ -161,10 +162,20 @@ function getindex(A::AffineMap, k::Number)
     affine_getindex(A, k)
 end
 
+function igetindex(A::AffineMap, k::Number)
+    # ensure we exactly hit range
+    k == first(A.range) && return first(A.domain)
+    k == last(A.range) && return last(A.domain)
+    affine_igetindex(A, k)
+end
+
 first(A::AffineMap) = first(A.range)
 last(A::AffineMap) = last(A.range)
 
-affine(a, b) = AffineMap(a, b)
+affine(a::AbstractQuasiVector, b::AbstractQuasiVector) = AffineMap(a, b)
+affine(a, b::AbstractQuasiVector) = affine(Inclusion(a), b)
+affine(a::AbstractQuasiVector, b) = affine(a, Inclusion(b))
+affine(a, b) = affine(Inclusion(a), Inclusion(b))
 
 
 
