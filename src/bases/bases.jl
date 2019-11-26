@@ -133,7 +133,7 @@ function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatri
     (Derivative(axes(P,1))*P)[parentindices(B)...]
 end
 
-function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AffineQuasiVector,<:Any}}})
+function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}})
     A, B = M.args
     P = parent(B)
     kr,jr = parentindices(B)
@@ -155,7 +155,7 @@ end
 
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
-sublayout(::BasisLayout, ::Type{<:Tuple{<:AffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
+sublayout(::BasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
@@ -208,7 +208,7 @@ end
 
 function __sum(::MappedBasisLayout, V::AbstractQuasiArray, dims)
     kr, jr = parentindices(V)
-    @assert kr isa AffineQuasiVector
+    @assert kr isa AbstractAffineQuasiVector
     sum(demap(V); dims=dims)/kr.A
 end
 

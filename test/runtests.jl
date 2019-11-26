@@ -1,5 +1,5 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, MappedBasisLayout
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, MappedBasisLayout, igetindex
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivApplyStyle
 
@@ -328,6 +328,18 @@ end
 
     @test !isempty(z)
     @test z == z
+
+    @testset "AffineMap" begin
+        a = affine(-2..3, -1..1)
+        @test a[0.1] == -0.16
+        @test_throws BoundsError a[-3]
+        @test a[-2] == first(a) == -1
+        @test a[3] == last(a) == 1
+        @test igetindex(a,-0.16) ≈ 0.1
+        @test igetindex(a,1) == 3
+        @test igetindex(a,-1) == -2
+        @test union(a) == Inclusion(-1..1)
+    end
 end
 
 @testset "Change-of-variables" begin
