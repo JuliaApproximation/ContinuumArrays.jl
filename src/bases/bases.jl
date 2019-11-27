@@ -90,16 +90,28 @@ _grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(
 _grid(::SubBasisLayout, P) = grid(parent(P))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
-function transform(L)
+struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
+    grid::Grid
+    plan::Plan
+    iplan::IPlan
+end
+
+TransformFactorization(grid, ::Nothing, iplan) = 
+    TransformFactorization{promote_type(eltype(grid),eltype(iplan)),typeof(grid),Nothing,typeof(iplan)}(grid, nothing, iplan)
+
+grid(T::TransformFactorization) = T.grid    
+
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b) = a.iplan \  convert(Array, b[a.grid])
+\(a::TransformFactorization, b) = a.plan * convert(Array, b[a.grid])
+
+function _factorize(::AbstractBasisLayout, L)
     p = grid(L)
-    p,L[p,:]
+    TransformFactorization(p, nothing, factorize(L[p,:]))
 end
 
-function transform_ldiv(A, B, _)
-    p,T = transform(A)
-    T \ convert(Array, B[p])
-end
+transform(L) = _factorize(MemoryLayout(typeof(L)), L)
 
+transform_ldiv(A, B, _) = factorize(A) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
