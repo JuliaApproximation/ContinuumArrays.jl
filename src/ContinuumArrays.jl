@@ -181,9 +181,10 @@ affine(a, b) = affine(Inclusion(a), Inclusion(b))
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
 
+
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,QInfAxes}) = V
-sub_materialize(_, V::AbstractQuasiArray, ::Tuple{<:Any,QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{Any,QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
 
 
