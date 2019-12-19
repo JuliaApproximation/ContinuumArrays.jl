@@ -9,6 +9,7 @@ abstract type AbstractBasisLayout <: MemoryLayout end
 struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
 struct MappedBasisLayout <: AbstractBasisLayout end
+struct WeightedBasisLayout <: AbstractBasisLayout end
 
 abstract type AbstractAdjointBasisLayout <: MemoryLayout end
 struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
@@ -21,8 +22,8 @@ MemoryLayout(::Type{<:Weight}) = WeightLayout()
 adjointlayout(::Type, ::BasisLayout) = AdjointBasisLayout()
 adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
 adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = BasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = SubBasisLayout()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 
 combine_mul_styles(::AbstractBasisLayout) = LazyQuasiArrayApplyStyle()
 combine_mul_styles(::AbstractAdjointBasisLayout) = LazyQuasiArrayApplyStyle()
@@ -88,6 +89,7 @@ end
 _grid(_, P) = error("Overload Grid")
 _grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(P)))
 _grid(::SubBasisLayout, P) = grid(parent(P))
+_grid(::WeightedBasisLayout, P) = grid(last(P.args))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
 struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
@@ -167,7 +169,7 @@ end
 
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
-sublayout(::BasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
+sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
