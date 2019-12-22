@@ -140,6 +140,21 @@ end
 #     *(arguments(S)...)
 
 
+
+# mass matrix
+# y = p(x), dy = p'(x) * dx
+# \int_a^b f(y) g(y) dy = \int_{-1}^1 f(p(x))*g(p(x)) * p'(x) dx
+
+function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
+                        <:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}})
+    Ac, B = M.args
+    A = Ac'
+    PA,PB = parent(A),parent(B)
+    kr,jr = parentindices(B)
+    ((PA'PB)/kr.A)[parentindices(A)[2],jr]
+end
+
+
 # Differentiation of sub-arrays
 function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}})
     A, B = M.args
