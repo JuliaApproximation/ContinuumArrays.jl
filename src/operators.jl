@@ -52,16 +52,21 @@ macro simplify(qt)
             
             esc(ret)
         else
-            @assert length(qt.args[1].args) == 4
-            Cname,Ctyp = qt.args[1].args[4].args
-            esc(quote
-            LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}, ::Type{<:$Ctyp}) = ContinuumArrays.SimplifyStyle()
-            function Base.copy(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp})
-                $Aname,$Bname,$Cname = M.args
-                $mat
+            apply_style_fun = :(LazyArrays.ApplyStyle(::typeof(*)) = ContinuumArrays.SimplifyStyle())
+            copy_fun = :(function Base.copy(M::Mul{<:ContinuumArrays.AbstractQuasiArrayApplyStyle, <:Tuple{}})
+                         () = M.args
+                         $mat
+                         end)
+            for arg in qt.args[1].args[2:end]
+                arg isa Expr && arg.head == :(::) ||
+                    throw(ArgumentError("Invalid argument specification $(arg)"))
+                arg_name, arg_typ = arg.args
+                push!(apply_style_fun.args[1].args, :(::Type{<:$(arg_typ)}))
+                push!(copy_fun.args[1].args[2].args[2].args[3].args[1].args, :(<:$(arg_typ)))
+                push!(copy_fun.args[2].args[2].args[1].args, arg_name)
             end
-         end)
-    end
+            esc(Expr(:block, apply_style_fun, copy_fun))
+        end
     else # A\
         mat = qt.args[2]  
         @assert qt.args[1].args[1] == :(\)
