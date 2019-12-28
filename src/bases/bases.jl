@@ -98,13 +98,20 @@ struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
     iplan::IPlan
 end
 
+TransformFactorization(grid, plan) = 
+    TransformFactorization{promote_type(eltype(grid),eltype(plan)),typeof(grid),typeof(plan),Nothing}(grid, plan, nothing)
+
+
 TransformFactorization(grid, ::Nothing, iplan) = 
     TransformFactorization{promote_type(eltype(grid),eltype(iplan)),typeof(grid),Nothing,typeof(iplan)}(grid, nothing, iplan)
 
 grid(T::TransformFactorization) = T.grid    
 
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b) = a.iplan \  convert(Array, b[a.grid])
-\(a::TransformFactorization, b) = a.plan * convert(Array, b[a.grid])
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector) = a.iplan \  convert(Array, b[a.grid])
+\(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
+
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
+\(a::TransformFactorization, b::AbstractVector) = a.plan * b
 
 function _factorize(::AbstractBasisLayout, L)
     p = grid(L)
