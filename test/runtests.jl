@@ -1,5 +1,6 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, Test
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, MappedBasisLayout, igetindex
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, Test
+import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, 
+                        MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivApplyStyle
 
@@ -228,6 +229,7 @@ end
         L = LinearSpline([1,2,3])
         x = axes(L,1)
         @test (L \ x) == [1,2,3]
+        @test factorize(L[:,2:end-1]) isa ContinuumArrays.ProjectionFactorization
 
         L = LinearSpline(range(0,1; length=10_000))
         x = axes(L,1)
@@ -347,6 +349,8 @@ end
     y = 2x .- 1
     L = LinearSpline(range(-1,stop=1,length=10))
     @test L[y,:][0.1,:] == L[2*0.1-1,:]
+    @test L[y,:]'L[y,:] isa SymTridiagonal
+    @test L[y,:]'L[y,:] == 1/2*(L'L)
 
     D = Derivative(axes(L,1))
     H = HeavisideSpline(L.points)
@@ -368,6 +372,7 @@ end
     @test B[0.1,1] == L[2*0.1-1,2]
     @test B\B == Eye(8)
     @test L[y,:] \ B == Eye(10)[:,2:end-1]
+    @test B'B == (1/2)*(L'L)[2:end-1,2:end-1]
 end
 
 @testset "diff" begin
@@ -382,4 +387,33 @@ end
     K = x .- x'
     @test K[0.1,0.2] == K[Inclusion(0..0.5), Inclusion(0..0.5)][0.1,0.2] == 0.1 - 0.2
     @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
+end
+
+struct Chebyshev <: Basis{Float64}
+    n::Int
+end
+
+struct ChebyshevWeight <: Weight{Float64} end
+
+
+Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
+ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n; kind=1)
+Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
+
+LinearAlgebra.factorize(L::Chebyshev) =
+    TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
+
+@testset "Chebyshev" begin
+    T = Chebyshev(5)
+    x = axes(T,1)
+    F = factorize(T)
+    g = grid(F)
+    @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g); kind=1)
+
+    w = ChebyshevWeight()
+    wT = w .* T
+    wT2 = w .* T[:,2:4]
+    @test MemoryLayout(typeof(wT)) == WeightedBasisLayout()
+    @test MemoryLayout(typeof(wT2)) == WeightedBasisLayout()
+    @test grid(wT) == grid(wT2) == grid(T)
 end

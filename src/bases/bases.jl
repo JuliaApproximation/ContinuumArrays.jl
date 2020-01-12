@@ -118,7 +118,15 @@ function _factorize(::AbstractBasisLayout, L)
     TransformFactorization(p, nothing, factorize(L[p,:]))
 end
 
-transform(L) = _factorize(MemoryLayout(typeof(L)), L)
+struct ProjectionFactorization{T, FAC<:Factorization{T}, INDS} <: Factorization{T}
+    F::FAC
+    inds::INDS
+end
+
+\(a::ProjectionFactorization, b::AbstractQuasiVector) = (a.F \ b)[a.inds]
+\(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
+
+_factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), parentindices(L)[2])
 
 transform_ldiv(A, B, _) = factorize(A) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
@@ -137,7 +145,7 @@ end
 
 
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
-    p,T = transform(L.A)
+    p,T = factorize(L.A)
     T \ L.B[p]
 end
 
@@ -152,13 +160,17 @@ end
 # y = p(x), dy = p'(x) * dx
 # \int_a^b f(y) g(y) dy = \int_{-1}^1 f(p(x))*g(p(x)) * p'(x) dx
 
+
+_sub_getindex(A, kr, jr) = A[kr, jr]
+_sub_getindex(A, ::Slice, ::Slice) = A
+
 function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
                         <:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}})
     Ac, B = M.args
     A = Ac'
     PA,PB = parent(A),parent(B)
     kr,jr = parentindices(B)
-    ((PA'PB)/kr.A)[parentindices(A)[2],jr]
+    _sub_getindex((PA'PB)/kr.A,parentindices(A)[2],jr)
 end
 
 
