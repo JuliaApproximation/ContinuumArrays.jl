@@ -9,6 +9,7 @@ abstract type AbstractBasisLayout <: MemoryLayout end
 struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
 struct MappedBasisLayout <: AbstractBasisLayout end
+struct WeightedBasisLayout <: AbstractBasisLayout end
 
 abstract type AbstractAdjointBasisLayout <: MemoryLayout end
 struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
@@ -21,8 +22,8 @@ MemoryLayout(::Type{<:Weight}) = WeightLayout()
 adjointlayout(::Type, ::BasisLayout) = AdjointBasisLayout()
 adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
 adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = BasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = SubBasisLayout()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 
 combine_mul_styles(::AbstractBasisLayout) = LazyQuasiArrayApplyStyle()
 combine_mul_styles(::AbstractAdjointBasisLayout) = LazyQuasiArrayApplyStyle()
@@ -88,18 +89,46 @@ end
 _grid(_, P) = error("Overload Grid")
 _grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(P)))
 _grid(::SubBasisLayout, P) = grid(parent(P))
+_grid(::WeightedBasisLayout, P) = grid(last(P.args))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
-function transform(L)
+struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
+    grid::Grid
+    plan::Plan
+    iplan::IPlan
+end
+
+TransformFactorization(grid, plan) = 
+    TransformFactorization{promote_type(eltype(grid),eltype(plan)),typeof(grid),typeof(plan),Nothing}(grid, plan, nothing)
+
+
+TransformFactorization(grid, ::Nothing, iplan) = 
+    TransformFactorization{promote_type(eltype(grid),eltype(iplan)),typeof(grid),Nothing,typeof(iplan)}(grid, nothing, iplan)
+
+grid(T::TransformFactorization) = T.grid    
+
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector) = a.iplan \  convert(Array, b[a.grid])
+\(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
+
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
+\(a::TransformFactorization, b::AbstractVector) = a.plan * b
+
+function _factorize(::AbstractBasisLayout, L)
     p = grid(L)
-    p,L[p,:]
+    TransformFactorization(p, nothing, factorize(L[p,:]))
 end
 
-function transform_ldiv(A, B, _)
-    p,T = transform(A)
-    T \ convert(Array, B[p])
+struct ProjectionFactorization{T, FAC<:Factorization{T}, INDS} <: Factorization{T}
+    F::FAC
+    inds::INDS
 end
 
+\(a::ProjectionFactorization, b::AbstractQuasiVector) = (a.F \ b)[a.inds]
+\(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
+
+_factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), parentindices(L)[2])
+
+transform_ldiv(A, B, _) = factorize(A) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
@@ -116,7 +145,7 @@ end
 
 
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
-    p,T = transform(L.A)
+    p,T = factorize(L.A)
     T \ L.B[p]
 end
 
@@ -124,6 +153,25 @@ end
 
 # materialize(S::SubQuasiArray{<:Any,2,<:ApplyQuasiArray{<:Any,2,typeof(*),<:Tuple{<:Basis,<:Any}}}) =
 #     *(arguments(S)...)
+
+
+
+# mass matrix
+# y = p(x), dy = p'(x) * dx
+# \int_a^b f(y) g(y) dy = \int_{-1}^1 f(p(x))*g(p(x)) * p'(x) dx
+
+
+_sub_getindex(A, kr, jr) = A[kr, jr]
+_sub_getindex(A, ::Slice, ::Slice) = A
+
+function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
+                        <:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}})
+    Ac, B = M.args
+    A = Ac'
+    PA,PB = parent(A),parent(B)
+    kr,jr = parentindices(B)
+    _sub_getindex((PA'PB)/kr.A,parentindices(A)[2],jr)
+end
 
 
 # Differentiation of sub-arrays
@@ -155,7 +203,7 @@ end
 
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
-sublayout(::BasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
+sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V

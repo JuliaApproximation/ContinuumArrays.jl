@@ -15,7 +15,7 @@ import FillArrays: AbstractFill, getindex_value, SquareEye
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, quasimulapplystyle,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
-                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, quasildivapplystyle
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, quasildivapplystyle, _factorize
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform, affine
 
@@ -181,9 +181,10 @@ affine(a, b) = affine(Inclusion(a), Inclusion(b))
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
 
+
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,QInfAxes}) = V
-sub_materialize(_, V::AbstractQuasiArray, ::Tuple{<:Any,QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{Any,QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
 
 
