@@ -75,7 +75,7 @@ end
 @inline function copy(L::Ldiv{SubBasisLayout,BasisLayout}) 
     P = parent(L.A)
     kr, jr = parentindices(L.A)
-    lazy_getindex(apply(\, P, L.B), jr, :) # avoid sparse arrays
+    layout_getindex(apply(\, P, L.B), jr, :) # avoid sparse arrays
 end
 
 
