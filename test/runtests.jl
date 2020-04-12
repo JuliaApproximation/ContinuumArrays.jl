@@ -230,6 +230,7 @@ end
         x = axes(L,1)
         @test (L \ x) == [1,2,3]
         @test factorize(L[:,2:end-1]) isa ContinuumArrays.ProjectionFactorization
+        @test L[:,1:2] \ x == [1,2]
 
         L = LinearSpline(range(0,1; length=10_000))
         x = axes(L,1)
