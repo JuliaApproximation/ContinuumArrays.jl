@@ -57,13 +57,13 @@ end
 function copy(P::Ldiv{BasisLayout,BasisLayout})
     A, B = P.A, P.B
     A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
-    SquareEye{eltype(P)}(size(A,2))
+    SquareEye{eltype(P)}((axes(A,2),))
 end
 function copy(P::Ldiv{SubBasisLayout,SubBasisLayout})
     A, B = P.A, P.B
-    (parent(A) == parent(B) && parentindices(A) == parentindices(B)) ||
+    parent(A) == parent(B) ||
         throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
-    SquareEye{eltype(P)}(size(A,2))
+    RectEye{eltype(P)}((axes(A,2),axes(B,2)))
 end
 
 @inline function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
