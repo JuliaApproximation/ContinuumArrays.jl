@@ -63,7 +63,7 @@ function copy(P::Ldiv{SubBasisLayout,SubBasisLayout})
     A, B = P.A, P.B
     parent(A) == parent(B) ||
         throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
-    RectEye{eltype(P)}((axes(A,2),axes(B,2)))
+    Eye{eltype(P)}((axes(A,2),axes(B,2)))
 end
 
 @inline function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
