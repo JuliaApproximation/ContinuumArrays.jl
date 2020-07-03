@@ -9,12 +9,18 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
     x = Inclusion(-1..1)
     @test x[0.1] === 0.1
     @test x[0.0] === 0.0
+
     x = Inclusion(-1.0..1)
     X = QuasiDiagonal(x)
     @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
     @test Base.BroadcastStyle(typeof(x)) == LazyQuasiArrayStyle{1}()
     @test x .* x isa BroadcastQuasiArray
     @test (x.*x)[0.1] == 0.1^2
+
+    @test exp.(x)[1.0] == exp(1.0)
+    @test exp.(-x)[1.0] == exp(-1.0)
+    @test exp.(x.^2)[1.0] == exp(1.0)
+    @test exp.(-x.^2/(20/2))[1.0] == exp(-1.0^2/(20/2))
 end
 
 @testset "DiracDelta" begin
