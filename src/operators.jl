@@ -158,6 +158,7 @@ function diff(d::AbstractQuasiVector)
     Derivative(x)*d
 end
 
+^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
 
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
 #     f::F

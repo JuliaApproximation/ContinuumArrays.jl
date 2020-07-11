@@ -149,6 +149,53 @@ function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Abstrac
     T \ L.B[p]
 end
 
+
+##
+# Algebra
+##
+
+# struct ExpansionLayout <: MemoryLayout end
+# applylayout(::Type{typeof(*)}, ::BasisLayout, _) = ExpansionLayout()
+
+const Expansion{T,Space<:Basis,Coeffs<:AbstractVector} = ApplyQuasiVector{T,typeof(*),<:Tuple{Space,Coeffs}}
+
+for op in (:*, :\)
+    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), x::Number, f::Expansion)
+        S,c = arguments(f)
+        S * broadcast($op, x, c)
+    end
+end
+for op in (:*, :/)
+    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), f::Expansion, x::Number)
+        S,c = arguments(f)
+        S * broadcast($op, c, x)
+    end
+end
+
+
+function broadcastbasis(::typeof(+), a, b)
+    a ≠ b && error("Overload broadcastbasis(::typeof(+), ::$(typeof(a)), ::$(typeof(b)))")
+    a
+end
+
+broadcastbasis(::typeof(-), a, b) = broadcastbasis(+, a, b)
+
+for op in (:+, :-)
+    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), f::Expansion, g::Expansion)
+        S,c = arguments(f)
+        T,d = arguments(g)
+        ST = broadcastbasis($op, S, T)
+        ST * $op((ST \ S) * c , (ST \ T) * d)
+    end
+end
+
+@eval function ==(f::Expansion, g::Expansion)
+    S,c = arguments(f)
+    T,d = arguments(g)
+    ST = broadcastbasis(+, S, T)
+    (ST \ S) * c == (ST \ T) * d
+end
+
 ## materialize views
 
 # materialize(S::SubQuasiArray{<:Any,2,<:ApplyQuasiArray{<:Any,2,typeof(*),<:Tuple{<:Basis,<:Any}}}) =

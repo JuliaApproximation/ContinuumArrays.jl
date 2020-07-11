@@ -1,6 +1,6 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, Test
 import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, 
-                        MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout
+                        MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, Expansion
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivApplyStyle
 
@@ -124,10 +124,28 @@ end
     end
 end
 
+@testset "Algebra" begin
+    L = LinearSpline([1,2,3])
+    f = L*[1,2,4]
+    g = L*[5,6,7]
+    
+    @test f isa Expansion
+    @test 2f isa Expansion
+    @test f*2 isa Expansion
+    @test 2\f isa Expansion
+    @test f/2 isa Expansion
+    @test f+g isa Expansion
+    @test f-g isa Expansion
+    @test f[1.2] == 1.2
+    @test (2f)[1.2] == (f*2)[1.2] == 2.4
+    @test (2\f)[1.2] == (f/2)[1.2] == 0.6
+    @test (f+g)[1.2] ≈ f[1.2] + g[1.2]
+    @test (f-g)[1.2] ≈ f[1.2] - g[1.2]
+end
+
 @testset "Derivative" begin
     L = LinearSpline([1,2,3])
     f = L*[1,2,4]
-    @test f[1.2] == 1.2
 
     D = Derivative(axes(L,1))
     @test ApplyStyle(*,typeof(D),typeof(L)) isa SimplifyStyle
@@ -151,11 +169,13 @@ end
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
 
-
     fp = D*f
     @test length(fp.args) == 2
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
+
+    @test D^2 isa ApplyQuasiMatrix{Float64,typeof(*)}
+    
 end
 
 @testset "Weak Laplacian" begin

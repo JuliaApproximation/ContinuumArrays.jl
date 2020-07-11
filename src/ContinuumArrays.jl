@@ -7,7 +7,7 @@ import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, 
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport,
                         adjointlayout, LdivApplyStyle, arguments, _arguments, call, broadcastlayout, layout_getindex,
-                        sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles
+                        sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value, SquareEye
