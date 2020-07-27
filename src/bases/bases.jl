@@ -4,14 +4,14 @@ abstract type Weight{T} <: LazyQuasiVector{T} end
 
 const WeightedBasis{T, A<:AbstractQuasiVector, B<:Basis} = BroadcastQuasiMatrix{T,typeof(*),<:Tuple{A,B}}
 
-struct WeightLayout <: MemoryLayout end
-abstract type AbstractBasisLayout <: MemoryLayout end
+struct WeightLayout <: AbstractQuasiLazyLayout end
+abstract type AbstractBasisLayout <: AbstractQuasiLazyLayout end
 struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
 struct MappedBasisLayout <: AbstractBasisLayout end
 struct WeightedBasisLayout <: AbstractBasisLayout end
 
-abstract type AbstractAdjointBasisLayout <: MemoryLayout end
+abstract type AbstractAdjointBasisLayout <: AbstractQuasiLazyLayout end
 struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
 struct AdjointSubBasisLayout <: AbstractAdjointBasisLayout end
 struct AdjointMappedBasisLayout <: AbstractAdjointBasisLayout end
@@ -25,8 +25,7 @@ adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 
-copy(M::Mul{BasisLayout}) = ApplyQuasiArray(M)
-
+# Default is lazy
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
 
@@ -206,9 +205,8 @@ end
 _sub_getindex(A, kr, jr) = A[kr, jr]
 _sub_getindex(A, ::Slice, ::Slice) = A
 
-function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
-                        <:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}})
-    Ac, B = M.args
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
+             B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
     A = Ac'
     PA,PB = parent(A),parent(B)
     kr,jr = parentindices(B)
@@ -217,14 +215,12 @@ end
 
 
 # Differentiation of sub-arrays
-function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}})
-    A, B = M.args
+@simplify function *(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})
     P = parent(B)
     (Derivative(axes(P,1))*P)[parentindices(B)...]
 end
 
-function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}})
-    A, B = M.args
+@simplify function *(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
     P = parent(B)
     kr,jr = parentindices(B)
     (Derivative(axes(P,1))*P*kr.A)[kr,jr]
@@ -262,13 +258,15 @@ end
 # SubLayout behaves like ApplyLayout{typeof(*)}
 
 combine_mul_styles(::SubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
-_arguments(::SubBasisLayout, A) = _arguments(ApplyLayout{typeof(*)}(), A)
+_mul_arguments(::SubBasisLayout, A) = _mul_arguments(ApplyLayout{typeof(*)}(), A)
 call(::SubBasisLayout, ::SubQuasiArray) = *
 
 combine_mul_styles(::AdjointSubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
-_arguments(::AdjointSubBasisLayout, A) = _arguments(ApplyLayout{typeof(*)}(), A)
+_mul_arguments(::AdjointSubBasisLayout, A) = _mul_arguments(ApplyLayout{typeof(*)}(), A)
 arguments(::AdjointSubBasisLayout, A) = arguments(ApplyLayout{typeof(*)}(), A)
 call(::AdjointSubBasisLayout, ::SubQuasiArray) = *
+
+copy(M::Mul{AdjointSubBasisLayout,SubBasisLayout}) = apply(*, arguments(M.A)..., arguments(M.B)...)
 
 function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
     A = parent(V)

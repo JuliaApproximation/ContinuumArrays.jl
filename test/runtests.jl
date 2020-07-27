@@ -63,37 +63,42 @@ end
 
     @test ApplyStyle(*,typeof(H'),typeof(H)) == SimplifyStyle()
 
-    @test H'H == materialize(applied(*,H',H)) == Eye(2)
+    @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
 end
 
 @testset "LinearSpline" begin
-    L = LinearSpline([1,2,3])
-    @test size(L) == (ℵ₁, 3)
+    @testset "Evaluation" begin
+        L = LinearSpline([1,2,3])
+        @test size(L) == (ℵ₁, 3)
 
-    @test_throws BoundsError L[0.1, 1]
-    @test L[1.1,1] == L'[1,1.1] == transpose(L)[1,1.1] ≈ 0.9
-    @test L[2.1,1] === L'[1,2.1] === transpose(L)[1,2.1] === 0.0
-    @test L[1.1,2] ≈ 0.1
-    @test L[2.1,2] ≈ 0.9
-    @test L[2.1,3] == L'[3,2.1] == transpose(L)[3,2.1] ≈ 0.1
-    @test_throws BoundsError L[3.1,2]
+        @test_throws BoundsError L[0.1, 1]
+        @test L[1.1,1] == L'[1,1.1] == transpose(L)[1,1.1] ≈ 0.9
+        @test L[2.1,1] === L'[1,2.1] === transpose(L)[1,2.1] === 0.0
+        @test L[1.1,2] ≈ 0.1
+        @test L[2.1,2] ≈ 0.9
+        @test L[2.1,3] == L'[3,2.1] == transpose(L)[3,2.1] ≈ 0.1
+        @test_throws BoundsError L[3.1,2]
 
-    @test L[[1.1,2.1], 1] == L'[1,[1.1,2.1]] == transpose(L)[1,[1.1,2.1]] ≈ [0.9,0.0]
-    @test L[1.1,1:2] ≈ [0.9,0.1]
-    @test L[[1.1,2.1], 1:2] ≈ [0.9 0.1; 0.0 0.9]
+        @test L[[1.1,2.1], 1] == L'[1,[1.1,2.1]] == transpose(L)[1,[1.1,2.1]] ≈ [0.9,0.0]
+        @test L[1.1,1:2] ≈ [0.9,0.1]
+        @test L[[1.1,2.1], 1:2] ≈ [0.9 0.1; 0.0 0.9]
 
-    @test_throws BoundsError L[[0.1,2.1], 1]
+        @test_throws BoundsError L[[0.1,2.1], 1]
+    end
 
-    f = L*[1,2,4]
-    @test axes(f) == (Inclusion(1.0..3.0),)
-    @test f[1.1] ≈ 1.1
-    @test f[2.1] ≈ 2.2
+    @testset "Expansion" begin
+        L = LinearSpline([1,2,3])
+        f = L*[1,2,4]
+        @test axes(f) == (Inclusion(1.0..3.0),)
+        @test f[1.1] ≈ 1.1
+        @test f[2.1] ≈ 2.2
 
-    δ = DiracDelta(1.2,1..3)
-    L = LinearSpline([1,2,3])
-    @test δ'L ≈ [0.8, 0.2, 0.0]
+        δ = DiracDelta(1.2,1..3)
+        L = LinearSpline([1,2,3])
+        @test @inferred(δ'L) ≈ [0.8, 0.2, 0.0]
 
-    @test L'L == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
+        @test @inferred(L'L) == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
+    end
 
     @testset "==" begin
         L = LinearSpline([1,2,3])
@@ -107,18 +112,18 @@ end
     @testset "Adjoint layout" begin
         L = LinearSpline([1,2,3])
         @test MemoryLayout(typeof(L')) == AdjointBasisLayout()
-        @test [3,4,5]'*L' isa ApplyQuasiArray
+        @test @inferred([3,4,5]'*L') isa ApplyQuasiArray
     end
 
-    @testset "Broadcast layout" begin
+    @testset "+" begin
         L = LinearSpline([1,2,3])
-        b = BroadcastQuasiArray(+, L*[3,4,5], L*[1.,2,3])
+        b = L*[3,4,5] + L*[1.,2,3]
         @test ApplyStyle(\, typeof(L), typeof(b)) == LdivStyle()
         @test (L\b) == [4,6,8]
         B = BroadcastQuasiArray(+, L, L)
         @test L\B == 2Eye(3)
 
-        b = BroadcastQuasiArray(-, L*[3,4,5], L*[1.,2,3])
+        b = L*[3,4,5] - L*[1.,2,3]
         @test (L\b) == [2,2,2]
         B = BroadcastQuasiArray(-, L, L)
         @test L\B == 0Eye(3)
@@ -155,11 +160,11 @@ end
     @test eltype(D*L) == Float64
 
     M = applied(*, (D*L).args..., [1,2,4])
-    @test M isa Applied{LazyQuasiArrayApplyStyle}
     @test eltype(materialize(M)) == Float64
 
     M = applied(*, D, L, [1,2,4])
-    @test M isa Applied{LazyQuasiArrayApplyStyle}
+    @test M isa Applied{SimplifyStyle}
+    @test materialize(M) isa ApplyQuasiArray
 
     fp = D*L*[1,2,4]
 
@@ -175,8 +180,7 @@ end
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
 
-    @test D^2 isa ApplyQuasiMatrix{Float64,typeof(*)}
-    
+    @test D^2 isa ApplyQuasiMatrix{Float64,typeof(*)} 
 end
 
 @testset "Weak Laplacian" begin
@@ -184,15 +188,14 @@ end
     L = LinearSpline(0:2)
     D = Derivative(axes(L,1))
 
-    M = QuasiArrays.flatten(Mul(D',D*L))
-    @test length(M.args) == 3
-    @test last(M.args) isa BandedMatrix
-
-    @test ApplyStyle(*, typeof(L'), typeof(D')) == SimplifyStyle()
+    @test ApplyStyle(*, typeof(D), typeof(L)) isa SimplifyStyle
+    @test ApplyStyle(*, typeof(L'), typeof(D')) isa SimplifyStyle
+    @test ApplyStyle(*, typeof(L'), typeof(L)) isa SimplifyStyle
     @test apply(*,L',D') isa MulQuasiMatrix
     @test MemoryLayout(typeof(L')) isa AdjointBasisLayout
     @test (L'D') isa MulQuasiMatrix
 
+    @test ApplyStyle(*, typeof.((L'D').args)..., typeof.((D*L).args)...) isa SimplifyStyle
     A = (L'D') * (D*L)
     @test A isa BandedMatrix
     @test A == (D*L)'*(D*L) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
@@ -289,6 +292,8 @@ end
 
     @test B'D' isa MulQuasiMatrix
     @test length((B'D').args) == 2
+
+    @test apply(*,B',D',D,B) isa BandedMatrix
 
     @test Δ == -(*(B',D',D,B))
     @test Δ == -(B'D'D*B)

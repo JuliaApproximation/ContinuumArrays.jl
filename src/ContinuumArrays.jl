@@ -3,10 +3,10 @@ using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, Quasi
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
-                getproperty
+                getproperty, isone, iszero
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport,
-                        adjointlayout, arguments, _arguments, call, broadcastlayout, layout_getindex,
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, most, combine_mul_styles, AbstractArrayApplyStyle,
+                        adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
@@ -14,7 +14,7 @@ import FillArrays: AbstractFill, getindex_value, SquareEye
 import ArrayLayouts: mul
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
-                    ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
+                    ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform, affine
@@ -23,6 +23,9 @@ export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmateri
 # Interval indexing support
 ####
 struct AlephInfinity{N} <: Integer end
+
+isone(::AlephInfinity) = false
+iszero(::AlephInfinity) = false
 
 ==(::AlephInfinity, ::Int) = false
 ==(::Int, ::AlephInfinity) = false
@@ -35,7 +38,7 @@ show(io::IO, F::AlephInfinity{1}) where N =
     print(io, "ℵ₁")
 
 
-const QMul2{A,B} = Mul{<:Any,<:Any, <:A,<:B}
+const QMul2{A,B} = Mul{<:Any, <:Any, <:A,<:B}
 const QMul3{A,B,C} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B,C}}
 
 cardinality(::AbstractInterval) = ℵ₁
