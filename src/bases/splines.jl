@@ -49,8 +49,8 @@ end
 
 ## Mass matrix
 
-ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:LinearSpline}) = 
-    SimplifyStyle()    
+ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:LinearSpline}) =
+    SimplifyStyle()
 
 
 function similar(AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
@@ -92,7 +92,7 @@ end
 
 
 ## Derivative
-ApplyStyle(::typeof(*), ::Type{<:Derivative}, ::Type{<:LinearSpline}) = SimplifyStyle()    
+ApplyStyle(::typeof(*), ::Type{<:Derivative}, ::Type{<:LinearSpline}) = SimplifyStyle()
 
 
 
@@ -123,7 +123,7 @@ end
 copy(M::QMul2{<:Derivative,<:LinearSpline}) =
     copyto!(similar(M, eltype(M)), M)
 
-ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:QuasiAdjoint{<:Any,<:Derivative}}) = SimplifyStyle()        
+ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:QuasiAdjoint{<:Any,<:Derivative}}) = SimplifyStyle()
 
 function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:QuasiAdjoint{<:Any,<:Derivative}})
     Bc,Ac = M.args

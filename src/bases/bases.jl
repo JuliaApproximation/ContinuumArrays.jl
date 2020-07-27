@@ -25,8 +25,7 @@ adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 
-combine_mul_styles(::AbstractBasisLayout) = LazyQuasiArrayApplyStyle()
-combine_mul_styles(::AbstractAdjointBasisLayout) = LazyQuasiArrayApplyStyle()
+copy(M::Mul{BasisLayout}) = ApplyQuasiArray(M)
 
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
@@ -36,10 +35,6 @@ function ==(A::Basis, B::Basis)
     axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
     false
 end
-
-@inline quasildivapplystyle(::AbstractBasisLayout, ::AbstractBasisLayout) = LdivApplyStyle()
-@inline quasildivapplystyle(::AbstractBasisLayout, _) = LdivApplyStyle()
-@inline quasildivapplystyle(_, ::AbstractBasisLayout) = LdivApplyStyle()
 
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)

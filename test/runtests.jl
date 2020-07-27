@@ -2,7 +2,7 @@ using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, Linear
 import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, 
                         MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, Expansion
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
-import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivApplyStyle
+import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
 
 @testset "Inclusion" begin
@@ -54,8 +54,9 @@ end
 
     @test_throws BoundsError H[[0.1,2.1], 1]
     @test MemoryLayout(typeof(H)) == BasisLayout()
-    @test ApplyStyle(*, typeof(H), typeof([1,2])) isa LazyQuasiArrayApplyStyle
+    @test ApplyStyle(*, typeof(H), typeof([1,2])) isa MulStyle
     f = H*[1,2]
+    @test f isa ApplyQuasiArray
     @test axes(f) == (Inclusion(1.0..3.0),)
     @test f[1.1] ≈ 1
     @test f[2.1] ≈ 2
@@ -112,7 +113,7 @@ end
     @testset "Broadcast layout" begin
         L = LinearSpline([1,2,3])
         b = BroadcastQuasiArray(+, L*[3,4,5], L*[1.,2,3])
-        @test ApplyStyle(\, typeof(L), typeof(b)) == LdivApplyStyle()
+        @test ApplyStyle(\, typeof(L), typeof(b)) == LdivStyle()
         @test (L\b) == [4,6,8]
         B = BroadcastQuasiArray(+, L, L)
         @test L\B == 2Eye(3)
