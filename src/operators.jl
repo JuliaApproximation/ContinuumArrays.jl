@@ -67,55 +67,12 @@ macro simplify(qt)
             @assert length(qt.args[1].args) == 4
             Cname,Ctyp = qt.args[1].args[4].args
             esc(quote
-            LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}, ::Type{<:$Ctyp}) = ContinuumArrays.SimplifyStyle()
-            function ContinuumArrays.mul_simplify($Aname::$Atyp, $Bname::$Btyp, $Cname::$Ctyp)
-                $mat
-            end
-            Base.copy(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp}) = ContinuumArrays.simplify(M)
-         end)
-    end
-    else # A\
-        mat = qt.args[2]  
-        @assert qt.args[1].args[1] == :(\)
-        @assert qt.args[1].args[2].head == :(::)
-        Aname,Atyp = qt.args[1].args[2].args
-        if qt.args[1].args[3].head == :(::) # A \ B
-            Bname,Btyp = qt.args[1].args[3].args
-            esc(quote
-                LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = ContinuumArrays.SimplifyStyle()
-                function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:$Btyp}})
-                    $Aname,$Bname = M.args
+                LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}, ::Type{<:$Ctyp}) = ContinuumArrays.SimplifyStyle()
+                function ContinuumArrays.mul_simplify($Aname::$Atyp, $Bname::$Btyp, $Cname::$Ctyp)
                     $mat
                 end
+                Base.copy(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp}) = ContinuumArrays.simplify(M)
             end)
-        else # A \ (B*C)
-            @assert qt.args[1].args[3].head == :call
-            @assert qt.args[1].args[3].args[1] == :(*)
-            @assert qt.args[1].args[3].args[2].head == :(::)
-            Bname,Btyp = qt.args[1].args[3].args[2].args
-            @assert qt.args[1].args[3].args[3].head == :(::)
-            Cname,Ctyp = qt.args[1].args[3].args[3].args   
-            if length(qt.args[1].args[3].args) == 3
-                esc(quote
-                    LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:ContinuumArrays.QMul2{<:$Btyp,<:$Ctyp}}) = ContinuumArrays.SimplifyStyle()
-                    function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:ContinuumArrays.QMul2{<:$Btyp,<:$Ctyp}}})
-                        $Aname,BC = M.args
-                        $Bname,$Cname = BC.args
-                        $mat
-                    end
-                end)
-            else
-                @assert length(qt.args[1].args[3].args) == 4
-                Dname,Dtyp = qt.args[1].args[3].args[4].args   
-                esc(quote
-                    ApplyStyle(::typeof(\),::Type{<:$Atyp}, ::Type{<:ContinuumArrays.QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}) = ContinuumArrays.SimplifyStyle()
-                    function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:ContinuumArrays.QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}})
-                        $Aname,BC = M.args
-                        $Bname,$Cname,$Dname = BC.args
-                        $mat
-                    end
-                end)
-            end
         end
     end
 end

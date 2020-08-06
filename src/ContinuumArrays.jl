@@ -1,9 +1,9 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
+using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, InfiniteArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
-                getproperty, isone, iszero
+                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, most, combine_mul_styles, AbstractArrayApplyStyle,
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex,
@@ -16,6 +16,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize
+import InfiniteArrays: Infinity
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform, affine
 
@@ -31,8 +32,30 @@ iszero(::AlephInfinity) = false
 ==(::Int, ::AlephInfinity) = false
 
 *(::AlephInfinity{N}, ::AlephInfinity{N}) where N = AlephInfinity{N}()
+*(::AlephInfinity{N}, ::Infinity) where N = AlephInfinity{N}()
+*(::Infinity, ::AlephInfinity{N}) where N = AlephInfinity{N}()
+
+abs(a::AlephInfinity) = a
+zero(::AlephInfinity) = 0
+
+for OP in (:<, :≤)
+    @eval begin
+        $OP(::Real, ::AlephInfinity) = true
+        $OP(::AlephInfinity, ::Real) = false
+    end
+end
+
+for OP in (:>, :≥)
+    @eval begin
+        $OP(::Real, ::AlephInfinity) = false
+        $OP(::AlephInfinity, ::Real) = true
+    end
+end
+
 
 const ℵ₁ = AlephInfinity{1}()
+
+string(::AlephInfinity{1}) = "ℵ₁"
 
 show(io::IO, F::AlephInfinity{1}) where N =
     print(io, "ℵ₁")
