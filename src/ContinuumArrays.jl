@@ -34,6 +34,13 @@ iszero(::AlephInfinity) = false
 *(::AlephInfinity{N}, ::AlephInfinity{N}) where N = AlephInfinity{N}()
 *(::AlephInfinity{N}, ::Infinity) where N = AlephInfinity{N}()
 *(::Infinity, ::AlephInfinity{N}) where N = AlephInfinity{N}()
+function *(a::Integer, b::AlephInfinity)
+    a > 0 || throw(ArgumentError("$a is negative"))
+    b
+end
+
+*(a::AlephInfinity, b::Integer) = b*a
+
 
 abs(a::AlephInfinity) = a
 zero(::AlephInfinity) = 0
