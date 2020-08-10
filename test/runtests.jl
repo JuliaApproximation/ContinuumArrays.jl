@@ -1,5 +1,5 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, Test
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, 
+import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, 
                         MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, Expansion
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
@@ -61,8 +61,6 @@ end
     @test f[1.1] ≈ 1
     @test f[2.1] ≈ 2
 
-    @test ApplyStyle(*,typeof(H'),typeof(H)) == SimplifyStyle()
-
     @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
 end
 
@@ -111,7 +109,7 @@ end
 
     @testset "Adjoint layout" begin
         L = LinearSpline([1,2,3])
-        @test MemoryLayout(typeof(L')) == AdjointBasisLayout()
+        @test MemoryLayout(L') == AdjointBasisLayout()
         @test @inferred([3,4,5]'*L') isa ApplyQuasiArray
     end
 
@@ -154,7 +152,6 @@ end
     f = L*[1,2,4]
 
     D = Derivative(axes(L,1))
-    @test ApplyStyle(*,typeof(D),typeof(L)) isa SimplifyStyle
     @test D*L isa MulQuasiMatrix
     @test length((D*L).args) == 2
     @test eltype(D*L) == Float64
@@ -163,7 +160,6 @@ end
     @test eltype(materialize(M)) == Float64
 
     M = applied(*, D, L, [1,2,4])
-    @test M isa Applied{SimplifyStyle}
     @test materialize(M) isa ApplyQuasiArray
 
     fp = D*L*[1,2,4]
@@ -188,14 +184,10 @@ end
     L = LinearSpline(0:2)
     D = Derivative(axes(L,1))
 
-    @test ApplyStyle(*, typeof(D), typeof(L)) isa SimplifyStyle
-    @test ApplyStyle(*, typeof(L'), typeof(D')) isa SimplifyStyle
-    @test ApplyStyle(*, typeof(L'), typeof(L)) isa SimplifyStyle
     @test apply(*,L',D') isa MulQuasiMatrix
     @test MemoryLayout(typeof(L')) isa AdjointBasisLayout
     @test (L'D') isa MulQuasiMatrix
 
-    @test ApplyStyle(*, typeof.((L'D').args)..., typeof.((D*L).args)...) isa SimplifyStyle
     A = (L'D') * (D*L)
     @test A isa BandedMatrix
     @test A == (D*L)'*(D*L) == [1.0 -1 0; -1.0 2.0 -1.0; 0.0 -1.0 1.0]
@@ -293,7 +285,7 @@ end
     @test B'D' isa MulQuasiMatrix
     @test length((B'D').args) == 2
 
-    @test apply(*,B',D',D,B) isa BandedMatrix
+    @test *(B',D',D,B) isa BandedMatrix
 
     @test Δ == -(*(B',D',D,B))
     @test Δ == -(B'D'D*B)

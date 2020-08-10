@@ -1,23 +1,5 @@
 
 
-struct SimplifyStyle <: AbstractQuasiArrayApplyStyle end
-
-combine_mul_styles(::SimplifyStyle, ::SimplifyStyle) = SimplifyStyle()
-combine_mul_styles(::SimplifyStyle, ::AbstractQuasiArrayApplyStyle) = SimplifyStyle()
-combine_mul_styles(::AbstractQuasiArrayApplyStyle, ::SimplifyStyle) = SimplifyStyle()
-combine_mul_styles(::SimplifyStyle, ::AbstractArrayApplyStyle) = SimplifyStyle()
-combine_mul_styles(::AbstractArrayApplyStyle, ::SimplifyStyle) = SimplifyStyle()
-
-_mul_simplify(A::Applied{SimplifyStyle}, ::Applied{SimplifyStyle}, args) = mul_simplify(_mul_arguments(simplify(A))..., last(args))
-_mul_simplify(A::Applied{SimplifyStyle}, _, args) = mul_simplify(_mul_arguments(simplify(A))..., last(args))
-_mul_simplify(_, B::Applied{SimplifyStyle}, args) = mul_simplify(first(args), _mul_arguments(simplify(B))...)
-_mul_simplify(_, _, args) = *(args...) # can't be simplified
-mul_simplify(args...) = _mul_simplify(applied(*, most(args)...), applied(*, tail(args)...), args)
-simplify(A::Applied{SimplifyStyle,typeof(*)}) = mul_simplify(A.args...)
-simplify(A::Mul) = mul_simplify(A.A, A.B)
-
-copy(A::Applied{SimplifyStyle,typeof(*)}) = simplify(A)
-
 function removesubtype(typ)
     if typ isa Expr && typ.head == :(<:) 
         typ.args[1]
@@ -46,19 +28,17 @@ macro simplify(qt)
         Badj = adjtype(Btyp)
         if length(qt.args[1].args) == 3
             ret = quote
-                LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = ContinuumArrays.SimplifyStyle()
-                function ContinuumArrays.mul_simplify($Aname::$Atyp, $Bname::$Btyp)
+                ContinuumArrays.simplifiable(::typeof(*), A::$Atyp, B::$Btyp) = Val(true)
+                function ContinuumArrays.mul($Aname::$Atyp, $Bname::$Btyp)
                     $mat
                 end
-                ContinuumArrays.mul(A::$Atyp, B::$Btyp) = ContinuumArrays.mul_simplify(A, B)
             end
             if Aadj ≠ Btyp 
                 @assert Atyp ≠ Badj
                 ret = quote
                     $ret
-                    LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Badj}, ::Type{<:$Aadj}) = ContinuumArrays.SimplifyStyle()
-                    ContinuumArrays.mul_simplify(Bc::$Badj, Ac::$Aadj) = ContinuumArrays.mul_simplify(Ac' , Bc')'
-                    ContinuumArrays.mul(Bc::$Badj, Ac::$Aadj) = ContinuumArrays.mul_simplify(Bc, Ac)
+                    ContinuumArrays.simplifiable(::typeof(*), ::$Badj, A::$Aadj) = Val(true)
+                    ContinuumArrays.mul(Bc::$Badj, Ac::$Aadj) = ContinuumArrays.mul(Ac', Bc')'
                 end
             end
             
@@ -67,8 +47,8 @@ macro simplify(qt)
             @assert length(qt.args[1].args) == 4
             Cname,Ctyp = qt.args[1].args[4].args
             esc(quote
-                LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}, ::Type{<:$Ctyp}) = ContinuumArrays.SimplifyStyle()
-                function ContinuumArrays.mul_simplify($Aname::$Atyp, $Bname::$Btyp, $Cname::$Ctyp)
+                ContinuumArrays.simplifiable(::typeof(*), ::$Atyp, ::$Btyp, ::$Ctyp) = Val(true)
+                function ContinuumArrays._simplify(::typeof(*), $Aname::$Atyp, $Bname::$Btyp, $Cname::$Ctyp)
                     $mat
                 end
                 Base.copy(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp}) = ContinuumArrays.simplify(M)
