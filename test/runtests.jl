@@ -430,7 +430,7 @@ struct ChebyshevWeight <: Weight{Float64} end
 
 
 Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
-ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n; kind=1)
+ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
 
 LinearAlgebra.factorize(L::Chebyshev) =
@@ -441,7 +441,7 @@ LinearAlgebra.factorize(L::Chebyshev) =
     x = axes(T,1)
     F = factorize(T)
     g = grid(F)
-    @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g); kind=1)
+    @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
 
     w = ChebyshevWeight()
     wT = w .* T
