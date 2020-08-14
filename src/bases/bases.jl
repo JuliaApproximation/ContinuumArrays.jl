@@ -259,6 +259,7 @@ end
 
 combine_mul_styles(::SubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
 _mul_arguments(::SubBasisLayout, A) = _mul_arguments(ApplyLayout{typeof(*)}(), A)
+arguments(::SubBasisLayout, A) = arguments(ApplyLayout{typeof(*)}(), A)
 call(::SubBasisLayout, ::SubQuasiArray) = *
 
 combine_mul_styles(::AdjointSubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
@@ -268,7 +269,7 @@ call(::AdjointSubBasisLayout, ::SubQuasiArray) = *
 
 copy(M::Mul{AdjointSubBasisLayout,SubBasisLayout}) = apply(*, arguments(M.A)..., arguments(M.B)...)
 
-function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
+function arguments(::ApplyLayout{typeof(*)}, V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
     A = parent(V)
     _,jr = parentindices(V)
     first(jr) ≥ 1 || throw(BoundsError())
@@ -289,8 +290,8 @@ function __sum(::SubBasisLayout, Vm, dims)
     @assert dims == 1
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
-function __sum(::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
-    a = arguments(V)
+function __sum(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
+    a = arguments(LAY, V)
     first(apply(*, sum(a[1]; dims=1), tail(a)...))
 end
 
