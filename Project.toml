@@ -15,12 +15,12 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
-ArrayLayouts = "0.4"
-BandedMatrices = "0.15.15"
-FillArrays = "0.9.1"
+ArrayLayouts = "0.4.3"
+BandedMatrices = "0.15.17"
+FillArrays = "0.9.3"
 InfiniteArrays = "0.8"
 IntervalSets = "0.3.2, 0.4, 0.5"
-LazyArrays = "0.17"
+LazyArrays = "0.17.1"
 QuasiArrays = "0.3"
 julia = "1.4"
 
