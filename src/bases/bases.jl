@@ -153,6 +153,8 @@ end
 
 const Expansion{T,Space<:Basis,Coeffs<:AbstractVector} = ApplyQuasiVector{T,typeof(*),<:Tuple{Space,Coeffs}}
 
+basis(v::AbstractQuasiVector) = v.args[1]
+
 for op in (:*, :\)
     @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), x::Number, f::Expansion)
         S,c = arguments(f)
