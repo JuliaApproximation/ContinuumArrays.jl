@@ -132,7 +132,7 @@ copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiV
     transform_ldiv(L.A, L.B)
 
 function copy(L::Ldiv{ApplyLayout{typeof(*)},<:AbstractBasisLayout})
-    args = arguments(L.A)
+    args = arguments(ApplyLayout{typeof(*)}(), L.A)
     @assert length(args) == 2 # temporary
     apply(\, last(args), apply(\, first(args), L.B))
 end
