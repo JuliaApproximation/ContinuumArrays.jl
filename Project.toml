@@ -22,7 +22,7 @@ InfiniteArrays = "0.8"
 IntervalSets = "0.3.2, 0.4, 0.5"
 LazyArrays = "0.17.1"
 QuasiArrays = "0.3"
-julia = "1.4"
+julia = "1.5"
 
 [extras]
 FastTransforms = "057dd010-8810-581a-b7be-e3fc3b93f78c"
