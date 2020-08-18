@@ -1,10 +1,6 @@
 
 
-struct SimplifyStyle <: AbstractQuasiArrayApplyStyle end
-
-copy(A::Applied{SimplifyStyle}) = error("Override copy(::$(typeof(A)))")
-
-function removesubtype(typ) 
+function removesubtype(typ)
     if typ isa Expr && typ.head == :(<:) 
         typ.args[1]
     else
@@ -32,9 +28,8 @@ macro simplify(qt)
         Badj = adjtype(Btyp)
         if length(qt.args[1].args) == 3
             ret = quote
-                LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = ContinuumArrays.SimplifyStyle()
-                function Base.copy(M::ContinuumArrays.QMul2{<:$Atyp,<:$Btyp})
-                    $Aname,$Bname = M.args
+                ContinuumArrays.simplifiable(::typeof(*), A::$Atyp, B::$Btyp) = Val(true)
+                function ContinuumArrays.mul($Aname::$Atyp, $Bname::$Btyp)
                     $mat
                 end
             end
@@ -42,11 +37,8 @@ macro simplify(qt)
                 @assert Atyp ≠ Badj
                 ret = quote
                     $ret
-                    LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Aadj}, ::Type{<:$Badj}) = ContinuumArrays.SimplifyStyle()
-                    function Base.copy(M::ContinuumArrays.QMul2{<:$Badj,<:$Aadj})
-                        Bc,Ac = M.args
-                        apply(*,Ac',Bc')'
-                    end
+                    ContinuumArrays.simplifiable(::typeof(*), ::$Badj, A::$Aadj) = Val(true)
+                    ContinuumArrays.mul(Bc::$Badj, Ac::$Aadj) = ContinuumArrays.mul(Ac', Bc')'
                 end
             end
             
@@ -55,55 +47,12 @@ macro simplify(qt)
             @assert length(qt.args[1].args) == 4
             Cname,Ctyp = qt.args[1].args[4].args
             esc(quote
-            LazyArrays.ApplyStyle(::typeof(*), ::Type{<:$Atyp}, ::Type{<:$Btyp}, ::Type{<:$Ctyp}) = ContinuumArrays.SimplifyStyle()
-            function Base.copy(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp})
-                $Aname,$Bname,$Cname = M.args
-                $mat
-            end
-         end)
-    end
-    else # A\
-        mat = qt.args[2]  
-        @assert qt.args[1].args[1] == :(\)
-        @assert qt.args[1].args[2].head == :(::)
-        Aname,Atyp = qt.args[1].args[2].args
-        if qt.args[1].args[3].head == :(::) # A \ B
-            Bname,Btyp = qt.args[1].args[3].args
-            esc(quote
-                LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:$Btyp}) = ContinuumArrays.SimplifyStyle()
-                function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:$Btyp}})
-                    $Aname,$Bname = M.args
+                ContinuumArrays.simplifiable(::typeof(*), ::$Atyp, ::$Btyp, ::$Ctyp) = Val(true)
+                function ContinuumArrays._simplify(::typeof(*), $Aname::$Atyp, $Bname::$Btyp, $Cname::$Ctyp)
                     $mat
                 end
+                Base.copy(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp}) = ContinuumArrays.simplify(M)
             end)
-        else # A \ (B*C)
-            @assert qt.args[1].args[3].head == :call
-            @assert qt.args[1].args[3].args[1] == :(*)
-            @assert qt.args[1].args[3].args[2].head == :(::)
-            Bname,Btyp = qt.args[1].args[3].args[2].args
-            @assert qt.args[1].args[3].args[3].head == :(::)
-            Cname,Ctyp = qt.args[1].args[3].args[3].args   
-            if length(qt.args[1].args[3].args) == 3
-                esc(quote
-                    LazyArrays.ApplyStyle(::typeof(\), ::Type{<:$Atyp}, ::Type{<:ContinuumArrays.QMul2{<:$Btyp,<:$Ctyp}}) = ContinuumArrays.SimplifyStyle()
-                    function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:ContinuumArrays.QMul2{<:$Btyp,<:$Ctyp}}})
-                        $Aname,BC = M.args
-                        $Bname,$Cname = BC.args
-                        $mat
-                    end
-                end)
-            else
-                @assert length(qt.args[1].args[3].args) == 4
-                Dname,Dtyp = qt.args[1].args[3].args[4].args   
-                esc(quote
-                    ApplyStyle(::typeof(\),::Type{<:$Atyp}, ::Type{<:ContinuumArrays.QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}) = ContinuumArrays.SimplifyStyle()
-                    function Base.copy(M::Applied{ContinuumArrays.SimplifyStyle,typeof(\),<:Tuple{<:$Atyp,<:ContinuumArrays.QMul3{<:$Btyp,<:$Ctyp,<:$Dtyp}}})
-                        $Aname,BC = M.args
-                        $Bname,$Cname,$Dname = BC.args
-                        $mat
-                    end
-                end)
-            end
         end
     end
 end
@@ -158,6 +107,7 @@ function diff(d::AbstractQuasiVector)
     Derivative(x)*d
 end
 
+^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
 
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
 #     f::F

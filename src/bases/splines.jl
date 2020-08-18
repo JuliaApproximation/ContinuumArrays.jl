@@ -48,22 +48,19 @@ end
 
 
 ## Mass matrix
-
-ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:LinearSpline}) = 
-    SimplifyStyle()    
-
-
 function similar(AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
     n = size(AB,1)
     SymTridiagonal(Vector{T}(undef, n), Vector{T}(undef, n-1))
 end
 #
-copy(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) =
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:LinearSpline}, B::LinearSpline) 
+    M = Mul(Ac, B)
     copyto!(similar(M, eltype(M)), M)
+end
 
 function copyto!(dest::SymTridiagonal,
                  AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) where T
-    Ac,B = AB.args
+    Ac,B = AB.A,AB.B
     A = parent(Ac)
     A.points == B.points || throw(ArgumentError())
     dv,ev = dest.dv,dest.ev
@@ -92,13 +89,9 @@ end
 
 
 ## Derivative
-ApplyStyle(::typeof(*), ::Type{<:Derivative}, ::Type{<:LinearSpline}) = SimplifyStyle()    
-
-
-
 function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
                  M::QMul2{<:Derivative,<:LinearSpline})
-    D, L = M.args
+    D, L = M.A, M.B
     H, A = dest.args
     x = H.points
 
@@ -114,20 +107,15 @@ function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
 end
 
 function similar(M::QMul2{<:Derivative,<:LinearSpline}, ::Type{T}) where T
-    D, B = M.args
+    D, B = M.A, M.B
     n = size(B,2)
     ApplyQuasiMatrix(*, HeavisideSpline{T}(B.points),
         BandedMatrix{T}(undef, (n-1,n), (0,1)))
 end
 
-copy(M::QMul2{<:Derivative,<:LinearSpline}) =
+@simplify function *(D::Derivative, L::LinearSpline)
+    M = Mul(D, L)
     copyto!(similar(M, eltype(M)), M)
-
-ApplyStyle(::typeof(*), ::Type{<:QuasiAdjoint{<:Any,<:LinearSpline}}, ::Type{<:QuasiAdjoint{<:Any,<:Derivative}}) = SimplifyStyle()        
-
-function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:QuasiAdjoint{<:Any,<:Derivative}})
-    Bc,Ac = M.args
-    apply(*,Ac',Bc')'
 end
 
 
@@ -138,4 +126,15 @@ end
 function _sum(A::HeavisideSpline, dims)
     @assert dims == 1
     permutedims(diff(A.points))
+end
+
+function _sum(P::LinearSpline, dims)
+    d = diff(P.points)
+    ret = Array{float(eltype(d))}(undef, length(d)+1)
+    ret[1] = d[1]/2
+    for k = 2:length(d)
+        ret[k] = (d[k-1] + d[k])/2
+    end
+    ret[end] = d[end]/2
+    permutedims(ret)
 end

@@ -1,9 +1,25 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, Test
-import ContinuumArrays: ℵ₁, materialize, SimplifyStyle, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, 
-                        MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test
+import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
+                        MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, Expansion, basis
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
-import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivApplyStyle
+import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
+@testset "AlephInfinity" begin
+    @test !isone(ℵ₁)
+    @test !iszero(ℵ₁)
+    @test ℵ₁ ≠ 4
+    @test ℵ₁ * ∞ == ∞ * ℵ₁ == ℵ₁
+    @test 2 * ℵ₁ == ℵ₁ * 2 == ℵ₁
+    @test abs(ℵ₁) == ℵ₁
+    @test zero(ℵ₁) == 0
+    @test 5 < ℵ₁
+    @test 5 ≤ ℵ₁
+    @test !(ℵ₁ ≤ 5)
+    @test ℵ₁ > 5
+    @test !(5 > ℵ₁)
+
+    @test string(ℵ₁) == "ℵ₁"
+end
 
 @testset "Inclusion" begin
     x = Inclusion(-1..1)
@@ -54,45 +70,57 @@ end
 
     @test_throws BoundsError H[[0.1,2.1], 1]
     @test MemoryLayout(typeof(H)) == BasisLayout()
-    @test ApplyStyle(*, typeof(H), typeof([1,2])) isa LazyQuasiArrayApplyStyle
+    @test ApplyStyle(*, typeof(H), typeof([1,2])) isa MulStyle
     f = H*[1,2]
+    @test f isa ApplyQuasiArray
     @test axes(f) == (Inclusion(1.0..3.0),)
     @test f[1.1] ≈ 1
     @test f[2.1] ≈ 2
 
-    @test ApplyStyle(*,typeof(H'),typeof(H)) == SimplifyStyle()
-
-    @test H'H == materialize(applied(*,H',H)) == Eye(2)
+    @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
 end
 
 @testset "LinearSpline" begin
-    L = LinearSpline([1,2,3])
-    @test size(L) == (ℵ₁, 3)
+    @testset "Evaluation" begin
+        L = LinearSpline([1,2,3])
+        @test size(L) == (ℵ₁, 3)
 
-    @test_throws BoundsError L[0.1, 1]
-    @test L[1.1,1] == L'[1,1.1] == transpose(L)[1,1.1] ≈ 0.9
-    @test L[2.1,1] === L'[1,2.1] === transpose(L)[1,2.1] === 0.0
-    @test L[1.1,2] ≈ 0.1
-    @test L[2.1,2] ≈ 0.9
-    @test L[2.1,3] == L'[3,2.1] == transpose(L)[3,2.1] ≈ 0.1
-    @test_throws BoundsError L[3.1,2]
+        @test_throws BoundsError L[0.1, 1]
+        @test L[1.1,1] == L'[1,1.1] == transpose(L)[1,1.1] ≈ 0.9
+        @test L[2.1,1] === L'[1,2.1] === transpose(L)[1,2.1] === 0.0
+        @test L[1.1,2] ≈ 0.1
+        @test L[2.1,2] ≈ 0.9
+        @test L[2.1,3] == L'[3,2.1] == transpose(L)[3,2.1] ≈ 0.1
+        @test_throws BoundsError L[3.1,2]
 
-    @test L[[1.1,2.1], 1] == L'[1,[1.1,2.1]] == transpose(L)[1,[1.1,2.1]] ≈ [0.9,0.0]
-    @test L[1.1,1:2] ≈ [0.9,0.1]
-    @test L[[1.1,2.1], 1:2] ≈ [0.9 0.1; 0.0 0.9]
+        @test L[[1.1,2.1], 1] == L'[1,[1.1,2.1]] == transpose(L)[1,[1.1,2.1]] ≈ [0.9,0.0]
+        @test L[1.1,1:2] ≈ [0.9,0.1]
+        @test L[[1.1,2.1], 1:2] ≈ [0.9 0.1; 0.0 0.9]
 
-    @test_throws BoundsError L[[0.1,2.1], 1]
+        @test_throws BoundsError L[[0.1,2.1], 1]
+    end
 
-    f = L*[1,2,4]
-    @test axes(f) == (Inclusion(1.0..3.0),)
-    @test f[1.1] ≈ 1.1
-    @test f[2.1] ≈ 2.2
+    @testset "Expansion" begin
+        L = LinearSpline([1,2,3])
+        f = L*[1,2,4]
 
-    δ = DiracDelta(1.2,1..3)
-    L = LinearSpline([1,2,3])
-    @test δ'L ≈ [0.8, 0.2, 0.0]
+        @test basis(f) == L
+        @test axes(f) == (Inclusion(1.0..3.0),)
+        @test f[1.1] ≈ 1.1
+        @test f[2.1] ≈ 2.2
 
-    @test L'L == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
+        δ = DiracDelta(1.2,1..3)
+        L = LinearSpline([1,2,3])
+        @test @inferred(δ'L) ≈ [0.8, 0.2, 0.0]
+
+        @test @inferred(L'L) == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
+
+        @testset "Algebra" begin
+            @test 2f == f*2 == 2 .* f == f .* 2
+            @test 2\f == f/2 == 2 .\ f == f ./ 2
+            @test sum(f) ≈ 4.5
+        end
+    end
 
     @testset "==" begin
         L = LinearSpline([1,2,3])
@@ -105,42 +133,58 @@ end
 
     @testset "Adjoint layout" begin
         L = LinearSpline([1,2,3])
-        @test MemoryLayout(typeof(L')) == AdjointBasisLayout()
-        @test [3,4,5]'*L' isa ApplyQuasiArray
+        @test MemoryLayout(L') == AdjointBasisLayout()
+        @test @inferred([3,4,5]'*L') isa ApplyQuasiArray
     end
 
-    @testset "Broadcast layout" begin
+    @testset "+" begin
         L = LinearSpline([1,2,3])
-        b = BroadcastQuasiArray(+, L*[3,4,5], L*[1.,2,3])
-        @test ApplyStyle(\, typeof(L), typeof(b)) == LdivApplyStyle()
+        b = L*[3,4,5] + L*[1.,2,3]
+        @test ApplyStyle(\, typeof(L), typeof(b)) == LdivStyle()
         @test (L\b) == [4,6,8]
         B = BroadcastQuasiArray(+, L, L)
         @test L\B == 2Eye(3)
 
-        b = BroadcastQuasiArray(-, L*[3,4,5], L*[1.,2,3])
+        b = L*[3,4,5] - L*[1.,2,3]
         @test (L\b) == [2,2,2]
         B = BroadcastQuasiArray(-, L, L)
         @test L\B == 0Eye(3)
     end
 end
 
+@testset "Algebra" begin
+    L = LinearSpline([1,2,3])
+    f = L*[1,2,4]
+    g = L*[5,6,7]
+    
+    @test f isa Expansion
+    @test 2f isa Expansion
+    @test f*2 isa Expansion
+    @test 2\f isa Expansion
+    @test f/2 isa Expansion
+    @test f+g isa Expansion
+    @test f-g isa Expansion
+    @test f[1.2] == 1.2
+    @test (2f)[1.2] == (f*2)[1.2] == 2.4
+    @test (2\f)[1.2] == (f/2)[1.2] == 0.6
+    @test (f+g)[1.2] ≈ f[1.2] + g[1.2]
+    @test (f-g)[1.2] ≈ f[1.2] - g[1.2]
+end
+
 @testset "Derivative" begin
     L = LinearSpline([1,2,3])
     f = L*[1,2,4]
-    @test f[1.2] == 1.2
 
     D = Derivative(axes(L,1))
-    @test ApplyStyle(*,typeof(D),typeof(L)) isa SimplifyStyle
     @test D*L isa MulQuasiMatrix
     @test length((D*L).args) == 2
     @test eltype(D*L) == Float64
 
     M = applied(*, (D*L).args..., [1,2,4])
-    @test M isa Applied{LazyQuasiArrayApplyStyle}
     @test eltype(materialize(M)) == Float64
 
     M = applied(*, D, L, [1,2,4])
-    @test M isa Applied{LazyQuasiArrayApplyStyle}
+    @test materialize(M) isa ApplyQuasiArray
 
     fp = D*L*[1,2,4]
 
@@ -151,11 +195,12 @@ end
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
 
-
     fp = D*f
     @test length(fp.args) == 2
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
+
+    @test D^2 isa ApplyQuasiMatrix{Float64,typeof(*)} 
 end
 
 @testset "Weak Laplacian" begin
@@ -163,11 +208,6 @@ end
     L = LinearSpline(0:2)
     D = Derivative(axes(L,1))
 
-    M = QuasiArrays.flatten(Mul(D',D*L))
-    @test length(M.args) == 3
-    @test last(M.args) isa BandedMatrix
-
-    @test ApplyStyle(*, typeof(L'), typeof(D')) == SimplifyStyle()
     @test apply(*,L',D') isa MulQuasiMatrix
     @test MemoryLayout(typeof(L')) isa AdjointBasisLayout
     @test (L'D') isa MulQuasiMatrix
@@ -268,6 +308,8 @@ end
 
     @test B'D' isa MulQuasiMatrix
     @test length((B'D').args) == 2
+
+    @test *(B',D',D,B) isa BandedMatrix
 
     @test Δ == -(*(B',D',D,B))
     @test Δ == -(B'D'D*B)
@@ -404,7 +446,7 @@ struct ChebyshevWeight <: Weight{Float64} end
 
 
 Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
-ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n; kind=1)
+ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
 
 LinearAlgebra.factorize(L::Chebyshev) =
@@ -415,7 +457,7 @@ LinearAlgebra.factorize(L::Chebyshev) =
     x = axes(T,1)
     F = factorize(T)
     g = grid(F)
-    @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g); kind=1)
+    @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
 
     w = ChebyshevWeight()
     wT = w .* T

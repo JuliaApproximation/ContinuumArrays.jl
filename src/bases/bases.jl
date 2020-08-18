@@ -4,14 +4,14 @@ abstract type Weight{T} <: LazyQuasiVector{T} end
 
 const WeightedBasis{T, A<:AbstractQuasiVector, B<:Basis} = BroadcastQuasiMatrix{T,typeof(*),<:Tuple{A,B}}
 
-struct WeightLayout <: MemoryLayout end
-abstract type AbstractBasisLayout <: MemoryLayout end
+struct WeightLayout <: AbstractQuasiLazyLayout end
+abstract type AbstractBasisLayout <: AbstractQuasiLazyLayout end
 struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
 struct MappedBasisLayout <: AbstractBasisLayout end
 struct WeightedBasisLayout <: AbstractBasisLayout end
 
-abstract type AbstractAdjointBasisLayout <: MemoryLayout end
+abstract type AbstractAdjointBasisLayout <: AbstractQuasiLazyLayout end
 struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
 struct AdjointSubBasisLayout <: AbstractAdjointBasisLayout end
 struct AdjointMappedBasisLayout <: AbstractAdjointBasisLayout end
@@ -25,9 +25,7 @@ adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 
-combine_mul_styles(::AbstractBasisLayout) = LazyQuasiArrayApplyStyle()
-combine_mul_styles(::AbstractAdjointBasisLayout) = LazyQuasiArrayApplyStyle()
-
+# Default is lazy
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
 
@@ -36,10 +34,6 @@ function ==(A::Basis, B::Basis)
     axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
     false
 end
-
-@inline quasildivapplystyle(::AbstractBasisLayout, ::AbstractBasisLayout) = LdivApplyStyle()
-@inline quasildivapplystyle(::AbstractBasisLayout, _) = LdivApplyStyle()
-@inline quasildivapplystyle(_, ::AbstractBasisLayout) = LdivApplyStyle()
 
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
@@ -138,7 +132,7 @@ copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiV
     transform_ldiv(L.A, L.B)
 
 function copy(L::Ldiv{ApplyLayout{typeof(*)},<:AbstractBasisLayout})
-    args = arguments(L.A)
+    args = arguments(ApplyLayout{typeof(*)}(), L.A)
     @assert length(args) == 2 # temporary
     apply(\, last(args), apply(\, first(args), L.B))
 end
@@ -147,6 +141,55 @@ end
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
     p,T = factorize(L.A)
     T \ L.B[p]
+end
+
+
+##
+# Algebra
+##
+
+# struct ExpansionLayout <: MemoryLayout end
+# applylayout(::Type{typeof(*)}, ::BasisLayout, _) = ExpansionLayout()
+
+const Expansion{T,Space<:Basis,Coeffs<:AbstractVector} = ApplyQuasiVector{T,typeof(*),<:Tuple{Space,Coeffs}}
+
+basis(v::AbstractQuasiVector) = v.args[1]
+
+for op in (:*, :\)
+    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), x::Number, f::Expansion)
+        S,c = arguments(f)
+        S * broadcast($op, x, c)
+    end
+end
+for op in (:*, :/)
+    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), f::Expansion, x::Number)
+        S,c = arguments(f)
+        S * broadcast($op, c, x)
+    end
+end
+
+
+function broadcastbasis(::typeof(+), a, b)
+    a ≠ b && error("Overload broadcastbasis(::typeof(+), ::$(typeof(a)), ::$(typeof(b)))")
+    a
+end
+
+broadcastbasis(::typeof(-), a, b) = broadcastbasis(+, a, b)
+
+for op in (:+, :-)
+    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), f::Expansion, g::Expansion)
+        S,c = arguments(f)
+        T,d = arguments(g)
+        ST = broadcastbasis($op, S, T)
+        ST * $op((ST \ S) * c , (ST \ T) * d)
+    end
+end
+
+@eval function ==(f::Expansion, g::Expansion)
+    S,c = arguments(f)
+    T,d = arguments(g)
+    ST = broadcastbasis(+, S, T)
+    (ST \ S) * c == (ST \ T) * d
 end
 
 ## materialize views
@@ -164,9 +207,8 @@ end
 _sub_getindex(A, kr, jr) = A[kr, jr]
 _sub_getindex(A, ::Slice, ::Slice) = A
 
-function copy(M::QMul2{<:QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
-                        <:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}})
-    Ac, B = M.args
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
+             B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
     A = Ac'
     PA,PB = parent(A),parent(B)
     kr,jr = parentindices(B)
@@ -175,14 +217,12 @@ end
 
 
 # Differentiation of sub-arrays
-function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}})
-    A, B = M.args
+@simplify function *(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})
     P = parent(B)
     (Derivative(axes(P,1))*P)[parentindices(B)...]
 end
 
-function copy(M::QMul2{<:Derivative,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}})
-    A, B = M.args
+@simplify function *(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
     P = parent(B)
     kr,jr = parentindices(B)
     (Derivative(axes(P,1))*P*kr.A)[kr,jr]
@@ -220,15 +260,18 @@ end
 # SubLayout behaves like ApplyLayout{typeof(*)}
 
 combine_mul_styles(::SubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
-_arguments(::SubBasisLayout, A) = _arguments(ApplyLayout{typeof(*)}(), A)
+_mul_arguments(::SubBasisLayout, A) = _mul_arguments(ApplyLayout{typeof(*)}(), A)
+arguments(::SubBasisLayout, A) = arguments(ApplyLayout{typeof(*)}(), A)
 call(::SubBasisLayout, ::SubQuasiArray) = *
 
 combine_mul_styles(::AdjointSubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
-_arguments(::AdjointSubBasisLayout, A) = _arguments(ApplyLayout{typeof(*)}(), A)
+_mul_arguments(::AdjointSubBasisLayout, A) = _mul_arguments(ApplyLayout{typeof(*)}(), A)
 arguments(::AdjointSubBasisLayout, A) = arguments(ApplyLayout{typeof(*)}(), A)
 call(::AdjointSubBasisLayout, ::SubQuasiArray) = *
 
-function arguments(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
+copy(M::Mul{AdjointSubBasisLayout,SubBasisLayout}) = apply(*, arguments(M.A)..., arguments(M.B)...)
+
+function arguments(::ApplyLayout{typeof(*)}, V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
     A = parent(V)
     _,jr = parentindices(V)
     first(jr) ≥ 1 || throw(BoundsError())
@@ -249,8 +292,8 @@ function __sum(::SubBasisLayout, Vm, dims)
     @assert dims == 1
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
-function __sum(::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
-    a = arguments(V)
+function __sum(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
+    a = arguments(LAY, V)
     first(apply(*, sum(a[1]; dims=1), tail(a)...))
 end
 

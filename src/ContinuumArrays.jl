@@ -1,41 +1,75 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays
+using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, InfiniteArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
-                getproperty
+                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport,
-                        adjointlayout, LdivApplyStyle, arguments, _arguments, call, broadcastlayout, layout_getindex,
-                        sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, most, combine_mul_styles, AbstractArrayApplyStyle,
+                        adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex,
+                        sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
+                        simplifiable, _simplify
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value, SquareEye
-
+import ArrayLayouts: mul
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
-                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, quasimulapplystyle,
-                    ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
-                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, quasildivapplystyle, _factorize
+                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
+                    ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize
+import InfiniteArrays: Infinity
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, fullmaterialize, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform, affine
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform, affine
 
 ####
 # Interval indexing support
 ####
 struct AlephInfinity{N} <: Integer end
 
+isone(::AlephInfinity) = false
+iszero(::AlephInfinity) = false
+
 ==(::AlephInfinity, ::Int) = false
 ==(::Int, ::AlephInfinity) = false
 
 *(::AlephInfinity{N}, ::AlephInfinity{N}) where N = AlephInfinity{N}()
+*(::AlephInfinity{N}, ::Infinity) where N = AlephInfinity{N}()
+*(::Infinity, ::AlephInfinity{N}) where N = AlephInfinity{N}()
+function *(a::Integer, b::AlephInfinity)
+    a > 0 || throw(ArgumentError("$a is negative"))
+    b
+end
+
+*(a::AlephInfinity, b::Integer) = b*a
+
+
+abs(a::AlephInfinity) = a
+zero(::AlephInfinity) = 0
+
+for OP in (:<, :≤)
+    @eval begin
+        $OP(::Real, ::AlephInfinity) = true
+        $OP(::AlephInfinity, ::Real) = false
+    end
+end
+
+for OP in (:>, :≥)
+    @eval begin
+        $OP(::Real, ::AlephInfinity) = false
+        $OP(::AlephInfinity, ::Real) = true
+    end
+end
+
 
 const ℵ₁ = AlephInfinity{1}()
+
+string(::AlephInfinity{1}) = "ℵ₁"
 
 show(io::IO, F::AlephInfinity{1}) where N =
     print(io, "ℵ₁")
 
 
-const QMul2{A,B} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B}}
+const QMul2{A,B} = Mul{<:Any, <:Any, <:A,<:B}
 const QMul3{A,B,C} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B,C}}
 
 cardinality(::AbstractInterval) = ℵ₁
