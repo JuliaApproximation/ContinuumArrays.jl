@@ -127,3 +127,14 @@ function _sum(A::HeavisideSpline, dims)
     @assert dims == 1
     permutedims(diff(A.points))
 end
+
+function _sum(P::LinearSpline, dims)
+    d = diff(P.points)
+    ret = Array{float(eltype(d))}(undef, length(d)+1)
+    ret[1] = d[1]/2
+    for k = 2:length(d)
+        ret[k] = (d[k-1] + d[k])/2
+    end
+    ret[end] = d[end]/2
+    permutedims(ret)
+end

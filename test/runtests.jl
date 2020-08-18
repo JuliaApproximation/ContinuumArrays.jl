@@ -1,9 +1,25 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, Test
-import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, 
-                        MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, Expansion
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test
+import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
+                        MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, Expansion, basis
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
+@testset "AlephInfinity" begin
+    @test !isone(ℵ₁)
+    @test !iszero(ℵ₁)
+    @test ℵ₁ ≠ 4
+    @test ℵ₁ * ∞ == ∞ * ℵ₁ == ℵ₁
+    @test 2 * ℵ₁ == ℵ₁ * 2 == ℵ₁
+    @test abs(ℵ₁) == ℵ₁
+    @test zero(ℵ₁) == 0
+    @test 5 < ℵ₁
+    @test 5 ≤ ℵ₁
+    @test !(ℵ₁ ≤ 5)
+    @test ℵ₁ > 5
+    @test !(5 > ℵ₁)
+
+    @test string(ℵ₁) == "ℵ₁"
+end
 
 @testset "Inclusion" begin
     x = Inclusion(-1..1)
@@ -87,6 +103,8 @@ end
     @testset "Expansion" begin
         L = LinearSpline([1,2,3])
         f = L*[1,2,4]
+
+        @test basis(f) == L
         @test axes(f) == (Inclusion(1.0..3.0),)
         @test f[1.1] ≈ 1.1
         @test f[2.1] ≈ 2.2
@@ -96,6 +114,12 @@ end
         @test @inferred(δ'L) ≈ [0.8, 0.2, 0.0]
 
         @test @inferred(L'L) == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
+
+        @testset "Algebra" begin
+            @test 2f == f*2 == 2 .* f == f .* 2
+            @test 2\f == f/2 == 2 .\ f == f ./ 2
+            @test sum(f) ≈ 4.5
+        end
     end
 
     @testset "==" begin
