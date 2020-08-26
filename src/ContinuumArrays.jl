@@ -1,6 +1,6 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, InfiniteArrays
-import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==,
+import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
                 getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string
@@ -9,7 +9,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
                         simplifiable, _simplify
-import LinearAlgebra: pinv
+import LinearAlgebra: pinv, dot, norm2
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value, SquareEye
 import ArrayLayouts: mul
@@ -78,6 +78,17 @@ cardinality(::AbstractInterval) = ℵ₁
 Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
 first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
 last(S::Inclusion{<:Any,<:AbstractInterval}) = rightendpoint(S.domain)
+
+norm2(x::Inclusion{T,<:AbstractInterval}) where T = sqrt(dot(x,x))
+
+function dot(x::Inclusion{T,<:AbstractInterval}, y::Inclusion{V,<:AbstractInterval}) where {T,V}
+    x == y || throw(DimensionMismatch("first quasivector has axis $(x) which does not match the axis of the second, $(y)."))
+    TV = promote_type(T,V)
+    isempty(x) && return zero(TV)
+    a,b = endpoints(x.domain)
+    convert(TV, b^3 - a^3)/3
+end
+    
 
 for find in (:findfirst, :findlast)
     @eval $find(f::Base.Fix2{typeof(isequal)}, d::Inclusion) = f.x in d.domain ? f.x : nothing
