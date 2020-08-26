@@ -37,6 +37,9 @@ end
     @test exp.(-x)[1.0] == exp(-1.0)
     @test exp.(x.^2)[1.0] == exp(1.0)
     @test exp.(-x.^2/(20/2))[1.0] == exp(-1.0^2/(20/2))
+
+    @test dot(x,x) ≈ 2/3
+    @test norm(x) ≈ sqrt(2/3)
 end
 
 @testset "DiracDelta" begin
@@ -199,8 +202,6 @@ end
     @test length(fp.args) == 2
     @test fp[1.1] ≈ 1
     @test fp[2.2] ≈ 2
-
-    @test D^2 isa ApplyQuasiMatrix{Float64,typeof(*)} 
 end
 
 @testset "Weak Laplacian" begin

@@ -9,7 +9,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
                         simplifiable, _simplify
-import LinearAlgebra: pinv, dot
+import LinearAlgebra: pinv, dot, norm2
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value, SquareEye
 import ArrayLayouts: mul
@@ -78,6 +78,8 @@ cardinality(::AbstractInterval) = ℵ₁
 Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
 first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
 last(S::Inclusion{<:Any,<:AbstractInterval}) = rightendpoint(S.domain)
+
+norm2(x::Inclusion{T,<:AbstractInterval}) where T = sqrt(dot(x,x))
 
 function dot(x::Inclusion{T,<:AbstractInterval}, y::Inclusion{V,<:AbstractInterval}) where {T,V}
     x == y || throw(DimensionMismatch("first quasivector has axis $(x) which does not match the axis of the second, $(y)."))
