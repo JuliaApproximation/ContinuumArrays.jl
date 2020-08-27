@@ -131,12 +131,6 @@ copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
 
-function copy(L::Ldiv{ApplyLayout{typeof(*)},<:AbstractBasisLayout})
-    args = arguments(ApplyLayout{typeof(*)}(), L.A)
-    @assert length(args) == 2 # temporary
-    apply(\, last(args), apply(\, first(args), L.B))
-end
-
 
 function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
     p,T = factorize(L.A)
@@ -153,7 +147,7 @@ end
 
 const Expansion{T,Space<:Basis,Coeffs<:AbstractVector} = ApplyQuasiVector{T,typeof(*),<:Tuple{Space,Coeffs}}
 
-basis(v::AbstractQuasiVector) = v.args[1]
+basis(v::Expansion) = v.args[1]
 
 for op in (:*, :\)
     @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), x::Number, f::Expansion)
