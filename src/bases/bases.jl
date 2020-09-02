@@ -25,6 +25,13 @@ adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 
+## Weighted basis interface
+unweightedbasis(P::WeightedBasis) = last(P.args)
+unweightedbasis(V::SubQuasiArray) = view(unweightedbasis(parent(V)), parentindices(V)...)
+
+
+
+
 # Default is lazy
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
@@ -83,7 +90,7 @@ end
 _grid(_, P) = error("Overload Grid")
 _grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(P)))
 _grid(::SubBasisLayout, P) = grid(parent(P))
-_grid(::WeightedBasisLayout, P) = grid(last(P.args))
+_grid(::WeightedBasisLayout, P) = grid(unweightedbasis(P))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
 struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
@@ -130,12 +137,6 @@ copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
 
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
-
-
-function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix,<:AbstractQuasiVector})
-    p,T = factorize(L.A)
-    T \ L.B[p]
-end
 
 
 ##
@@ -222,22 +223,10 @@ end
     (Derivative(axes(P,1))*P*kr.A)[kr,jr]
 end
 
-function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:AbstractQuasiMatrix})
-    args = arguments(L.B)
-    # this is a temporary hack
-    if args isa Tuple{AbstractQuasiMatrix,Number}
-        (L.A \  first(args))*last(args)
-    elseif args isa Tuple{Number,AbstractQuasiMatrix}
-        first(args)*(L.A \ last(args))
-    else
-        error("Not implemented")
-    end
-end
-
-
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
+sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = WeightedBasisLayout()
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
