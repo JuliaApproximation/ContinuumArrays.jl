@@ -29,7 +29,7 @@ broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedB
 sublayout(::WeightLayout, _) = WeightLayout()
 
 ## Weighted basis interface
-unweightedbasis(P::WeightedBasis) = last(P.args)
+unweightedbasis(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = last(P.args)
 unweightedbasis(V::SubQuasiArray) = view(unweightedbasis(parent(V)), parentindices(V)...)
 
 
