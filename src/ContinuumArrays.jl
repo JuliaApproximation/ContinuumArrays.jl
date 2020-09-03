@@ -88,7 +88,7 @@ function dot(x::Inclusion{T,<:AbstractInterval}, y::Inclusion{V,<:AbstractInterv
     a,b = endpoints(x.domain)
     convert(TV, b^3 - a^3)/3
 end
-    
+
 
 for find in (:findfirst, :findlast)
     @eval $find(f::Base.Fix2{typeof(isequal)}, d::Inclusion) = f.x in d.domain ? f.x : nothing
@@ -135,7 +135,7 @@ AffineQuasiVector(A, x::AffineQuasiVector, b) = AffineQuasiVector(A*x.A, x.x, A*
 axes(A::AbstractAffineQuasiVector) = axes(A.x)
 affine_getindex(A, k) = A.A*A.x[k] .+ A.b
 getindex(A::AbstractAffineQuasiVector, k::Number) = affine_getindex(A, k)
-function getindex(A::AbstractAffineQuasiVector, k::Inclusion) 
+function getindex(A::AbstractAffineQuasiVector, k::Inclusion)
     @boundscheck A.x[k] # throws bounds error if k ≠ x
     A
 end
@@ -188,7 +188,7 @@ struct AffineMap{T,D,R} <: AbstractAffineQuasiVector{T,T,D,T}
     range::R
 end
 
-AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {T,V} = 
+AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {T,V} =
     AffineMap{promote_type(T,V), typeof(domain),typeof(range)}(domain,range)
 
 measure(x::Inclusion) = last(x)-first(x)
@@ -223,6 +223,20 @@ affine(a::AbstractQuasiVector, b) = affine(a, Inclusion(b))
 affine(a, b) = affine(Inclusion(a), Inclusion(b))
 
 
+_sum(V::SubQuasiArray{<:Any,1, <:Any, <:Tuple{AbstractAffineQuasiVector}}, ::Colon) = parentindices(V)[1].A \ sum(parent(V))
+
+# pretty print for bases
+show(io::IO, P::SubQuasiArray{<:Any,2,<:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}) =
+    print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].domain.domain)")
+
+show(io::IO, P::SubQuasiArray{<:Any,1,<:Any, <:Tuple{AbstractAffineQuasiVector}}) =
+    print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].domain.domain)")
+
+show(io::IO, ::MIME"text/plain", P::SubQuasiArray{<:Any,2,<:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}) = 
+    show(io, P)
+
+show(io::IO, ::MIME"text/plain", P::SubQuasiArray{<:Any,1,<:Any, <:Tuple{AbstractAffineQuasiVector}}) =
+    show(io, P)
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
 

@@ -25,6 +25,9 @@ adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 
+# A sub of a weight is still a weight
+sublayout(::WeightLayout, _) = WeightLayout()
+
 ## Weighted basis interface
 unweightedbasis(P::WeightedBasis) = last(P.args)
 unweightedbasis(V::SubQuasiArray) = view(unweightedbasis(parent(V)), parentindices(V)...)
@@ -128,6 +131,11 @@ end
 \(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
 
 _factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), parentindices(L)[2])
+# function _factorize(::MappedBasisLayout, L)
+#     kr, jr = parentindices(L)
+#     P = parent(L)
+#     ProjectionFactorization(factorize(view(P,:,jr)), parentindices(L)[2])
+# end
 
 transform_ldiv(A, B, _) = factorize(A) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
@@ -146,7 +154,8 @@ copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiV
 # struct ExpansionLayout <: MemoryLayout end
 # applylayout(::Type{typeof(*)}, ::BasisLayout, _) = ExpansionLayout()
 
-const Expansion{T,Space<:Basis,Coeffs<:AbstractVector} = ApplyQuasiVector{T,typeof(*),<:Tuple{Space,Coeffs}}
+const Expansion{T,Space<:AbstractQuasiMatrix,Coeffs<:AbstractVector} = ApplyQuasiVector{T,typeof(*),<:Tuple{Space,Coeffs}}
+
 
 basis(v::Expansion) = v.args[1]
 
