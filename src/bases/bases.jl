@@ -264,7 +264,7 @@ function demap(V::SubQuasiArray{<:Any,2})
     demap(parent(V)[kr,:])[:,jr]
 end
 
-basismap(x::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Slice}}) = parentindices(x)[1]
+basismap(x::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) = parentindices(x)[1]
 basismap(x::SubQuasiArray{<:Any,1,<:Any,<:Tuple{<:AbstractAffineQuasiVector}}) = parentindices(x)[1]
 basismap(x::BroadcastQuasiArray) = basismap(x.args[1])
 
