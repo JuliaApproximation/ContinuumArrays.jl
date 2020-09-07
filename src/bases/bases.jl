@@ -10,6 +10,10 @@ struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
 struct MappedBasisLayout <: AbstractBasisLayout end
 struct WeightedBasisLayout <: AbstractBasisLayout end
+struct SubWeightedBasisLayout <: AbstractBasisLayout end
+
+SubBasisLayouts = Union{SubBasisLayout,SubWeightedBasisLayout}
+WeightedBasisLayouts = Union{WeightedBasisLayout,SubWeightedBasisLayout}
 
 abstract type AbstractAdjointBasisLayout <: AbstractQuasiLazyLayout end
 struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
@@ -19,7 +23,7 @@ struct AdjointMappedBasisLayout <: AbstractAdjointBasisLayout end
 MemoryLayout(::Type{<:Basis}) = BasisLayout()
 MemoryLayout(::Type{<:Weight}) = WeightLayout()
 
-adjointlayout(::Type, ::BasisLayout) = AdjointBasisLayout()
+adjointlayout(::Type, ::AbstractBasisLayout) = AdjointBasisLayout()
 adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
 adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
@@ -58,12 +62,12 @@ end
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
 
-function copy(P::Ldiv{BasisLayout,BasisLayout})
+function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
     A, B = P.A, P.B
     A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
     SquareEye{eltype(P)}((axes(A,2),))
 end
-function copy(P::Ldiv{SubBasisLayout,SubBasisLayout})
+function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
     A, B = P.A, P.B
     parent(A) == parent(B) ||
         throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
@@ -75,8 +79,8 @@ end
     demap(A)\demap(B)
 end
 
-@inline copy(L::Ldiv{BasisLayout,SubBasisLayout}) = apply(\, L.A, ApplyQuasiArray(L.B))
-@inline function copy(L::Ldiv{SubBasisLayout,BasisLayout}) 
+@inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = apply(\, L.A, ApplyQuasiArray(L.B))
+@inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout}) 
     P = parent(L.A)
     kr, jr = parentindices(L.A)
     layout_getindex(apply(\, P, L.B), jr, :) # avoid sparse arrays
@@ -93,7 +97,7 @@ end
 _grid(_, P) = error("Overload Grid")
 _grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(P)))
 _grid(::SubBasisLayout, P) = grid(parent(P))
-_grid(::WeightedBasisLayout, P) = grid(unweightedbasis(P))
+_grid(::WeightedBasisLayouts, P) = grid(unweightedbasis(P))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
 struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
@@ -235,7 +239,7 @@ end
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
-sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = WeightedBasisLayout()
+sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubWeightedBasisLayout()
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
@@ -251,17 +255,17 @@ end
 ##
 # SubLayout behaves like ApplyLayout{typeof(*)}
 
-combine_mul_styles(::SubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
-_mul_arguments(::SubBasisLayout, A) = _mul_arguments(ApplyLayout{typeof(*)}(), A)
-arguments(::SubBasisLayout, A) = arguments(ApplyLayout{typeof(*)}(), A)
-call(::SubBasisLayout, ::SubQuasiArray) = *
+combine_mul_styles(::SubBasisLayouts) = combine_mul_styles(ApplyLayout{typeof(*)}())
+_mul_arguments(::SubBasisLayouts, A) = _mul_arguments(ApplyLayout{typeof(*)}(), A)
+arguments(::SubBasisLayouts, A) = arguments(ApplyLayout{typeof(*)}(), A)
+call(::SubBasisLayouts, ::SubQuasiArray) = *
 
 combine_mul_styles(::AdjointSubBasisLayout) = combine_mul_styles(ApplyLayout{typeof(*)}())
 _mul_arguments(::AdjointSubBasisLayout, A) = _mul_arguments(ApplyLayout{typeof(*)}(), A)
 arguments(::AdjointSubBasisLayout, A) = arguments(ApplyLayout{typeof(*)}(), A)
 call(::AdjointSubBasisLayout, ::SubQuasiArray) = *
 
-copy(M::Mul{AdjointSubBasisLayout,SubBasisLayout}) = apply(*, arguments(M.A)..., arguments(M.B)...)
+copy(M::Mul{AdjointSubBasisLayout,<:SubBasisLayouts}) = apply(*, arguments(M.A)..., arguments(M.B)...)
 
 function arguments(::ApplyLayout{typeof(*)}, V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Inclusion,<:AbstractUnitRange}})
     A = parent(V)

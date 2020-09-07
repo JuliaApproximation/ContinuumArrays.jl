@@ -118,6 +118,8 @@ BroadcastStyle(::Type{<:QuasiTranspose{<:Any,<:Inclusion}}) = LazyQuasiArrayStyl
 # Affine map represents A*x .+ b
 abstract type AbstractAffineQuasiVector{T,AA,X,B} <: AbstractQuasiVector{T} end
 
+show(io::IO, ::MIME"text/plain", a::AbstractAffineQuasiVector) = print(io, "$(a.A) * $(a.x) .+ ($(a.b))")
+
 struct AffineQuasiVector{T,AA,X,B} <: AbstractAffineQuasiVector{T,AA,X,B}
     A::AA
     x::X
@@ -227,10 +229,10 @@ _sum(V::SubQuasiArray{<:Any,1, <:Any, <:Tuple{AbstractAffineQuasiVector}}, ::Col
 
 # pretty print for bases
 show(io::IO, P::SubQuasiArray{<:Any,2,<:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}) =
-    print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].domain.domain)")
+    print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
 
 show(io::IO, P::SubQuasiArray{<:Any,1,<:Any, <:Tuple{AbstractAffineQuasiVector}}) =
-    print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].domain.domain)")
+    print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
 
 show(io::IO, ::MIME"text/plain", P::SubQuasiArray{<:Any,2,<:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}) = 
     show(io, P)
