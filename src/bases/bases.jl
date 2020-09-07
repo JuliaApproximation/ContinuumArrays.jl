@@ -11,9 +11,11 @@ struct SubBasisLayout <: AbstractBasisLayout end
 struct MappedBasisLayout <: AbstractBasisLayout end
 struct WeightedBasisLayout <: AbstractBasisLayout end
 struct SubWeightedBasisLayout <: AbstractBasisLayout end
+struct MappedWeightedBasisLayout <: AbstractBasisLayout end
 
 SubBasisLayouts = Union{SubBasisLayout,SubWeightedBasisLayout}
-WeightedBasisLayouts = Union{WeightedBasisLayout,SubWeightedBasisLayout}
+WeightedBasisLayouts = Union{WeightedBasisLayout,SubWeightedBasisLayout,MappedWeightedBasisLayout}
+MappedBasisLayouts = Union{MappedBasisLayout,MappedWeightedBasisLayout}
 
 abstract type AbstractAdjointBasisLayout <: AbstractQuasiLazyLayout end
 struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
@@ -25,9 +27,10 @@ MemoryLayout(::Type{<:Weight}) = WeightLayout()
 
 adjointlayout(::Type, ::AbstractBasisLayout) = AdjointBasisLayout()
 adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
-adjointlayout(::Type, ::MappedBasisLayout) = AdjointMappedBasisLayout()
+adjointlayout(::Type, ::MappedBasisLayouts) = AdjointMappedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::MappedBasisLayouts) = MappedWeightedBasisLayout()
 
 # A sub of a weight is still a weight
 sublayout(::WeightLayout, _) = WeightLayout()
@@ -35,7 +38,6 @@ sublayout(::WeightLayout, _) = WeightLayout()
 ## Weighted basis interface
 unweightedbasis(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = last(P.args)
 unweightedbasis(V::SubQuasiArray) = view(unweightedbasis(parent(V)), parentindices(V)...)
-
 
 
 
@@ -74,7 +76,7 @@ function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
     Eye{eltype(P)}((axes(A,2),axes(B,2)))
 end
 
-@inline function copy(P::Ldiv{MappedBasisLayout,MappedBasisLayout})
+@inline function copy(P::Ldiv{<:MappedBasisLayouts,<:MappedBasisLayouts})
     A, B = P.A, P.B
     demap(A)\demap(B)
 end
@@ -177,10 +179,18 @@ for op in (:*, :/)
 end
 
 
-function broadcastbasis(::typeof(+), a, b)
-    a ≠ b && error("Overload broadcastbasis(::typeof(+), ::$(typeof(a)), ::$(typeof(b)))")
+function _broadcastbasis(::typeof(+), _, _, a, b)
+    try
+        a ≠ b && error("Overload broadcastbasis(::typeof(+), ::$(typeof(a)), ::$(typeof(b)))")
+    catch
+        error("Overload broadcastbasis(::typeof(+), ::$(typeof(a)), ::$(typeof(b)))")
+    end
     a
 end
+
+_broadcastbasis(::typeof(+), ::MappedBasisLayouts, ::MappedBasisLayouts, a, b) = broadcastbasis(+, demap(a), demap(b))[basismap(a), :]
+
+broadcastbasis(::typeof(+), a, b) = _broadcastbasis(+, MemoryLayout(a), MemoryLayout(b), a, b)
 
 broadcastbasis(::typeof(-), a, b) = broadcastbasis(+, a, b)
 
@@ -239,17 +249,24 @@ end
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
+sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedWeightedBasisLayout()
 sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubWeightedBasisLayout()
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
 
 demap(x) = x
-demap(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:Any,<:Slice}}) = parent(V)
+demap(x::BroadcastQuasiArray) = BroadcastQuasiArray(x.f, map(demap, arguments(x))...)
+demap(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Slice}}) = parent(V)
+demap(V::SubQuasiArray{<:Any,1,<:Any,<:Tuple{<:AbstractAffineQuasiVector}}) = parent(V)
 function demap(V::SubQuasiArray{<:Any,2}) 
     kr, jr = parentindices(V)
     demap(parent(V)[kr,:])[:,jr]
 end
+
+basismap(x::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Slice}}) = parentindices(x)[1]
+basismap(x::SubQuasiArray{<:Any,1,<:Any,<:Tuple{<:AbstractAffineQuasiVector}}) = parentindices(x)[1]
+basismap(x::BroadcastQuasiArray) = basismap(x.args[1])
 
 
 ##
