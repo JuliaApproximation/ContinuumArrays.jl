@@ -310,8 +310,8 @@ function __sum(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
     first(apply(*, sum(a[1]; dims=1), tail(a)...))
 end
 
-function __sum(::MappedBasisLayout, V::AbstractQuasiArray, dims)
-    kr, jr = parentindices(V)
+function __sum(::MappedBasisLayouts, V::AbstractQuasiArray, dims)
+    kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
     sum(demap(V); dims=dims)/kr.A
 end
