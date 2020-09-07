@@ -225,19 +225,25 @@ affine(a::AbstractQuasiVector, b) = affine(a, Inclusion(b))
 affine(a, b) = affine(Inclusion(a), Inclusion(b))
 
 
-_sum(V::SubQuasiArray{<:Any,1, <:Any, <:Tuple{AbstractAffineQuasiVector}}, ::Colon) = parentindices(V)[1].A \ sum(parent(V))
+# mapped vectors
+const AffineMappedQuasiVector = SubQuasiArray{<:Any, 1, <:Any, <:Tuple{AbstractAffineQuasiVector}}
+const AffineMappedQuasiMatrix = SubQuasiArray{<:Any, 2, <:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}
+
+==(a::AffineMappedQuasiVector, b::AffineMappedQuasiVector) = parentindices(a) == parentindices(b) && parent(a) == parent(b)
+
+_sum(V::AffineMappedQuasiVector, ::Colon) = parentindices(V)[1].A \ sum(parent(V))
 
 # pretty print for bases
-show(io::IO, P::SubQuasiArray{<:Any,2,<:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}) =
+show(io::IO, P::AffineMappedQuasiMatrix) =
     print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
 
-show(io::IO, P::SubQuasiArray{<:Any,1,<:Any, <:Tuple{AbstractAffineQuasiVector}}) =
+show(io::IO, P::AffineMappedQuasiVector) =
     print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
 
-show(io::IO, ::MIME"text/plain", P::SubQuasiArray{<:Any,2,<:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}) = 
+show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiMatrix) = 
     show(io, P)
 
-show(io::IO, ::MIME"text/plain", P::SubQuasiArray{<:Any,1,<:Any, <:Tuple{AbstractAffineQuasiVector}}) =
+show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiVector) =
     show(io, P)
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
