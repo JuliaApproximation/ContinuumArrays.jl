@@ -106,11 +106,6 @@ function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::
 end
 
 
-BroadcastStyle(::Type{<:Inclusion}) = LazyQuasiArrayStyle{1}()
-BroadcastStyle(::Type{<:QuasiAdjoint{<:Any,<:Inclusion}}) = LazyQuasiArrayStyle{2}()
-BroadcastStyle(::Type{<:QuasiTranspose{<:Any,<:Inclusion}}) = LazyQuasiArrayStyle{2}()
-
-
 ###
 # Maps
 ###
