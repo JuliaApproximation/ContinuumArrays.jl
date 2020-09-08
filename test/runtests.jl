@@ -1,6 +1,6 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
-                        MappedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout, 
+                        MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout, 
                         Expansion, basis
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
@@ -104,6 +104,8 @@ end
         @test igetindex(a,1) == 3
         @test igetindex(a,-1) == -2
         @test union(a) == Inclusion(-1..1)
+
+        @test affine(0..1, -1..1) == y
     end
 
     @testset "show" begin
@@ -122,7 +124,6 @@ end
 
     @test stringmime("text/plain", δ) == "δ at 0.0 over Inclusion(-1..3)"
     x = Inclusion(-1..1)
-    2x .+ 1
     @test stringmime("text/plain", δ[2x .+ 1]) == "δ at 0.0 over Inclusion(-1..3) affine mapped to -1..1"
 end
 
@@ -428,7 +429,8 @@ end
         H = HeavisideSpline(L.points)
         @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 
-        @test MemoryLayout(typeof(L[y,:])) isa MappedBasisLayout
+        @test MemoryLayout(L[y,:]) isa MappedBasisLayout
+        @test MemoryLayout(L[y,:]') isa AdjointMappedBasisLayout
         a,b = arguments((D*L)[y,:])
         @test H[y,:]\a == Eye(9)
         @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
@@ -445,6 +447,13 @@ end
         @test B\B == Eye(8)
         @test L[y,:] \ B == Eye(10)[:,2:end-1]
         @test B'B == (1/2)*(L'L)[2:end-1,2:end-1]
+
+        @testset "algebra" begin
+            f = L[y,:] * randn(10)
+            g = L[y,:] * randn(10)
+            @test f + g isa Expansion
+            @test (f+g)[0.1] ≈ f[0.1] + g[0.1]
+        end
     end
 
     @testset "diff" begin
@@ -481,6 +490,9 @@ Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
 ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
 
+Base.getindex(::Chebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
+Base.getindex(::ChebyshevWeight, x::Float64) = 1/sqrt(1-x^2)
+
 LinearAlgebra.factorize(L::Chebyshev) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
 
@@ -498,12 +510,19 @@ LinearAlgebra.factorize(L::Chebyshev) =
     wT = w .* T
     wT2 = w .* T[:,2:4]
     wT3 = wT[:,2:4]
-    @test MemoryLayout(typeof(wT)) == WeightedBasisLayout()
-    @test MemoryLayout(typeof(wT2)) == WeightedBasisLayout()
-    @test MemoryLayout(typeof(wT3)) == SubWeightedBasisLayout()
+    @test MemoryLayout(wT) == WeightedBasisLayout()
+    @test MemoryLayout(wT2) == WeightedBasisLayout()
+    @test MemoryLayout(wT3) == SubWeightedBasisLayout()
     @test grid(wT) == grid(wT2) == grid(wT3) == grid(T)
 
     @test ContinuumArrays.unweightedbasis(wT) ≡ T
     @test ContinuumArrays.unweightedbasis(wT2) ≡ T[:,2:4]
     @test ContinuumArrays.unweightedbasis(wT3) ≡ T[:,2:4]
+
+    @testset "Mapped" begin
+        y = affine(0..1, x)
+        @test MemoryLayout(wT[y,:]) isa MappedWeightedBasisLayout
+        @test MemoryLayout(w[y] .* T[y,:]) isa MappedWeightedBasisLayout
+        @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]
+    end
 end

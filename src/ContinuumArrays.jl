@@ -229,17 +229,10 @@ const AffineMappedQuasiMatrix = SubQuasiArray{<:Any, 2, <:Any, <:Tuple{AbstractA
 _sum(V::AffineMappedQuasiVector, ::Colon) = parentindices(V)[1].A \ sum(parent(V))
 
 # pretty print for bases
-show(io::IO, P::AffineMappedQuasiMatrix) =
-    print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
-
-show(io::IO, P::AffineMappedQuasiVector) =
-    print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
-
-show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiMatrix) = 
-    show(io, P)
-
-show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiVector) =
-    show(io, P)
+show(io::IO, P::AffineMappedQuasiMatrix) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
+show(io::IO, P::AffineMappedQuasiVector) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
+show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiMatrix) = show(io, P)
+show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiVector) = show(io, P)
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
 
