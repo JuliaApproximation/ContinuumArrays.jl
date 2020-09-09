@@ -88,7 +88,7 @@ function dot(x::Inclusion{T,<:AbstractInterval}, y::Inclusion{V,<:AbstractInterv
     a,b = endpoints(x.domain)
     convert(TV, b^3 - a^3)/3
 end
-    
+
 
 for find in (:findfirst, :findlast)
     @eval $find(f::Base.Fix2{typeof(isequal)}, d::Inclusion) = f.x in d.domain ? f.x : nothing
@@ -106,17 +106,14 @@ function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::
 end
 
 
-BroadcastStyle(::Type{<:Inclusion}) = LazyQuasiArrayStyle{1}()
-BroadcastStyle(::Type{<:QuasiAdjoint{<:Any,<:Inclusion}}) = LazyQuasiArrayStyle{2}()
-BroadcastStyle(::Type{<:QuasiTranspose{<:Any,<:Inclusion}}) = LazyQuasiArrayStyle{2}()
-
-
 ###
 # Maps
 ###
 
 # Affine map represents A*x .+ b
 abstract type AbstractAffineQuasiVector{T,AA,X,B} <: AbstractQuasiVector{T} end
+
+show(io::IO, ::MIME"text/plain", a::AbstractAffineQuasiVector) = print(io, "$(a.A) * $(a.x) .+ ($(a.b))")
 
 struct AffineQuasiVector{T,AA,X,B} <: AbstractAffineQuasiVector{T,AA,X,B}
     A::AA
@@ -135,7 +132,7 @@ AffineQuasiVector(A, x::AffineQuasiVector, b) = AffineQuasiVector(A*x.A, x.x, A*
 axes(A::AbstractAffineQuasiVector) = axes(A.x)
 affine_getindex(A, k) = A.A*A.x[k] .+ A.b
 getindex(A::AbstractAffineQuasiVector, k::Number) = affine_getindex(A, k)
-function getindex(A::AbstractAffineQuasiVector, k::Inclusion) 
+function getindex(A::AbstractAffineQuasiVector, k::Inclusion)
     @boundscheck A.x[k] # throws bounds error if k ≠ x
     A
 end
@@ -188,7 +185,7 @@ struct AffineMap{T,D,R} <: AbstractAffineQuasiVector{T,T,D,T}
     range::R
 end
 
-AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {T,V} = 
+AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {T,V} =
     AffineMap{promote_type(T,V), typeof(domain),typeof(range)}(domain,range)
 
 measure(x::Inclusion) = last(x)-first(x)
@@ -223,6 +220,19 @@ affine(a::AbstractQuasiVector, b) = affine(a, Inclusion(b))
 affine(a, b) = affine(Inclusion(a), Inclusion(b))
 
 
+# mapped vectors
+const AffineMappedQuasiVector = SubQuasiArray{<:Any, 1, <:Any, <:Tuple{AbstractAffineQuasiVector}}
+const AffineMappedQuasiMatrix = SubQuasiArray{<:Any, 2, <:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}
+
+==(a::AffineMappedQuasiVector, b::AffineMappedQuasiVector) = parentindices(a) == parentindices(b) && parent(a) == parent(b)
+
+_sum(V::AffineMappedQuasiVector, ::Colon) = parentindices(V)[1].A \ sum(parent(V))
+
+# pretty print for bases
+show(io::IO, P::AffineMappedQuasiMatrix) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
+show(io::IO, P::AffineMappedQuasiVector) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
+show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiMatrix) = show(io, P)
+show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiVector) = show(io, P)
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
 

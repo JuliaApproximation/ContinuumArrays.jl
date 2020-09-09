@@ -85,6 +85,9 @@ end
 @simplify *(A::QuasiAdjoint{<:Any,<:DiracDelta}, B::AbstractQuasiVector) = B[parent(A).x]
 @simplify *(A::QuasiAdjoint{<:Any,<:DiracDelta}, B::AbstractQuasiMatrix) = B[parent(A).x,:]
 
+show(io::IO, δ::DiracDelta) = print(io, "δ at $(δ.x) over $(axes(δ,1))")
+show(io::IO, ::MIME"text/plain", δ::DiracDelta) = show(io, δ)
+
 #########
 # Derivative
 #########
