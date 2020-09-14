@@ -96,7 +96,7 @@ end
 
 
 # multiplication operators, reexpand in basis A
-@inline function _broadcast_mul_ldiv(::Tuple{AbstractBasisLayout,Any}, A, B)
+@inline function _broadcast_mul_ldiv(::Tuple{Any,AbstractBasisLayout}, A, B)
     a,b = arguments(B)
     @assert a isa AbstractQuasiVector # Only works for vec .* mat
     ab = (A * (A \ a)) .* b # broadcasted should be overloaded

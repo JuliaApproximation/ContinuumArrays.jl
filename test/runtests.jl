@@ -534,7 +534,7 @@ Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Che
         a = 1 .+ x .+ x.^2
         # The following are wrong, just testing dispatch
         @test T \ (a .* T) == I
-        @test T \ (a .* (T * (T \ a))) ≈ [1.5,1,0.5,0,0]
+        @test T \ (a .* (T * (T \ a))) ≈ [2.875, 3.5, 2.0, 0.5, 0.125]
         f = exp.(x) .* a # another broadcast layout
         @test T \ f == F \ f
     end
