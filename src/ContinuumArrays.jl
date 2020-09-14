@@ -6,7 +6,7 @@ import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, 
                 getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, most, combine_mul_styles, AbstractArrayApplyStyle,
-                        adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex,
+                        adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
                         simplifiable, _simplify
 import LinearAlgebra: pinv, dot, norm2

@@ -96,18 +96,18 @@ end
 
 
 # multiplication operators, reexpand in basis A
-@inline function _broadcast_mul_ldiv(A, B)
-    args = arguments(B)
-    @assert length(args) == 2
-    a,b = args
+@inline function _broadcast_mul_ldiv(::Tuple{AbstractBasisLayout,Any}, A, B)
+    a,b = arguments(B)
     @assert a isa AbstractQuasiVector # Only works for vec .* mat
     ab = (A * (A \ a)) .* b # broadcasted should be overloaded
     MemoryLayout(ab) isa BroadcastLayout && error("Overload broadcasted(_, ::typeof(*), ::$(typeof(ab.args[1])), ::$(typeof(b)))")
     A \ ab
 end
 
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(L.A, L.B)
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(L.A, L.B)
+_broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
+
+copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 
 
 # expansion
