@@ -1,6 +1,6 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
-                        MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout, 
+                        MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
                         Expansion, basis
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
@@ -236,7 +236,7 @@ end
         L = LinearSpline([1,2,3])
         f = L*[1,2,4]
         g = L*[5,6,7]
-        
+
         @test f isa Expansion
         @test 2f isa Expansion
         @test f*2 isa Expansion
@@ -346,7 +346,7 @@ end
         @testset "sub-colon" begin
             L = LinearSpline([1,2,3])
             @test L[:,1][1.1] == (L')[1,:][1.1] == L[1.1,1]
-            @test L[:,1:2][1.1,:] == (L')[1:2,:][:,1.1] == L[1.1,1:2] 
+            @test L[:,1:2][1.1,:] == (L')[1:2,:][:,1.1] == L[1.1,1:2]
         end
 
         @testset "transform" begin
@@ -459,7 +459,7 @@ end
     @testset "diff" begin
         L = LinearSpline(range(-1,stop=1,length=10))
         f = L * randn(size(L,2))
-        h = 0.0001; 
+        h = 0.0001;
         @test diff(f)[0.1] ≈ (f[0.1+h]-f[0.1])/h
     end
 
@@ -485,7 +485,7 @@ end
 
 struct ChebyshevWeight <: Weight{Float64} end
 
-
+Base.:(==)(::Chebyshev, ::Chebyshev) = true
 Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
 ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
@@ -496,33 +496,49 @@ Base.getindex(::ChebyshevWeight, x::Float64) = 1/sqrt(1-x^2)
 LinearAlgebra.factorize(L::Chebyshev) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
 
+# This is wrong but just for tests
+Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Chebyshev}, b::Chebyshev) = b * Matrix(I, 5, 5)
+
 @testset "Chebyshev" begin
     T = Chebyshev(5)
+    w = ChebyshevWeight()
+    wT = w .* T
     x = axes(T,1)
     F = factorize(T)
     g = grid(F)
     @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
 
-    w = ChebyshevWeight()
-    @test MemoryLayout(w) isa WeightLayout
-    @test MemoryLayout(w[Inclusion(0..1)]) isa WeightLayout
+    @testset "Weighted" begin
+        @test MemoryLayout(w) isa WeightLayout
+        @test MemoryLayout(w[Inclusion(0..1)]) isa WeightLayout
 
-    wT = w .* T
-    wT2 = w .* T[:,2:4]
-    wT3 = wT[:,2:4]
-    @test MemoryLayout(wT) == WeightedBasisLayout()
-    @test MemoryLayout(wT2) == WeightedBasisLayout()
-    @test MemoryLayout(wT3) == SubWeightedBasisLayout()
-    @test grid(wT) == grid(wT2) == grid(wT3) == grid(T)
+        wT2 = w .* T[:,2:4]
+        wT3 = wT[:,2:4]
+        @test MemoryLayout(wT) == WeightedBasisLayout()
+        @test MemoryLayout(wT2) == WeightedBasisLayout()
+        @test MemoryLayout(wT3) == SubWeightedBasisLayout()
+        @test grid(wT) == grid(wT2) == grid(wT3) == grid(T)
 
-    @test ContinuumArrays.unweightedbasis(wT) ≡ T
-    @test ContinuumArrays.unweightedbasis(wT2) ≡ T[:,2:4]
-    @test ContinuumArrays.unweightedbasis(wT3) ≡ T[:,2:4]
-
+        @test ContinuumArrays.unweightedbasis(wT) ≡ T
+        @test ContinuumArrays.unweightedbasis(wT2) ≡ T[:,2:4]
+        @test ContinuumArrays.unweightedbasis(wT3) ≡ T[:,2:4]
+    end
     @testset "Mapped" begin
         y = affine(0..1, x)
         @test MemoryLayout(wT[y,:]) isa MappedWeightedBasisLayout
         @test MemoryLayout(w[y] .* T[y,:]) isa MappedWeightedBasisLayout
         @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]
+    end
+
+    @testset "Broadcasted" begin
+        a = 1 .+ x .+ x.^2
+        # The following are wrong, just testing dispatch
+        @test T \ (a .* T) == I
+        @test T \ (a .* (T * (T \ a))) ≈ [2.875, 3.5, 2.0, 0.5, 0.125]
+        f = exp.(x) .* a # another broadcast layout
+        @test T \ f == F \ f
+
+        ã = T * (T \ a)
+        @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
     end
 end
