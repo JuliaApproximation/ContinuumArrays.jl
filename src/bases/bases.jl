@@ -95,6 +95,21 @@ for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
 end
 
 
+# multiplication operators, reexpand in basis A
+@inline function _broadcast_mul_ldiv(A, B)
+    args = arguments(B)
+    @assert length(args) == 2
+    a,b = args
+    @assert a isa AbstractQuasiVector # Only works for vec .* mat
+    ab = (A * (A \ a)) .* b # broadcasted should be overloaded
+    MemoryLayout(ab) isa BroadcastLayout && error("Overload broadcasted(_, ::typeof(*), ::$(typeof(ab.args[1])), ::$(typeof(b)))")
+    A \ ab
+end
+
+copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(L.A, L.B)
+
+
 # expansion
 _grid(_, P) = error("Overload Grid")
 _grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(P)))
@@ -202,6 +217,13 @@ for op in (:+, :-)
         ST * $op((ST \ S) * c , (ST \ T) * d)
     end
 end
+
+function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(*), a::Expansion, f::Expansion)
+    axes(a,1) == axes(f,1) || throw(DimensionMismatch())
+    P,c = arguments(f)
+    (a .* P) * c
+end
+
 
 @eval function ==(f::Expansion, g::Expansion)
     S,c = arguments(f)
