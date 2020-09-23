@@ -159,7 +159,7 @@ _factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), 
 # end
 
 transform_ldiv(A, B, _) = factorize(A) \ B
-transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
+transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
