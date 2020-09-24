@@ -132,7 +132,7 @@ TransformFactorization(grid, ::Nothing, iplan) =
 
 grid(T::TransformFactorization) = T.grid    
 
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector) = a.iplan \  convert(Array, b[a.grid])
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
@@ -231,6 +231,14 @@ end
     ST = broadcastbasis(+, S, T)
     (ST \ S) * c == (ST \ T) * d
 end
+
+function show(io::IO, f::Expansion)
+    P,c = arguments(f)
+    show(io, P)
+    print(io, " * ")
+    show(io, c)
+end
+show(io::IO, ::MIME"text/plain", f::Expansion) = show(io, f)
 
 ## materialize views
 
