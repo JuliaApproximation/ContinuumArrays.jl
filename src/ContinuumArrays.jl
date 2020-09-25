@@ -3,7 +3,7 @@ using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, Quasi
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
-                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string
+                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, most, combine_mul_styles, AbstractArrayApplyStyle,
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
@@ -113,7 +113,7 @@ end
 # Affine map represents A*x .+ b
 abstract type AbstractAffineQuasiVector{T,AA,X,B} <: AbstractQuasiVector{T} end
 
-show(io::IO, ::MIME"text/plain", a::AbstractAffineQuasiVector) = print(io, "$(a.A) * $(a.x) .+ ($(a.b))")
+summary(io::IO, a::AbstractAffineQuasiVector) = print(io, "$(a.A) * $(a.x) .+ ($(a.b))")
 
 struct AffineQuasiVector{T,AA,X,B} <: AbstractAffineQuasiVector{T,AA,X,B}
     A::AA
@@ -225,14 +225,13 @@ const AffineMappedQuasiVector = SubQuasiArray{<:Any, 1, <:Any, <:Tuple{AbstractA
 const AffineMappedQuasiMatrix = SubQuasiArray{<:Any, 2, <:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}
 
 ==(a::AffineMappedQuasiVector, b::AffineMappedQuasiVector) = parentindices(a) == parentindices(b) && parent(a) == parent(b)
+==(a::AffineMappedQuasiMatrix, b::AffineMappedQuasiMatrix) = parentindices(a) == parentindices(b) && parent(a) == parent(b)
 
 _sum(V::AffineMappedQuasiVector, ::Colon) = parentindices(V)[1].A \ sum(parent(V))
 
 # pretty print for bases
-show(io::IO, P::AffineMappedQuasiMatrix) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
-show(io::IO, P::AffineMappedQuasiVector) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
-show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiMatrix) = show(io, P)
-show(io::IO, ::MIME"text/plain", P::AffineMappedQuasiVector) = show(io, P)
+summary(io::IO, P::AffineMappedQuasiMatrix) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
+summary(io::IO, P::AffineMappedQuasiVector) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
 
