@@ -225,7 +225,6 @@ const AffineMappedQuasiVector = SubQuasiArray{<:Any, 1, <:Any, <:Tuple{AbstractA
 const AffineMappedQuasiMatrix = SubQuasiArray{<:Any, 2, <:Any, <:Tuple{AbstractAffineQuasiVector,Slice}}
 
 ==(a::AffineMappedQuasiVector, b::AffineMappedQuasiVector) = parentindices(a) == parentindices(b) && parent(a) == parent(b)
-==(a::AffineMappedQuasiMatrix, b::AffineMappedQuasiMatrix) = parentindices(a) == parentindices(b) && parent(a) == parent(b)
 
 _sum(V::AffineMappedQuasiVector, ::Colon) = parentindices(V)[1].A \ sum(parent(V))
 

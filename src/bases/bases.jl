@@ -91,7 +91,7 @@ end
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
     @eval ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2}) =
-        all(parentindices(A) == parentindices(B)) && parent(A) == parent(B)
+        parentindices(A) == parentindices(B) && parent(A) == parent(B)
 end
 
 
@@ -279,8 +279,9 @@ end
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
-sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedWeightedBasisLayout()
+sublayout(::WeightedBasisLayouts, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedWeightedBasisLayout()
 sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubWeightedBasisLayout()
+sublayout(::MappedWeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = MappedWeightedBasisLayout()
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
