@@ -468,7 +468,7 @@ end
         H = HeavisideSpline([1,2,3,6])
         B = H[5x .+ 1,:]
         u = H * [1,2,3]
-        @test stringmime("text/plain", B) == "Spline{0,Float64,Array{Int64,1}}([1, 2, 3, 6]) affine mapped to 0..1"
+        @test stringmime("text/plain", B) == "Spline{0,Float64,Array{Int64,1}} affine mapped to 0..1"
     end
 end
 
