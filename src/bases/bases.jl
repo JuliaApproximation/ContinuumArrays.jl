@@ -28,7 +28,7 @@ MemoryLayout(::Type{<:Weight}) = WeightLayout()
 adjointlayout(::Type, ::AbstractBasisLayout) = AdjointBasisLayout()
 adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
 adjointlayout(::Type, ::MappedBasisLayouts) = AdjointMappedBasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::AbstractBasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::MappedBasisLayouts) = MappedWeightedBasisLayout()
 
@@ -64,12 +64,12 @@ end
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
 
-function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
+@inline function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
     A, B = P.A, P.B
     A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
     SquareEye{eltype(P)}((axes(A,2),))
 end
-function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
+@inline function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
     A, B = P.A, P.B
     parent(A) == parent(B) ||
         throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
