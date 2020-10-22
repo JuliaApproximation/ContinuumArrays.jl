@@ -15,7 +15,7 @@ QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 [compat]
 ArrayLayouts = "0.4.7"
 BandedMatrices = "0.15.17"
-FillArrays = "0.9.3"
+FillArrays = "0.9.3, 0.10"
 InfiniteArrays = "0.8"
 IntervalSets = "0.4, 0.5"
 LazyArrays = "0.18, 0.19"
