@@ -19,7 +19,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize
 import InfiniteArrays: Infinity
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform, affine
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, LeftIntegral, RightIntegral, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform, affine
 
 ####
 # Interval indexing support
