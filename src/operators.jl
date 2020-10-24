@@ -93,24 +93,23 @@ show(io::IO, ::MIME"text/plain", δ::DiracDelta) = show(io, δ)
 #########
 
 
-struct Derivative{T,D} <: LazyQuasiMatrix{T}
-    axis::Inclusion{T,D}
+for Op in (:Derivative, :LeftIntegral, :RightIntegral)
+    @eval struct $Op{T,D} <: LazyQuasiMatrix{T}
+        axis::Inclusion{T,D}
+    end
+    @eval $Op{T}(axis::A) where {T,A<:Inclusion} = $Op{T,A}(axis)
+    @eval $Op{T}(domain) where T = $Op{T}(Inclusion(domain))
+    @eval $Op(axis) = $Op{Float64}(axis)
+    @eval axes(D::$Op) = (D.axis, D.axis)
+    @eval ==(a::$Op, b::$Op) = a.axis == b.axis
+    @eval copy(D::$Op) = $Op(copy(D.axis))
+    @eval ^(D::$Op, k::Integer) = ApplyQuasiArray(^, D, k)
 end
-
-Derivative{T}(axis::A) where {T,A<:Inclusion} = Derivative{T,A}(axis)
-Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
-Derivative(axis) = Derivative{Float64}(axis)
-
-axes(D::Derivative) = (D.axis, D.axis)
-==(a::Derivative, b::Derivative) = a.axis == b.axis
-copy(D::Derivative) = Derivative(copy(D.axis))
 
 function diff(d::AbstractQuasiVector)
     x = axes(d,1)
     Derivative(x)*d
 end
-
-^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
 
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
 #     f::F
