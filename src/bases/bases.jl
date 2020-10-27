@@ -232,13 +232,12 @@ end
     (ST \ S) * c == (ST \ T) * d
 end
 
-function show(io::IO, f::Expansion)
+function summary(io::IO, f::Expansion)
     P,c = arguments(f)
-    show(io, P)
+    summary(io, P)
     print(io, " * ")
-    show(io, c)
+    summary(io, c)
 end
-show(io::IO, ::MIME"text/plain", f::Expansion) = show(io, f)
 
 ## materialize views
 

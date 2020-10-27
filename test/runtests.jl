@@ -158,6 +158,7 @@ end
         @test f[2.1] ≈ 2
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
+        @test summary(f) == "Spline{0,Float64,Array{$Int,1}} * 2-element Array{$Int,1}"
     end
 
     @testset "LinearSpline" begin
@@ -339,6 +340,7 @@ end
         @testset "sub-of-sub" begin
             L = LinearSpline([1,2,3])
             V = view(L,:,1:2)
+            @test V == V
             V2 = view(V,1.1:0.1:2,:)
             @test V2 == L[1.1:0.1:2,1:2]
         end
@@ -525,9 +527,13 @@ Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Che
     end
     @testset "Mapped" begin
         y = affine(0..1, x)
+
+        @test summary(T[y,:]) == "Chebyshev affine mapped to 0..1"
         @test MemoryLayout(wT[y,:]) isa MappedWeightedBasisLayout
         @test MemoryLayout(w[y] .* T[y,:]) isa MappedWeightedBasisLayout
         @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]
+        @test MemoryLayout(wT[y,1:3]) isa MappedWeightedBasisLayout
+        @test wT[y,1:3][[0.1,0.2],1:2] == wT[y[[0.1,0.2]],1:2]
     end
 
     @testset "Broadcasted" begin
