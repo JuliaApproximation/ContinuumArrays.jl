@@ -232,13 +232,6 @@ end
     (ST \ S) * c == (ST \ T) * d
 end
 
-function summary(io::IO, f::Expansion)
-    P,c = arguments(f)
-    summary(io, P)
-    print(io, " * ")
-    summary(io, c)
-end
-
 ## materialize views
 
 # materialize(S::SubQuasiArray{<:Any,2,<:ApplyQuasiArray{<:Any,2,typeof(*),<:Tuple{<:Basis,<:Any}}}) =
