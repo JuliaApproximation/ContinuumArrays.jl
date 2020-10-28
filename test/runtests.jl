@@ -159,6 +159,7 @@ end
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
         @test summary(f) == "(Spline{0,Float64,Array{$Int,1}}) * (2-element Array{$Int,1})"
+        @test stringmime("text/plain", f) == "Spline{0,Float64,Array{Int64,1}} * [1, 2]"
     end
 
     @testset "LinearSpline" begin
