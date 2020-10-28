@@ -232,6 +232,14 @@ end
     (ST \ S) * c == (ST \ T) * d
 end
 
+function show(io::IO, f::Expansion)
+    P,c = arguments(f)
+    show(io, P)
+    print(io, " * ")
+    show(io, c)
+end
+show(io::IO, ::MIME"text/plain", f::Expansion) = show(io, f)
+
 ## materialize views
 
 # materialize(S::SubQuasiArray{<:Any,2,<:ApplyQuasiArray{<:Any,2,typeof(*),<:Tuple{<:Basis,<:Any}}}) =
