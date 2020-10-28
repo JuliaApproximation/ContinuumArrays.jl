@@ -151,7 +151,7 @@ end
         @test_throws BoundsError H[[0.1,2.1], 1]
         @test MemoryLayout(typeof(H)) == BasisLayout()
         @test ApplyStyle(*, typeof(H), typeof([1,2])) isa MulStyle
-
+        
         f = H*[1,2]
         @test f isa ApplyQuasiArray
         @test axes(f) == (Inclusion(1.0..3.0),)
@@ -160,7 +160,7 @@ end
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
         @test summary(f) == "(Spline{0,Float64,Array{$Int,1}}) * (2-element Array{$Int,1})"
-        @test stringmime("text/plain", f) == "Spline{0,Float64,Array{$Int,1}}([1, 2, 3]) * [1, 2]"
+        @test stringmime("text/plain", f) == "Spline{0,Float64,Array{$Int,1}} * [1, 2]"
     end
 
     @testset "LinearSpline" begin
