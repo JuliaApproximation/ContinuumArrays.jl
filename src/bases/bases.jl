@@ -28,7 +28,7 @@ MemoryLayout(::Type{<:Weight}) = WeightLayout()
 adjointlayout(::Type, ::AbstractBasisLayout) = AdjointBasisLayout()
 adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
 adjointlayout(::Type, ::MappedBasisLayouts) = AdjointMappedBasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::BasisLayout) = WeightedBasisLayout()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::AbstractBasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
 broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::MappedBasisLayouts) = MappedWeightedBasisLayout()
 
@@ -64,12 +64,12 @@ end
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
 
-function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
+@inline function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
     A, B = P.A, P.B
     A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
     SquareEye{eltype(P)}((axes(A,2),))
 end
-function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
+@inline function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
     A, B = P.A, P.B
     parent(A) == parent(B) ||
         throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
@@ -91,7 +91,7 @@ end
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
     @eval ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2}) =
-        all(parentindices(A) == parentindices(B)) && parent(A) == parent(B)
+        parentindices(A) == parentindices(B) && parent(A) == parent(B)
 end
 
 
@@ -132,7 +132,7 @@ TransformFactorization(grid, ::Nothing, iplan) =
 
 grid(T::TransformFactorization) = T.grid    
 
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector) = a.iplan \  convert(Array, b[a.grid])
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
@@ -159,7 +159,7 @@ _factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), 
 # end
 
 transform_ldiv(A, B, _) = factorize(A) \ B
-transform_ldiv(A, B) = transform_ldiv(A, B, axes(A))
+transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
@@ -271,8 +271,9 @@ end
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedBasisLayout()
-sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedWeightedBasisLayout()
+sublayout(::WeightedBasisLayouts, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractUnitRange}}) = MappedWeightedBasisLayout()
 sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = SubWeightedBasisLayout()
+sublayout(::MappedWeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractUnitRange}}) = MappedWeightedBasisLayout()
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
