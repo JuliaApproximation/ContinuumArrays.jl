@@ -1,6 +1,6 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.3.5"
+version = "0.3.6"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -13,10 +13,10 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
-ArrayLayouts = "0.4.10"
-BandedMatrices = "0.15.17"
-FillArrays = "0.9.3, 0.10"
-InfiniteArrays = "0.8"
+ArrayLayouts = "0.4.10, 0.5"
+BandedMatrices = "0.15.17, 0.16"
+FillArrays = "0.9.3, 0.10, 0.11"
+InfiniteArrays = "0.8, 0.9"
 IntervalSets = "0.4, 0.5"
 LazyArrays = "0.19"
 QuasiArrays = "0.3.5"
