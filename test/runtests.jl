@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
-                        MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        Expansion, basis
+                        MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
+                        Expansion, basis, invmap
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -100,9 +100,9 @@ end
         @test_throws BoundsError a[-3]
         @test a[-2] == first(a) == -1
         @test a[3] == last(a) == 1
-        @test igetindex(a,-0.16) ≈ 0.1
-        @test igetindex(a,1) == 3
-        @test igetindex(a,-1) == -2
+        @test invmap(a)[-0.16] ≈ 0.1
+        @test invmap(a)[1] == 3
+        @test invmap(a)[-1] == -2
         @test union(a) == Inclusion(-1..1)
 
         @test affine(0..1, -1..1) == y

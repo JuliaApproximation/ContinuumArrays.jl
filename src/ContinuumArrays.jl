@@ -110,8 +110,29 @@ end
 # Maps
 ###
 
+"""
+A subtype of `Map` is used as a one-to-one map between two domains
+via `view`. The domain of the map `m` is `axes(m,1)` and the range
+is `union(m)`.
+
+Maps must also overload `invmap` to give the inverse of the map, which 
+is equivalent to `invmap(m)[x] == findfirst(isequal(x), m)`.
+"""
+
+abstract type Map{T} <: AbstractQuasiVector{T} end
+
+invmap(M::Map) = error("Overload invmap(::$(typeof(M)))")
+
+for find in (:findfirst, :findlast, :findall)
+    @eval $find(f::Base.Fix2{typeof(isequal)}, d::Map) = $find(isequal(invmap(d)[f.x]), d.x)
+end
+
+Base.issubset(d::Map, b::IntervalSets.Domain) = union(d) ⊆ b
+Base.union(d::Map) = axes(invmap(d),1)
+
+
 # Affine map represents A*x .+ b
-abstract type AbstractAffineQuasiVector{T,AA,X,B} <: AbstractQuasiVector{T} end
+abstract type AbstractAffineQuasiVector{T,AA,X,B} <: Map{T} end
 
 summary(io::IO, a::AbstractAffineQuasiVector) = print(io, "$(a.A) * $(a.x) .+ ($(a.b))")
 
@@ -130,6 +151,7 @@ AffineQuasiVector(x) = AffineQuasiVector(one(eltype(x)), x)
 AffineQuasiVector(A, x::AffineQuasiVector, b) = AffineQuasiVector(A*x.A, x.x, A*x.b .+ b)
 
 axes(A::AbstractAffineQuasiVector) = axes(A.x)
+
 affine_getindex(A, k) = A.A*A.x[k] .+ A.b
 getindex(A::AbstractAffineQuasiVector, k::Number) = affine_getindex(A, k)
 function getindex(A::AbstractAffineQuasiVector, k::Inclusion)
@@ -167,17 +189,14 @@ function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::
     isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
 end
 
-affine_igetindex(d, x) = d.A \ (x .- d.b)
-igetindex(d::AbstractAffineQuasiVector, x) = affine_igetindex(d, x)
-
-for find in (:findfirst, :findlast, :findall)
-    @eval $find(f::Base.Fix2{typeof(isequal)}, d::AbstractAffineQuasiVector) = $find(isequal(igetindex(d, f.x)), d.x)
-end
-
 minimum(d::AbstractAffineQuasiVector) = signbit(d.A) ? last(d) : first(d)
 maximum(d::AbstractAffineQuasiVector) = signbit(d.A) ? first(d) : last(d)
 
 union(d::AbstractAffineQuasiVector) = Inclusion(minimum(d)..maximum(d))
+invmap(d::AbstractAffineQuasiVector) = affine(union(d), axes(d,1))
+
+
+
 
 
 struct AffineMap{T,D,R} <: AbstractAffineQuasiVector{T,T,D,T}
@@ -204,12 +223,6 @@ function getindex(A::AffineMap, k::Number)
     affine_getindex(A, k)
 end
 
-function igetindex(A::AffineMap, k::Number)
-    # ensure we exactly hit range
-    k == first(A.range) && return first(A.domain)
-    k == last(A.range) && return last(A.domain)
-    affine_igetindex(A, k)
-end
 
 first(A::AffineMap) = first(A.range)
 last(A::AffineMap) = last(A.range)
