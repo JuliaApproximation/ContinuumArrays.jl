@@ -24,8 +24,9 @@ end
 
 @testset "Inclusion" begin
     x = Inclusion(-1..1)
-    @test x[0.1] === 0.1
-    @test x[0.0] === 0.0
+    @test eltype(x) == Float64
+    @test x[0.1] ≡ 0.1
+    @test x[0] ≡ x[0.0] ≡ 0.0
 
     x = Inclusion(-1.0..1)
     X = QuasiDiagonal(x)
@@ -116,11 +117,11 @@ end
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)
-    @test axes(δ) === (axes(δ,1),) === (Inclusion(-1..3),)
-    @test size(δ) === (length(δ),) === (ℵ₁,)
-    @test δ[1.1] === 0.0
-    @test δ[0.0] === Inf
-    @test Base.IndexStyle(δ) === Base.IndexLinear()
+    @test axes(δ) ≡ (axes(δ,1),) ≡ (Inclusion(-1..3),)
+    @test size(δ) ≡ (length(δ),) ≡ (ℵ₁,)
+    @test δ[1.1] ≡ 0.0
+    @test δ[0.0] ≡ Inf
+    @test Base.IndexStyle(δ) ≡ Base.IndexLinear()
 
     @test stringmime("text/plain", δ) == "δ at 0.0 over Inclusion(-1..3)"
     x = Inclusion(-1..1)
@@ -131,14 +132,14 @@ end
     @testset "HeavisideSpline" begin
         H = HeavisideSpline([1,2,3])
 
-        @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1..3), Base.OneTo(2))
-        @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
+        @test axes(H) ≡ (axes(H,1),axes(H,2)) ≡ (Inclusion(1..3), Base.OneTo(2))
+        @test size(H) ≡ (size(H,1),size(H,2)) ≡ (ℵ₁, 2)
 
         @test_throws BoundsError H[0.1, 1]
-        @test H[1.1,1] === H'[1,1.1] === transpose(H)[1,1.1] === 1.0
-        @test H[2.1,1] === H'[1,2.1] === transpose(H)[1,2.1] === 0.0
-        @test H[1.1,2] === 0.0
-        @test H[2.1,2] === 1.0
+        @test H[1.1,1] ≡ H'[1,1.1] ≡ transpose(H)[1,1.1] ≡ 1.0
+        @test H[2.1,1] ≡ H'[1,2.1] ≡ transpose(H)[1,2.1] ≡ 0.0
+        @test H[1.1,2] ≡ 0.0
+        @test H[2.1,2] ≡ 1.0
         @test_throws BoundsError H[2.1,3]
         @test_throws BoundsError H'[3,2.1]
         @test_throws BoundsError transpose(H)[3,2.1]

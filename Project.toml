@@ -1,6 +1,6 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.4"
+version = "0.4.0"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -19,7 +19,7 @@ FillArrays = "0.9.3, 0.10, 0.11"
 InfiniteArrays = "0.8, 0.9"
 IntervalSets = "0.4, 0.5"
 LazyArrays = "0.19, 0.20"
-QuasiArrays = "0.3.5"
+QuasiArrays = "0.3.8"
 julia = "1.5"
 
 [extras]

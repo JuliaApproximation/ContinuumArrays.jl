@@ -90,16 +90,6 @@ function dot(x::Inclusion{T,<:AbstractInterval}, y::Inclusion{V,<:AbstractInterv
 end
 
 
-for find in (:findfirst, :findlast)
-    @eval $find(f::Base.Fix2{typeof(isequal)}, d::Inclusion) = f.x in d.domain ? f.x : nothing
-end
-
-function findall(f::Base.Fix2{typeof(isequal)}, d::Inclusion)
-    r = findfirst(f,d)
-    r === nothing ? eltype(d)[] : [r]
-end
-
-
 function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::Inclusion{<:Any,<:AbstractInterval})
     @_propagate_inbounds_meta
     isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
@@ -124,7 +114,7 @@ abstract type Map{T} <: AbstractQuasiVector{T} end
 invmap(M::Map) = error("Overload invmap(::$(typeof(M)))")
 
 for find in (:findfirst, :findlast, :findall)
-    @eval $find(f::Base.Fix2{typeof(isequal)}, d::Map) = $find(isequal(invmap(d)[f.x]), d.x)
+    @eval $find(f::Base.Fix2{typeof(isequal)}, d::Map) = $find(isequal(Base.unsafe_getindex(invmap(d),f.x)), d.x)
 end
 
 Base.issubset(d::Map, b::IntervalSets.Domain) = union(d) ⊆ b
@@ -153,6 +143,7 @@ AffineQuasiVector(A, x::AffineQuasiVector, b) = AffineQuasiVector(A*x.A, x.x, A*
 axes(A::AbstractAffineQuasiVector) = axes(A.x)
 
 affine_getindex(A, k) = A.A*A.x[k] .+ A.b
+Base.unsafe_getindex(A::AbstractAffineQuasiVector, k) = A.A*Base.unsafe_getindex(A.x,k) .+ A.b
 getindex(A::AbstractAffineQuasiVector, k::Number) = affine_getindex(A, k)
 function getindex(A::AbstractAffineQuasiVector, k::Inclusion)
     @boundscheck A.x[k] # throws bounds error if k ≠ x
@@ -210,9 +201,10 @@ AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {
 measure(x::Inclusion) = last(x)-first(x)
 
 function getproperty(A::AffineMap, d::Symbol)
-    d == :x && return A.domain
-    d == :A && return measure(A.range)/measure(A.domain)
-    d == :b && return (last(A.domain)*first(A.range) - first(A.domain)*last(A.range))/measure(A.domain)
+    domain, range = getfield(A, :domain), getfield(A, :range)
+    d == :x && return domain
+    d == :A && return measure(range)/measure(domain)
+    d == :b && return (last(domain)*first(range) - first(domain)*last(range))/measure(domain)
     getfield(A, d)
 end
 
