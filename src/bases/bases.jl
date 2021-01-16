@@ -34,6 +34,8 @@ broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::MappedBasisLayouts) = Mappe
 
 # A sub of a weight is still a weight
 sublayout(::WeightLayout, _) = WeightLayout()
+sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Map,AbstractUnitRange}}) = MappedBasisLayout()
+
 
 ## Weighted basis interface
 unweightedbasis(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = last(P.args)
@@ -112,7 +114,7 @@ copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQu
 
 # expansion
 _grid(_, P) = error("Overload Grid")
-_grid(::MappedBasisLayout, P) = igetindex.(Ref(parentindices(P)[1]), grid(demap(P)))
+_grid(::MappedBasisLayout, P) = invmap(parentindices(P)[1])[grid(demap(P))]
 _grid(::SubBasisLayout, P) = grid(parent(P))
 _grid(::WeightedBasisLayouts, P) = grid(unweightedbasis(P))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
@@ -152,11 +154,22 @@ end
 \(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
 
 _factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), parentindices(L)[2])
-# function _factorize(::MappedBasisLayout, L)
-#     kr, jr = parentindices(L)
-#     P = parent(L)
-#     ProjectionFactorization(factorize(view(P,:,jr)), parentindices(L)[2])
-# end
+
+struct MappedFactorization{T, FAC<:Factorization{T}, MAP} <: Factorization{T}
+    F::FAC
+    map::MAP
+end
+
+\(a::MappedFactorization, b::AbstractQuasiVector) = a.F \ view(b, a.map)
+\(a::MappedFactorization, b::AbstractVector) = a.F \ b
+
+function invmap end
+
+function _factorize(::MappedBasisLayout, L)
+    kr, jr = parentindices(L)
+    P = parent(L)
+    MappedFactorization(factorize(view(P,:,jr)), invmap(parentindices(L)[1]))
+end
 
 transform_ldiv(A, B, _) = factorize(A) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, size(A))

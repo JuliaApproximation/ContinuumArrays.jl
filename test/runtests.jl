@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
-                        MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, igetindex, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        Expansion, basis
+                        MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
+                        Expansion, basis, invmap, Map
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -24,8 +24,9 @@ end
 
 @testset "Inclusion" begin
     x = Inclusion(-1..1)
-    @test x[0.1] === 0.1
-    @test x[0.0] === 0.0
+    @test eltype(x) == Float64
+    @test x[0.1] ≡ 0.1
+    @test x[0] ≡ x[0.0] ≡ 0.0
 
     x = Inclusion(-1.0..1)
     X = QuasiDiagonal(x)
@@ -100,9 +101,9 @@ end
         @test_throws BoundsError a[-3]
         @test a[-2] == first(a) == -1
         @test a[3] == last(a) == 1
-        @test igetindex(a,-0.16) ≈ 0.1
-        @test igetindex(a,1) == 3
-        @test igetindex(a,-1) == -2
+        @test invmap(a)[-0.16] ≈ 0.1
+        @test invmap(a)[1] == 3
+        @test invmap(a)[-1] == -2
         @test union(a) == Inclusion(-1..1)
 
         @test affine(0..1, -1..1) == y
@@ -116,11 +117,11 @@ end
 
 @testset "DiracDelta" begin
     δ = DiracDelta(-1..3)
-    @test axes(δ) === (axes(δ,1),) === (Inclusion(-1..3),)
-    @test size(δ) === (length(δ),) === (ℵ₁,)
-    @test δ[1.1] === 0.0
-    @test δ[0.0] === Inf
-    @test Base.IndexStyle(δ) === Base.IndexLinear()
+    @test axes(δ) ≡ (axes(δ,1),) ≡ (Inclusion(-1..3),)
+    @test size(δ) ≡ (length(δ),) ≡ (ℵ₁,)
+    @test δ[1.1] ≡ 0.0
+    @test δ[0.0] ≡ Inf
+    @test Base.IndexStyle(δ) ≡ Base.IndexLinear()
 
     @test stringmime("text/plain", δ) == "δ at 0.0 over Inclusion(-1..3)"
     x = Inclusion(-1..1)
@@ -131,14 +132,14 @@ end
     @testset "HeavisideSpline" begin
         H = HeavisideSpline([1,2,3])
 
-        @test axes(H) === (axes(H,1),axes(H,2)) === (Inclusion(1..3), Base.OneTo(2))
-        @test size(H) === (size(H,1),size(H,2)) === (ℵ₁, 2)
+        @test axes(H) ≡ (axes(H,1),axes(H,2)) ≡ (Inclusion(1..3), Base.OneTo(2))
+        @test size(H) ≡ (size(H,1),size(H,2)) ≡ (ℵ₁, 2)
 
         @test_throws BoundsError H[0.1, 1]
-        @test H[1.1,1] === H'[1,1.1] === transpose(H)[1,1.1] === 1.0
-        @test H[2.1,1] === H'[1,2.1] === transpose(H)[1,2.1] === 0.0
-        @test H[1.1,2] === 0.0
-        @test H[2.1,2] === 1.0
+        @test H[1.1,1] ≡ H'[1,1.1] ≡ transpose(H)[1,1.1] ≡ 1.0
+        @test H[2.1,1] ≡ H'[1,2.1] ≡ transpose(H)[1,2.1] ≡ 0.0
+        @test H[1.1,2] ≡ 0.0
+        @test H[2.1,2] ≡ 1.0
         @test_throws BoundsError H[2.1,3]
         @test_throws BoundsError H'[3,2.1]
         @test_throws BoundsError transpose(H)[3,2.1]
@@ -483,6 +484,12 @@ end
     @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
 end
 
+"""
+This is a simple implementation of Chebyshev for testing. Use OrthogonalPolynomialsQuasi
+for the real implementation.
+"""
+
+
 struct Chebyshev <: Basis{Float64}
     n::Int
 end
@@ -502,6 +509,20 @@ LinearAlgebra.factorize(L::Chebyshev) =
 
 # This is wrong but just for tests
 Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Chebyshev}, b::Chebyshev) = b * Matrix(I, 5, 5)
+
+struct QuadraticMap{T} <: Map{T} end
+struct InvQuadraticMap{T} <: Map{T} end
+
+QuadraticMap() = QuadraticMap{Float64}()
+InvQuadraticMap() = InvQuadraticMap{Float64}()
+
+Base.getindex(::QuadraticMap, r::Number) = 2r^2-1
+Base.axes(::QuadraticMap{T}) where T = (Inclusion(0..1),)
+Base.axes(::InvQuadraticMap{T}) where T = (Inclusion(-1..1),)
+Base.getindex(d::InvQuadraticMap, x::Number) = sqrt((x+1)/2)
+ContinuumArrays.invmap(::QuadraticMap{T}) where T = InvQuadraticMap{T}()
+ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
+
 
 @testset "Chebyshev" begin
     T = Chebyshev(5)
@@ -536,9 +557,33 @@ Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Che
         @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]
         @test MemoryLayout(wT[y,1:3]) isa MappedWeightedBasisLayout
         @test wT[y,1:3][[0.1,0.2],1:2] == wT[y[[0.1,0.2]],1:2]
+
+        @testset "QuadraticMap" begin
+            m = QuadraticMap()
+            mi = InvQuadraticMap()
+            @test 0.1 ∈ m
+            @test -0.1 ∈ m
+            @test 2 ∉ m
+            @test 0.1 ∈ mi
+            @test -0.1 ∉ mi
+            
+            @test m[findfirst(isequal(0.1), m)] ≈ 0.1
+            @test m[findlast(isequal(0.1), m)] ≈ 0.1
+            @test m[findall(isequal(0.1), m)] ≈ [0.1]
+
+            T = Chebyshev(5)
+            M = T[m,:]
+            @test MemoryLayout(M) isa MappedBasisLayout
+            @test M[0.1,:] ≈ T[2*0.1^2-1,:]
+            x = axes(M,1)
+            @test x == Inclusion(0..1)
+            @test M \ exp.(x) ≈ T \ exp.(sqrt.((axes(T,1) .+ 1)/2))
+        end
     end
 
     @testset "Broadcasted" begin
+        T = Chebyshev(5)
+        x = axes(T,1)
         a = 1 .+ x .+ x.^2
         # The following are wrong, just testing dispatch
         @test T \ (a .* T) == I
