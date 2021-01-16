@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        Expansion, basis, invmap
+                        Expansion, basis, invmap, Map
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -484,6 +484,12 @@ end
     @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
 end
 
+"""
+This is a simple implementation of Chebyshev for testing. Use OrthogonalPolynomialsQuasi
+for the real implementation.
+"""
+
+
 struct Chebyshev <: Basis{Float64}
     n::Int
 end
@@ -503,6 +509,24 @@ LinearAlgebra.factorize(L::Chebyshev) =
 
 # This is wrong but just for tests
 Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Chebyshev}, b::Chebyshev) = b * Matrix(I, 5, 5)
+
+struct QuadraticMap{T} <: Map{T} end
+struct InvQuadraticMap{T} <: Map{T} end
+
+QuadraticMap() = QuadraticMap{Float64}()
+
+function Base.getindex(A::QuadraticMap, k::Inclusion)
+    @assert k.domain == UnitInterval()
+    A
+end
+
+Base.getindex(::QuadraticMap, r::Number) = 2r^2-1
+Base.axes(::QuadraticMap{T}) where T = (Inclusion(0..1),)
+Base.axes(::InvQuadraticMap{T}) where T = (Inclusion(-1..1),)
+Base.getindex(d::InvQuadraticMap, x::Number) = sqrt((x+1)/2)
+ContinuumArrays.invmap(::QuadraticMap{T}) where T = InvQuadraticMap{T}()
+ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
+
 
 @testset "Chebyshev" begin
     T = Chebyshev(5)
@@ -550,4 +574,15 @@ Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Che
         ã = T * (T \ a)
         @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
     end
+end
+
+
+@testset "Maps" begin
+    T = Chebyshev(5)
+    M = T[QuadraticMap(),:]
+    @test MemoryLayout(M) isa MappedBasisLayout
+    @test M[0.1,:] ≈ T[2*0.1^2-1,:]
+    x = axes(M,1)
+    @test x == Inclusion(0..1)
+    @test M \ exp.(x) ≈ T \ exp.(sqrt.((axes(T,1) .+ 1)/2))
 end
