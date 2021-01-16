@@ -113,13 +113,22 @@ abstract type Map{T} <: AbstractQuasiVector{T} end
 
 invmap(M::Map) = error("Overload invmap(::$(typeof(M)))")
 
-for find in (:findfirst, :findlast, :findall)
-    @eval $find(f::Base.Fix2{typeof(isequal)}, d::Map) = $find(isequal(Base.unsafe_getindex(invmap(d),f.x)), d.x)
-end
 
+Base.in(x, m::Map) = x in union(m)
 Base.issubset(d::Map, b::IntervalSets.Domain) = union(d) ⊆ b
 Base.union(d::Map) = axes(invmap(d),1)
 
+for find in (:findfirst, :findlast)
+    @eval function $find(f::Base.Fix2{typeof(isequal)}, d::Map)
+        f.x in d || return nothing
+        $find(isequal(invmap(d)[f.x]), union(d))
+    end
+end
+
+@eval function findall(f::Base.Fix2{typeof(isequal)}, d::Map)
+    f.x in d || return eltype(axes(d,1))[]
+    findall(isequal(invmap(d)[f.x]), union(d))
+end
 
 # Affine map represents A*x .+ b
 abstract type AbstractAffineQuasiVector{T,AA,X,B} <: Map{T} end

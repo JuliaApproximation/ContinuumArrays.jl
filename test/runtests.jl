@@ -514,11 +514,7 @@ struct QuadraticMap{T} <: Map{T} end
 struct InvQuadraticMap{T} <: Map{T} end
 
 QuadraticMap() = QuadraticMap{Float64}()
-
-function Base.getindex(A::QuadraticMap, k::Inclusion)
-    @assert k.domain == UnitInterval()
-    A
-end
+InvQuadraticMap() = InvQuadraticMap{Float64}()
 
 Base.getindex(::QuadraticMap, r::Number) = 2r^2-1
 Base.axes(::QuadraticMap{T}) where T = (Inclusion(0..1),)
@@ -561,6 +557,28 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]
         @test MemoryLayout(wT[y,1:3]) isa MappedWeightedBasisLayout
         @test wT[y,1:3][[0.1,0.2],1:2] == wT[y[[0.1,0.2]],1:2]
+
+        @testset "QuadraticMap" begin
+            m = QuadraticMap()
+            mi = InvQuadraticMap()
+            @test 0.1 ∈ m
+            @test -0.1 ∈ m
+            @test 2 ∉ m
+            @test 0.1 ∈ mi
+            @test -0.1 ∉ mi
+            
+            @test m[findfirst(isequal(0.1), m)] ≈ 0.1
+            @test m[findlast(isequal(0.1), m)] ≈ 0.1
+            @test m[findall(isequal(0.1), m)] ≈ [0.1]
+
+            T = Chebyshev(5)
+            M = T[m,:]
+            @test MemoryLayout(M) isa MappedBasisLayout
+            @test M[0.1,:] ≈ T[2*0.1^2-1,:]
+            x = axes(M,1)
+            @test x == Inclusion(0..1)
+            @test M \ exp.(x) ≈ T \ exp.(sqrt.((axes(T,1) .+ 1)/2))
+        end
     end
 
     @testset "Broadcasted" begin
@@ -574,15 +592,4 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         ã = T * (T \ a)
         @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
     end
-end
-
-
-@testset "Maps" begin
-    T = Chebyshev(5)
-    M = T[QuadraticMap(),:]
-    @test MemoryLayout(M) isa MappedBasisLayout
-    @test M[0.1,:] ≈ T[2*0.1^2-1,:]
-    x = axes(M,1)
-    @test x == Inclusion(0..1)
-    @test M \ exp.(x) ≈ T \ exp.(sqrt.((axes(T,1) .+ 1)/2))
 end
