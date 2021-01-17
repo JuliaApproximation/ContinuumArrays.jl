@@ -488,8 +488,6 @@ end
 This is a simple implementation of Chebyshev for testing. Use OrthogonalPolynomialsQuasi
 for the real implementation.
 """
-
-
 struct Chebyshev <: Basis{Float64}
     n::Int
 end
@@ -571,9 +569,12 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
             @test m[findlast(isequal(0.1), m)] ≈ 0.1
             @test m[findall(isequal(0.1), m)] ≈ [0.1]
 
+            @test m[Inclusion(0..1)] ≡ m
+            @test_throws BoundsError m[Inclusion(-1..1)]
             T = Chebyshev(5)
             M = T[m,:]
             @test MemoryLayout(M) isa MappedBasisLayout
+            @test MemoryLayout(M[:,1:3]) isa MappedBasisLayout
             @test M[0.1,:] ≈ T[2*0.1^2-1,:]
             x = axes(M,1)
             @test x == Inclusion(0..1)
