@@ -130,6 +130,11 @@ end
     findall(isequal(invmap(d)[f.x]), union(d))
 end
 
+function Base.getindex(d::Map, x::Inclusion)
+    x == axes(d,1) || throw(BoundsError(d, x))
+    d
+end
+
 # Affine map represents A*x .+ b
 abstract type AbstractAffineQuasiVector{T,AA,X,B} <: Map{T} end
 
