@@ -119,18 +119,21 @@ _grid(::SubBasisLayout, P) = grid(parent(P))
 _grid(::WeightedBasisLayouts, P) = grid(unweightedbasis(P))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
+# TODO: Move over from OrthogonalPolynomialsQuasi
+function checkpoints end
+
 struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
     grid::Grid
     plan::Plan
     iplan::IPlan
 end
 
-TransformFactorization(grid, plan) = 
-    TransformFactorization{promote_type(eltype(grid),eltype(plan)),typeof(grid),typeof(plan),Nothing}(grid, plan, nothing)
+TransformFactorization{T}(grid, plan) where T = TransformFactorization{T,typeof(grid),typeof(plan),Nothing}(grid, plan, nothing)
+TransformFactorization(grid, plan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(plan))}(grid, plan)
 
 
-TransformFactorization(grid, ::Nothing, iplan) = 
-    TransformFactorization{promote_type(eltype(grid),eltype(iplan)),typeof(grid),Nothing,typeof(iplan)}(grid, nothing, iplan)
+TransformFactorization{T}(grid, ::Nothing, iplan) where T = TransformFactorization{T,typeof(grid),Nothing,typeof(iplan)}(grid, nothing, iplan)
+TransformFactorization(grid, ::Nothing, iplan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(iplan))}(grid, nothing, iplan)
 
 grid(T::TransformFactorization) = T.grid    
 
