@@ -119,8 +119,6 @@ _grid(::SubBasisLayout, P) = grid(parent(P))
 _grid(::WeightedBasisLayouts, P) = grid(unweightedbasis(P))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
-# TODO: Move over from OrthogonalPolynomialsQuasi
-function checkpoints end
 
 struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
     grid::Grid
