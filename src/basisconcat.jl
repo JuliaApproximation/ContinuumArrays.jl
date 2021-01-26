@@ -1,22 +1,42 @@
 """
-    PiecewiseBlockDiagonal
+    AbstractConcatBasis
 
-is an analogue of `BlockDiagonal` that takes the union of the first axis.
+is an abstract type representing a block diagonal basis but
+with modified axes.
+"""
+abstract type AbstractConcatBasis{T} <: Basis{T} end
+
+@simplify function *(D::Derivative, S::AbstractConcatBasis)
+    axes(D,2) == axes(S,1) || throw(DimensionMismatch())
+    args = arguments.(Ref(ApplyLayout{typeof(*)}()), Derivative.(axes.(S.args,1)) .* S.args)
+    all(length.(args) .== 2) || error("Not implemented")
+    concatbasistype(S)(map(first, args)...) * mortar(Diagonal([map(last, args)...]))
+end
+
+
+"""
+    PiecewiseBasis
+
+is an analogue of `Basis` that takes the union of the first axis.
 If there is overlap, it uses the first in order.
 """
-struct PiecewiseBlockDiagonal{T, Args} <: AbstractQuasiMatrix{T}
+struct PiecewiseBasis{T, Args} <: AbstractConcatBasis{T}
     args::Args
 end
 
-PiecewiseBlockDiagonal{T}(args...) where T = PiecewiseBlockDiagonal{T,typeof(args)}(args)
-PiecewiseBlockDiagonal(args...) = PiecewiseBlockDiagonal{mapreduce(eltype,promote_type,args)}(args...)
+PiecewiseBasis{T}(args...) where T = PiecewiseBasis{T,typeof(args)}(args)
+PiecewiseBasis(args...) = PiecewiseBasis{mapreduce(eltype,promote_type,args)}(args...)
+
+concatbasistype(S::PiecewiseBasis) = PiecewiseBasis
 
 _blockedrange(a::Tuple) = blockedrange(SVector(a...))
 _blockedrange(a::AbstractVector) = blockedrange(a)
 
-axes(A::PiecewiseBlockDiagonal) = (union(axes.(A.args,1)...), _blockedrange(size.(A.args,2)))
+axes(A::PiecewiseBasis) = (union(axes.(A.args,1)...), _blockedrange(size.(A.args,2)))
 
-function QuasiArrays._getindex(::Type{IND}, A::PiecewiseBlockDiagonal{T}, (x,j)::IND) where {IND,T}
+==(A::PiecewiseBasis, B::PiecewiseBasis) = all(A.args .== B.args)
+
+function QuasiArrays._getindex(::Type{IND}, A::PiecewiseBasis{T}, (x,j)::IND) where {IND,T}
     Jj = findblockindex(axes(A,2), j)
     J = Int(block(Jj))
     @boundscheck x in axes(A,1) || throw(BoundsError(A, (x,j)))
@@ -25,13 +45,13 @@ function QuasiArrays._getindex(::Type{IND}, A::PiecewiseBlockDiagonal{T}, (x,j):
 end
 
 """
-    PiecewiseBlockDiagonal
+    VcatBasis
 
-is an analogue of `BlockDiagonal` that vcats the values.
+is an analogue of `Basis` that vcats the values.
 """ 
-struct VcatBlockDiagonal{T, Args} <: AbstractQuasiMatrix{T}
+struct VcatBasis{T, Args} <: AbstractConcatBasis{T}
     args::Args
-    function VcatBlockDiagonal{T, Args}(args::Args) where {T,Args}
+    function VcatBasis{T, Args}(args::Args) where {T,Args}
         ax = axes(args[1],1)
         for a in Base.tail(args)
             ax == axes(a,1) || throw(ArgumentError("Must be defined on same"))
@@ -40,12 +60,16 @@ struct VcatBlockDiagonal{T, Args} <: AbstractQuasiMatrix{T}
     end
 end
 
-VcatBlockDiagonal{T}(args...) where T = VcatBlockDiagonal{T,typeof(args)}(args)
-VcatBlockDiagonal(args::Vararg{Any,N}) where N = VcatBlockDiagonal{SVector{N,mapreduce(eltype,promote_type,args)}}(args...)
+VcatBasis{T}(args...) where T = VcatBasis{T,typeof(args)}(args)
+VcatBasis(args::Vararg{Any,N}) where N = VcatBasis{SVector{N,mapreduce(eltype,promote_type,args)}}(args...)
 
-axes(A::VcatBlockDiagonal{<:Any,<:Tuple}) = (axes(A.args[1],1), _blockedrange(size.(A.args,2)))
+concatbasistype(S::VcatBasis) = VcatBasis
 
-function QuasiArrays._getindex(::Type{IND}, A::VcatBlockDiagonal{T}, (x,j)::IND) where {IND,T<:SVector{N}} where N
+axes(A::VcatBasis{<:Any,<:Tuple}) = (axes(A.args[1],1), _blockedrange(size.(A.args,2)))
+
+==(A::VcatBasis, B::VcatBasis) = all(A.args .== B.args)
+
+function QuasiArrays._getindex(::Type{IND}, A::VcatBasis{T}, (x,j)::IND) where {IND,T<:SVector{N}} where N
     Jj = findblockindex(axes(A,2), j)
     J = Int(block(Jj))
     T(zeros(J-1)..., A.args[J][x, blockindex(Jj)], zeros(N-J)...) # TODO: type stable via @generated
