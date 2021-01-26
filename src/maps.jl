@@ -17,7 +17,7 @@ invmap(M::Map) = error("Overload invmap(::$(typeof(M)))")
 
 
 Base.in(x, m::Map) = x in union(m)
-Base.issubset(d::Map, b::IntervalSets.Domain) = union(d) ⊆ b
+Base.issubset(d::Map, b) = union(d) ⊆ b
 Base.union(d::Map) = axes(invmap(d),1)
 
 for find in (:findfirst, :findlast)
@@ -91,10 +91,8 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(+), x::AbstractAffineQuasiVector,
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), a::Number, x::AbstractAffineQuasiVector) = AffineQuasiVector(-one(eltype(x)), x, a)
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), x::AbstractAffineQuasiVector, b::Number) = AffineQuasiVector(one(eltype(x)), x, -b)
 
-function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::AbstractAffineQuasiVector)
-    @_propagate_inbounds_meta
-    isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
-end
+Base.@propagate_inbounds checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::Inclusion{<:Any,<:AbstractInterval}) = QuasiArrays._affine_checkindex(inds, r)
+Base.@propagate_inbounds checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::AbstractAffineQuasiVector) = QuasiArrays._affine_checkindex(inds, r)
 
 minimum(d::AbstractAffineQuasiVector) = signbit(d.A) ? last(d) : first(d)
 maximum(d::AbstractAffineQuasiVector) = signbit(d.A) ? first(d) : last(d)
@@ -124,16 +122,16 @@ function getproperty(A::AffineMap, d::Symbol)
     getfield(A, d)
 end
 
-function getindex(A::AffineMap, k::Number)
+function getindex(A::AffineMap{T}, k::Number)  where T
     # ensure we exactly hit range
-    k == first(A.domain) && return first(A.range)
-    k == last(A.domain) && return last(A.range)
-    affine_getindex(A, k)
+    k == first(A.domain) && return convert(T, first(A.range))::T
+    k == last(A.domain) && return convert(T, last(A.range))::T
+    convert(T, affine_getindex(A, k))::T
 end
 
 
-first(A::AffineMap) = first(A.range)
-last(A::AffineMap) = last(A.range)
+first(A::AffineMap{T}) where T = convert(T, first(A.range))::T
+last(A::AffineMap{T}) where T = convert(T, last(A.range))::T
 
 affine(a::AbstractQuasiVector, b::AbstractQuasiVector) = AffineMap(a, b)
 affine(a, b::AbstractQuasiVector) = affine(Inclusion(a), b)

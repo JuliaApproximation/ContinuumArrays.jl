@@ -1,9 +1,9 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, InfiniteArrays, StaticArrays, BlockArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==, ^,
-                IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
+                IndexStyle, IndexLinear, ==, OneTo, _maybetail, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
-                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary
+                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, most, combine_mul_styles, AbstractArrayApplyStyle,
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
@@ -11,7 +11,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         simplifiable, _simplify
 import LinearAlgebra: pinv, dot, norm2
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
-import BlockArrays: block, blockindex
+import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
 import FillArrays: AbstractFill, getindex_value, SquareEye
 import ArrayLayouts: mul
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
@@ -91,12 +91,6 @@ function dot(x::Inclusion{T,<:AbstractInterval}, y::Inclusion{V,<:AbstractInterv
 end
 
 
-function checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::Inclusion{<:Any,<:AbstractInterval})
-    @_propagate_inbounds_meta
-    isempty(r) | (checkindex(Bool, inds, first(r)) & checkindex(Bool, inds, last(r)))
-end
-
-
 include("maps.jl")
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
@@ -127,7 +121,7 @@ end
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockIndex{1}, Vararg{Any}}) =
     (inds[1][I[1]], to_indices(A, _maybetail(inds), tail(I))...)
 
-checkpoints(d::AbstractInterval) = width(d) .* checkpoints(UnitInterval()) .+ leftendpoint(d)
+checkpoints(d::AbstractInterval{T}) where T = width(d) .* SVector{3,float(T)}(0.823972,0.01,0.3273484) .+ leftendpoint(d)
 checkpoints(x::Inclusion) = checkpoints(x.domain)
 checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
 
