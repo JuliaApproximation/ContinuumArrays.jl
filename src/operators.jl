@@ -97,7 +97,7 @@ struct Derivative{T,Ax} <: LazyQuasiMatrix{T}
     axis::Ax
 end
 
-Derivative{T}(axis::Ax) where {T,Ax<:AbstractInclusion} = Derivative{T,Ax}(axis)
+Derivative{T}(axis::Ax) where {T,Ax<:Inclusion} = Derivative{T,Ax}(axis)
 Derivative(axis) = Derivative{Float64}(axis)
 
 axes(D::Derivative) = (D.axis, D.axis)
