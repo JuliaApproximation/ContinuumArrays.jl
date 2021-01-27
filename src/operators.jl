@@ -93,12 +93,12 @@ show(io::IO, ::MIME"text/plain", δ::DiracDelta) = show(io, δ)
 #########
 
 
-struct Derivative{T,Ax} <: LazyQuasiMatrix{T}
-    axis::Ax
+struct Derivative{T,D} <: LazyQuasiMatrix{T}
+    axis::Inclusion{T,D}
 end
 
-Derivative{T}(axis::Ax) where {T,Ax<:Inclusion} = Derivative{T,Ax}(axis)
-Derivative(axis) = Derivative{Float64}(axis)
+Derivative{T}(axis::A) where {T,A<:Inclusion} = Derivative{T,A}(axis)
+Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
 
 axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis
