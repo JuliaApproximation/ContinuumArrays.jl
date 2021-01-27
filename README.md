@@ -1,7 +1,7 @@
 # ContinuumArrays.jl
 A package for representing quasi arrays with continuous dimensions
 
-[![Build Status](https://travis-ci.org/JuliaApproximation/ContinuumArrays.jl.svg?branch=master)](https://travis-ci.org/JuliaApproximation/ContinuumArrays.jl)
+[![Build Status](https://github.com/JuliaApproximation/ContinuumArrays.jl/workflows/CI/badge.svg)](https://github.com/JuliaApproximation/ContinuumArrays.jl/actions)
 [![codecov](https://codecov.io/gh/JuliaApproximation/ContinuumArrays.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaApproximation/ContinuumArrays.jl)
 
 
