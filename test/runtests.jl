@@ -596,3 +596,5 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
     end
 end
+
+include("test_basisconcat.jl")
