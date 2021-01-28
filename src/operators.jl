@@ -99,7 +99,6 @@ end
 
 Derivative{T}(axis::A) where {T,A<:Inclusion} = Derivative{T,A}(axis)
 Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
-Derivative(axis) = Derivative{Float64}(axis)
 
 axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis

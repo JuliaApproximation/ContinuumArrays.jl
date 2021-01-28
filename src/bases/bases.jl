@@ -69,13 +69,13 @@ end
 @inline function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
     A, B = P.A, P.B
     A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
-    SquareEye{eltype(P)}((axes(A,2),))
+    SquareEye{eltype(eltype(P))}((axes(A,2),)) # use double eltype for array-valued 
 end
 @inline function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
     A, B = P.A, P.B
     parent(A) == parent(B) ||
         throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
-    Eye{eltype(P)}((axes(A,2),axes(B,2)))
+    Eye{eltype(eltype(P))}((axes(A,2),axes(B,2)))
 end
 
 @inline function copy(P::Ldiv{<:MappedBasisLayouts,<:MappedBasisLayouts})
@@ -119,8 +119,6 @@ _grid(::SubBasisLayout, P) = grid(parent(P))
 _grid(::WeightedBasisLayouts, P) = grid(unweightedbasis(P))
 grid(P) = _grid(MemoryLayout(typeof(P)), P)
 
-# TODO: Move over from OrthogonalPolynomialsQuasi
-function checkpoints end
 
 struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
     grid::Grid
