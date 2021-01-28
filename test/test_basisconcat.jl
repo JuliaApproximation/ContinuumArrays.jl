@@ -7,6 +7,8 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis
         S2 = LinearSpline(2:3)
         S = PiecewiseBasis(S1, S2)
 
+        @test S == S
+
         @test S[0.5,1:4] == [S1[0.5,1:2]; zeros(2)]
         @test S[2.5,1:4] == [zeros(2); S2[2.5,1:2]]
         @test_throws BoundsError S[1.5,2]
@@ -22,6 +24,12 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis
         @test_throws BoundsError (D*S)[0.5,5]
 
         @test_throws DimensionMismatch D1*S
+
+        @testset "Vec case" begin
+            Sv = PiecewiseBasis([S1,S2])
+            @test axes(Sv,2) isa BlockedUnitRange
+            @test Sv[0.5,1:4] == S[0.5,1:4]
+        end
     end
 
     @testset "VcatBasis" begin
@@ -53,6 +61,8 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis
         S1 = LinearSpline(0:1)
         S2 = LinearSpline(0:0.5:1)
         S = HvcatBasis(2, S1, S2, S2, S1)
+
+        @test S == S
 
         @test S[0.1, 1] == [S1[0.1,1] 0; 0 0]
         @test S[0.1,Block(1)] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]

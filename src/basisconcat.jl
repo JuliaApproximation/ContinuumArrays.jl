@@ -26,6 +26,8 @@ end
 
 PiecewiseBasis{T}(args...) where T = PiecewiseBasis{T,typeof(args)}(args)
 PiecewiseBasis(args...) = PiecewiseBasis{mapreduce(eltype,promote_type,args)}(args...)
+PiecewiseBasis{T}(args::AbstractVector) where T = PiecewiseBasis{T,typeof(args)}(args)
+PiecewiseBasis(args::AbstractVector) = PiecewiseBasis{eltype(eltype(args))}(args)
 
 concatbasis(::PiecewiseBasis, args...) = PiecewiseBasis(args...)
 
