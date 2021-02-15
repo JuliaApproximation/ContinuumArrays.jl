@@ -1,5 +1,5 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, InfiniteArrays, StaticArrays, BlockArrays
+using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, _maybetail, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
@@ -22,59 +22,12 @@ import InfiniteArrays: Infinity, InfAxes
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, WeightedBasis, grid, transform, affine, ..
 
-####
-# Interval indexing support
-####
-struct AlephInfinity{N} <: Integer end
-
-isone(::AlephInfinity) = false
-iszero(::AlephInfinity) = false
-
-==(::AlephInfinity, ::Int) = false
-==(::Int, ::AlephInfinity) = false
-
-*(::AlephInfinity{N}, ::AlephInfinity{N}) where N = AlephInfinity{N}()
-*(::AlephInfinity{N}, ::Infinity) where N = AlephInfinity{N}()
-*(::Infinity, ::AlephInfinity{N}) where N = AlephInfinity{N}()
-function *(a::Integer, b::AlephInfinity)
-    a > 0 || throw(ArgumentError("$a is negative"))
-    b
-end
-
-*(a::AlephInfinity, b::Integer) = b*a
-
-
-abs(a::AlephInfinity) = a
-zero(::AlephInfinity) = 0
-
-for OP in (:<, :≤)
-    @eval begin
-        $OP(::Real, ::AlephInfinity) = true
-        $OP(::AlephInfinity, ::Real) = false
-    end
-end
-
-for OP in (:>, :≥)
-    @eval begin
-        $OP(::Real, ::AlephInfinity) = false
-        $OP(::AlephInfinity, ::Real) = true
-    end
-end
-
-
-const ℵ₁ = AlephInfinity{1}()
-
-string(::AlephInfinity{1}) = "ℵ₁"
-
-show(io::IO, F::AlephInfinity{1}) where N =
-    print(io, "ℵ₁")
 
 
 const QMul2{A,B} = Mul{<:Any, <:Any, <:A,<:B}
 const QMul3{A,B,C} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B,C}}
 
 cardinality(::AbstractInterval) = ℵ₁
-*(ℵ::AlephInfinity) = ℵ
 
 Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
 first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
