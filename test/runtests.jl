@@ -5,22 +5,6 @@ import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, Adj
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
-@testset "AlephInfinity" begin
-    @test !isone(ℵ₁)
-    @test !iszero(ℵ₁)
-    @test ℵ₁ ≠ 4
-    @test ℵ₁ * ∞ == ∞ * ℵ₁ == ℵ₁
-    @test 2 * ℵ₁ == ℵ₁ * 2 == ℵ₁
-    @test abs(ℵ₁) == ℵ₁
-    @test zero(ℵ₁) == 0
-    @test 5 < ℵ₁
-    @test 5 ≤ ℵ₁
-    @test !(ℵ₁ ≤ 5)
-    @test ℵ₁ > 5
-    @test !(5 > ℵ₁)
-
-    @test string(ℵ₁) == "ℵ₁"
-end
 
 @testset "Inclusion" begin
     x = Inclusion(-1..1)
