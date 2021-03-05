@@ -74,6 +74,9 @@ end
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockIndex{1}, Vararg{Any}}) =
     (inds[1][I[1]], to_indices(A, _maybetail(inds), tail(I))...)
 
+@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractArray{<:BlockIndex{1}}, Vararg{Any}}) =
+    (inds[1][I[1]], to_indices(A, _maybetail(inds), tail(I))...)    
+
 checkpoints(d::AbstractInterval{T}) where T = width(d) .* SVector{3,float(T)}(0.823972,0.01,0.3273484) .+ leftendpoint(d)
 checkpoints(x::Inclusion) = checkpoints(x.domain)
 checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
