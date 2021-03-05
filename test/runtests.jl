@@ -425,6 +425,7 @@ Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
 
 Base.getindex(::Chebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
 Base.getindex(::ChebyshevWeight, x::Float64) = 1/sqrt(1-x^2)
+Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 
 LinearAlgebra.factorize(L::Chebyshev) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
@@ -469,6 +470,10 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test ContinuumArrays.unweightedbasis(wT) ≡ T
         @test ContinuumArrays.unweightedbasis(wT2) ≡ T[:,2:4]
         @test ContinuumArrays.unweightedbasis(wT3) ≡ T[:,2:4]
+
+        @test ContinuumArrays.weight(wT) ≡ ContinuumArrays.weight(wT2) ≡ ContinuumArrays.weight(wT3) ≡ w
+
+        @test wT \ @.(exp(x) / sqrt(1-x^2)) ≈ T \ exp.(x)
     end
     @testset "Mapped" begin
         y = affine(0..1, x)
