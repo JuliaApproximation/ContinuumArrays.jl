@@ -517,6 +517,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
 
     @testset "Broadcasted" begin
         T = Chebyshev(5)
+        F = factorize(T)
         x = axes(T,1)
         a = 1 .+ x .+ x.^2
         # The following are wrong, just testing dispatch
