@@ -40,6 +40,8 @@ sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Map,AbstractUnitRange}}) = Mappe
 ## Weighted basis interface
 unweightedbasis(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = last(P.args)
 unweightedbasis(V::SubQuasiArray) = view(unweightedbasis(parent(V)), parentindices(V)...)
+weight(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = first(P.args)
+weight(V::SubQuasiArray) = weight(parent(V))[parentindices(V)[1]]
 
 
 
@@ -181,6 +183,15 @@ copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
 
+struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
+    w::WW
+    F::FAC
+end
+
+_factorize(::WeightedBasisLayouts, wS) = WeightedFactorization(weight(wS), factorize(unweightedbasis(wS)))
+
+
+\(F::WeightedFactorization, b::AbstractQuasiVector) = F.F \ (b ./ F.w)
 
 ##
 # Algebra

@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        Expansion, basis, invmap, Map
+                        Expansion, basis, invmap, Map, checkpoints
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -425,6 +425,7 @@ Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
 
 Base.getindex(::Chebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
 Base.getindex(::ChebyshevWeight, x::Float64) = 1/sqrt(1-x^2)
+Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 
 LinearAlgebra.factorize(L::Chebyshev) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
@@ -451,9 +452,13 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
     w = ChebyshevWeight()
     wT = w .* T
     x = axes(T,1)
-    F = factorize(T)
-    g = grid(F)
-    @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
+
+    @testset "basics" begin
+        F = factorize(T)
+        g = grid(F)
+        @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
+        @test all(checkpoints(T) .∈ Ref(axes(T,1)))
+    end
 
     @testset "Weighted" begin
         @test MemoryLayout(w) isa WeightLayout
@@ -469,6 +474,10 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test ContinuumArrays.unweightedbasis(wT) ≡ T
         @test ContinuumArrays.unweightedbasis(wT2) ≡ T[:,2:4]
         @test ContinuumArrays.unweightedbasis(wT3) ≡ T[:,2:4]
+
+        @test ContinuumArrays.weight(wT) ≡ ContinuumArrays.weight(wT2) ≡ ContinuumArrays.weight(wT3) ≡ w
+
+        @test wT \ @.(exp(x) / sqrt(1-x^2)) ≈ T \ exp.(x)
     end
     @testset "Mapped" begin
         y = affine(0..1, x)
@@ -508,6 +517,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
 
     @testset "Broadcasted" begin
         T = Chebyshev(5)
+        F = factorize(T)
         x = axes(T,1)
         a = 1 .+ x .+ x.^2
         # The following are wrong, just testing dispatch
