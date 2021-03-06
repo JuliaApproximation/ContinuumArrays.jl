@@ -61,12 +61,15 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis
         S1 = LinearSpline(0:1)
         S2 = LinearSpline(0:0.5:1)
         S = HvcatBasis(2, S1, S2, S2, S1)
+        D = Derivative(axes(S,1))
 
         @test S == S
 
         @test S[0.1, 1] == [S1[0.1,1] 0; 0 0]
         @test S[0.1,Block(1)] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]
+        @test S[0.1,Block(1)[1]] == [S1[0.1,1] 0; 0 0]
+        @test S[0.1,getindex.(Block(1),1:2)] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]
         D = Derivative(axes(S,1))
-        @test_broken (D*S)[0.1,1]
+        @test_broken (D*S)[0.1,1] # throws error
     end
 end
