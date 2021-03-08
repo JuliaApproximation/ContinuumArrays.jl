@@ -344,7 +344,7 @@ function arguments(::ApplyLayout{typeof(*)}, V::SubQuasiArray{<:Any,2,<:Any,<:Tu
     A = parent(V)
     _,jr = parentindices(V)
     first(jr) ≥ 1 || throw(BoundsError())
-    P = _BandedMatrix(Ones{Int}(1,length(jr)), axes(A,2), first(jr)-1,1-first(jr))
+    P = _BandedMatrix(Ones{Int}((Base.OneTo(1),axes(jr,1))), axes(A,2), first(jr)-1,1-first(jr))
     A,P
 end
 
