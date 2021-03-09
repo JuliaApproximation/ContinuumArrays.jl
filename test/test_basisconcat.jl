@@ -39,6 +39,8 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
 
         @test size(S,2) == 5
         @test axes(S,1) == axes(S1,1) == axes(S2,1)
+        @test blockaxes(S) == (Block.(1:1), Block.(1:2))
+
         @test S == S
 
         @test S[0.1,1:5] == [vcat.(S1[0.1,:],0); vcat.(0, S2[0.1,:])]
