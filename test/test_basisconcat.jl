@@ -1,5 +1,5 @@
 using ContinuumArrays, BlockArrays, Test
-import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis
+import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout
 
 @testset "ConcatBasis" begin
     @testset "PiecewiseBasis" begin
@@ -71,5 +71,9 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis
         @test S[0.1,getindex.(Block(1),1:2)] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]
         D = Derivative(axes(S,1))
         @test_broken (D*S)[0.1,1] # throws error
+
+        v = view(S, :, Block.(2:3))
+        @test v[0.1,1] == S[0.1,3]
+        @test blockisequal(axes(arguments(ApplyLayout{typeof(*)}(), v)[2],1), axes(S,2))
     end
 end
