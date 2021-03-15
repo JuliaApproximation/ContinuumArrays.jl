@@ -69,7 +69,7 @@ DiracDelta{T}(x, axis::A) where {T,A<:AbstractQuasiVector} = DiracDelta{T,A}(x, 
 DiracDelta{T}(x, domain) where T = DiracDelta{T}(x, Inclusion(domain))
 DiracDelta(x, domain) = DiracDelta{eltype(x)}(x, Inclusion(domain))
 DiracDelta(axis::AbstractQuasiVector) = DiracDelta(zero(float(eltype(axis))), axis)
-DiracDelta(domain) = DiracDelta(Inclusion(domain))
+DiracDelta(x) = DiracDelta(x, Inclusion(x))
 
 axes(δ::DiracDelta) = (δ.axis,)
 IndexStyle(::Type{<:DiracDelta}) = IndexLinear()
