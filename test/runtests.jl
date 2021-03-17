@@ -31,7 +31,14 @@ end
 include("test_maps.jl")
 
 @testset "DiracDelta" begin
-    δ = DiracDelta(-1..3)
+    δ = DiracDelta()
+    @test axes(δ) ≡ (axes(δ,1),) ≡ (Inclusion(0.0),)
+    @test size(δ) ≡ (length(δ),) ≡ (1,)
+    @test_throws BoundsError δ[1.1]
+    @test δ[0.0] ≡ Inf
+    @test Base.IndexStyle(δ) ≡ Base.IndexLinear()
+
+    δ = DiracDelta(0, -1..3)
     @test axes(δ) ≡ (axes(δ,1),) ≡ (Inclusion(-1..3),)
     @test size(δ) ≡ (length(δ),) ≡ (ℵ₁,)
     @test δ[1.1] ≡ 0.0
