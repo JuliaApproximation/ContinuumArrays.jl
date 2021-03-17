@@ -67,9 +67,12 @@ end
 
 DiracDelta{T}(x, axis::A) where {T,A<:AbstractQuasiVector} = DiracDelta{T,A}(x, axis)
 DiracDelta{T}(x, domain) where T = DiracDelta{T}(x, Inclusion(domain))
-DiracDelta(x, domain) = DiracDelta{eltype(x)}(x, Inclusion(domain))
+DiracDelta(x, domain) = DiracDelta{float(eltype(x))}(x, Inclusion(domain))
 DiracDelta(axis::AbstractQuasiVector) = DiracDelta(zero(float(eltype(axis))), axis)
-DiracDelta(domain) = DiracDelta(Inclusion(domain))
+DiracDelta(x) = DiracDelta(x, Inclusion(x))
+DiracDelta{T}() where T = DiracDelta(zero(T))
+DiracDelta() = DiracDelta{Float64}()
+
 
 axes(δ::DiracDelta) = (δ.axis,)
 IndexStyle(::Type{<:DiracDelta}) = IndexLinear()
@@ -78,7 +81,7 @@ IndexStyle(::Type{<:DiracDelta}) = IndexLinear()
 
 function getindex(δ::DiracDelta{T}, x::Number) where T
     x ∈ δ.axis || throw(BoundsError())
-    x == δ.x ? inv(zero(T)) : zero(T)
+    convert(T, x == δ.x ? inv(zero(T)) : zero(T))::T
 end
 
 
@@ -110,6 +113,12 @@ function diff(d::AbstractQuasiVector)
 end
 
 ^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
+
+
+function view(D::Derivative, kr::Inclusion, jr::Inclusion)
+    @boundscheck axes(D,1) == kr == jr || throw(BoundsError(D,(kr,jr)))
+    D
+end
 
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
 #     f::F

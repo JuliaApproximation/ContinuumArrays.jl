@@ -15,9 +15,10 @@ end
 
 
 """
-    PiecewiseBasis
+    PiecewiseBasis(args...)
 
-is an analogue of `Basis` that takes the union of the first axis.
+is an analogue of `Basis` that takes the union of the first axis,
+and the second axis is a blocked concatenatation of args.
 If there is overlap, it uses the first in order.
 """
 struct PiecewiseBasis{T, Args} <: AbstractConcatBasis{T}
@@ -31,12 +32,11 @@ PiecewiseBasis(args::AbstractVector) = PiecewiseBasis{eltype(eltype(args))}(args
 
 concatbasis(::PiecewiseBasis, args...) = PiecewiseBasis(args...)
 
-_blockedrange(a::Tuple) = blockedrange(SVector(a...))
-_blockedrange(a::AbstractVector) = blockedrange(a)
 
-axes(A::PiecewiseBasis) = (union(axes.(A.args,1)...), _blockedrange(size.(A.args,2)))
+axes(A::PiecewiseBasis) = (union(axes.(A.args,1)...), blockedrange(size.(A.args,2)))
 
 ==(A::PiecewiseBasis, B::PiecewiseBasis) = all(A.args .== B.args)
+
 
 function QuasiArrays._getindex(::Type{IND}, A::PiecewiseBasis{T}, (x,j)::IND) where {IND,T}
     Jj = findblockindex(axes(A,2), j)
@@ -67,7 +67,7 @@ VcatBasis(args::Vararg{Any,N}) where N = VcatBasis{SVector{N,mapreduce(eltype,pr
 
 concatbasis(::VcatBasis, args...) = VcatBasis(args...)
 
-axes(A::VcatBasis{<:Any,<:Tuple}) = (axes(A.args[1],1), _blockedrange(size.(A.args,2)))
+axes(A::VcatBasis{<:Any,<:Tuple}) = (axes(A.args[1],1), blockedrange(size.(A.args,2)))
 
 ==(A::VcatBasis, B::VcatBasis) = all(A.args .== B.args)
 
@@ -99,7 +99,7 @@ HvcatBasis(n::Int, args::Vararg{Any,N}) where N = HvcatBasis{Matrix{mapreduce(el
 
 concatbasis(S::HvcatBasis, args...) = HvcatBasis(S.n, args...)
 
-axes(A::HvcatBasis{<:Any,<:Tuple}) = (axes(A.args[1],1), _blockedrange(size.(A.args,2)))
+axes(A::HvcatBasis{<:Any,<:Tuple}) = (axes(A.args[1],1), blockedrange(size.(A.args,2)))
 
 ==(A::HvcatBasis, B::HvcatBasis) = all(A.args .== B.args)
 

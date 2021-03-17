@@ -31,7 +31,16 @@ end
 include("test_maps.jl")
 
 @testset "DiracDelta" begin
-    δ = DiracDelta(-1..3)
+    δ = DiracDelta()
+    @test δ == DiracDelta(0, Inclusion(0))
+    @test axes(δ) ≡ (axes(δ,1),) ≡ (Inclusion(0.0),)
+    @test size(δ) ≡ (length(δ),) ≡ (1,)
+    @test_throws BoundsError δ[1.1]
+    @test δ[0.0] ≡ Inf
+    @test Base.IndexStyle(δ) ≡ Base.IndexLinear()
+
+    δ = DiracDelta(0, -1..3)
+    @test δ == DiracDelta{Float64}(0, -1..3)
     @test axes(δ) ≡ (axes(δ,1),) ≡ (Inclusion(-1..3),)
     @test size(δ) ≡ (length(δ),) ≡ (ℵ₁,)
     @test δ[1.1] ≡ 0.0
@@ -203,6 +212,33 @@ end
         @test length(fp.args) == 2
         @test fp[1.1] ≈ 1
         @test fp[2.2] ≈ 2
+
+
+        @testset "View derivatives" begin
+            L = LinearSpline(1:5)
+            H = HeavisideSpline(1:5)
+            x = axes(L,1)
+            D = Derivative(x)
+
+            @test view(D, x, x) ≡ D
+            @test_throws BoundsError view(D, Inclusion(0..1), x)
+            jr = [1,3,4]
+            @test H \ (D*L[:,jr]) == H\(L[:,jr]'D')' == (H \ (D*L))[:,jr]
+
+            @test D*L[:,jr]*[1,2,3] == D * L * [1,0,2,3,0]
+            @test L[:,jr]'D'D*L[:,jr] == (L'D'D*L)[jr,jr]
+
+            a = affine(0..1, 1..5)
+            D̃ = Derivative(axes(a,1))
+            @test H[a,:] \ (D̃ * L[a,:]) == H[a,:] \ (L[a,:]'D̃')' ==  4*(H\(D*L))
+            @test_throws DimensionMismatch D * L[a,:]
+            @test_throws DimensionMismatch D̃ * L[:,jr]
+
+            @test ContinuumArrays.simplifiable(*, D, L[:,jr]) isa Val{true}
+            @test ContinuumArrays.simplifiable(*, L[:,jr]', D') isa Val{true}
+            @test ContinuumArrays.simplifiable(*, D̃, L[a,jr]) isa Val{true}
+            @test ContinuumArrays.simplifiable(*, L[a,jr]', D̃') isa Val{true}
+        end
     end
 
     @testset "Weak Laplacian" begin
