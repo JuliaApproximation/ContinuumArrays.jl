@@ -32,6 +32,7 @@ include("test_maps.jl")
 
 @testset "DiracDelta" begin
     δ = DiracDelta()
+    @test δ == DiracDelta(0, Inclusion(0))
     @test axes(δ) ≡ (axes(δ,1),) ≡ (Inclusion(0.0),)
     @test size(δ) ≡ (length(δ),) ≡ (1,)
     @test_throws BoundsError δ[1.1]
@@ -39,6 +40,7 @@ include("test_maps.jl")
     @test Base.IndexStyle(δ) ≡ Base.IndexLinear()
 
     δ = DiracDelta(0, -1..3)
+    @test δ == DiracDelta{Float64}(0, -1..3)
     @test axes(δ) ≡ (axes(δ,1),) ≡ (Inclusion(-1..3),)
     @test size(δ) ≡ (length(δ),) ≡ (ℵ₁,)
     @test δ[1.1] ≡ 0.0
@@ -231,6 +233,11 @@ end
             @test H[a,:] \ (D̃ * L[a,:]) == H[a,:] \ (L[a,:]'D̃')' ==  4*(H\(D*L))
             @test_throws DimensionMismatch D * L[a,:]
             @test_throws DimensionMismatch D̃ * L[:,jr]
+
+            @test ContinuumArrays.simplifiable(*, D, L[:,jr]) isa Val{true}
+            @test ContinuumArrays.simplifiable(*, L[:,jr]', D') isa Val{true}
+            @test ContinuumArrays.simplifiable(*, D̃, L[a,jr]) isa Val{true}
+            @test ContinuumArrays.simplifiable(*, L[a,jr]', D̃') isa Val{true}
         end
     end
 
