@@ -217,6 +217,12 @@ end
             H = HeavisideSpline(1:5)
             D = Derivative(axes(L,1))
             @test H \ (D*L[:,[1,3,4]]) == H\(L[:,[1,3,4]]'D')' == (H \ (D*L))[:,[1,3,4]]
+
+            a = affine(0..1, 1..5)
+            D̃ = Derivative(axes(a,1))
+            @test H[a,:] \ (D̃ * L[a,:]) == H[a,:] \ (L[a,:]'D̃')' ==  4*(H\(D*L))
+            @test_throws DimensionMismatch D * L[a,:]
+            @test_throws DimensionMismatch D̃ * L[:,[1,3,4]]
         end
     end
 
