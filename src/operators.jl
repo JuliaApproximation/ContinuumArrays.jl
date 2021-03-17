@@ -114,6 +114,12 @@ end
 
 ^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
 
+
+function view(D::Derivative, kr::Inclusion, jr::Inclusion)
+    @boundscheck axes(D,1) == kr == jr
+    D
+end
+
 # struct Multiplication{T,F,A} <: AbstractQuasiMatrix{T}
 #     f::F
 #     axis::A
