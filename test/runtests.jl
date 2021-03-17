@@ -210,6 +210,14 @@ end
         @test length(fp.args) == 2
         @test fp[1.1] ≈ 1
         @test fp[2.2] ≈ 2
+
+
+        @testset "View derivatives" begin
+            L = LinearSpline(1:5)
+            H = HeavisideSpline(1:5)
+            D = Derivative(axes(L,1))
+            @test H \ (D*L[:,[1,3,4]]) == H\(L[:,[1,3,4]]'D')' == (H \ (D*L))[:,[1,3,4]]
+        end
     end
 
     @testset "Weak Laplacian" begin
