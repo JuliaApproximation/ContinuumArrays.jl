@@ -215,14 +215,22 @@ end
         @testset "View derivatives" begin
             L = LinearSpline(1:5)
             H = HeavisideSpline(1:5)
-            D = Derivative(axes(L,1))
-            @test H \ (D*L[:,[1,3,4]]) == H\(L[:,[1,3,4]]'D')' == (H \ (D*L))[:,[1,3,4]]
+            x = axes(L,1)
+            D = Derivative(x)
+
+            @test view(D, x, x) ≡ D
+            @test_throws BoundsError view(D, Inclusion(0..1), x)
+            jr = [1,3,4]
+            @test H \ (D*L[:,jr]) == H\(L[:,jr]'D')' == (H \ (D*L))[:,jr]
+
+            @test D*L[:,jr]*[1,2,3] == D * L * [1,0,2,3,0]
+            @test L[:,jr]'D'D*L[:,jr] == (L'D'D*L)[jr,jr]
 
             a = affine(0..1, 1..5)
             D̃ = Derivative(axes(a,1))
             @test H[a,:] \ (D̃ * L[a,:]) == H[a,:] \ (L[a,:]'D̃')' ==  4*(H\(D*L))
             @test_throws DimensionMismatch D * L[a,:]
-            @test_throws DimensionMismatch D̃ * L[:,[1,3,4]]
+            @test_throws DimensionMismatch D̃ * L[:,jr]
         end
     end
 

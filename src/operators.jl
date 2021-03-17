@@ -116,7 +116,7 @@ end
 
 
 function view(D::Derivative, kr::Inclusion, jr::Inclusion)
-    @boundscheck axes(D,1) == kr == jr
+    @boundscheck axes(D,1) == kr == jr || throw(BoundsError(D,(kr,jr)))
     D
 end
 
