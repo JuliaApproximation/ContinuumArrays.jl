@@ -68,7 +68,6 @@ end
 DiracDelta{T}(x, axis::A) where {T,A<:AbstractQuasiVector} = DiracDelta{T,A}(x, axis)
 DiracDelta{T}(x, domain) where T = DiracDelta{T}(x, Inclusion(domain))
 DiracDelta(x, domain) = DiracDelta{float(eltype(x))}(x, Inclusion(domain))
-DiracDelta(axis::AbstractQuasiVector) = DiracDelta(zero(float(eltype(axis))), axis)
 DiracDelta(x) = DiracDelta(x, Inclusion(x))
 DiracDelta{T}() where T = DiracDelta(zero(T))
 DiracDelta() = DiracDelta{Float64}()

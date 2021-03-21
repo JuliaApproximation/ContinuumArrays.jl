@@ -189,6 +189,8 @@ end
         f = L*[1,2,4]
 
         D = Derivative(axes(L,1))
+        @test copy(D) == D
+
         @test D*L isa MulQuasiMatrix
         @test length((D*L).args) == 2
         @test eltype(D*L) == Float64
