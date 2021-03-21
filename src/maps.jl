@@ -91,8 +91,9 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(+), x::AbstractAffineQuasiVector,
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), a::Number, x::AbstractAffineQuasiVector) = AffineQuasiVector(-one(eltype(x)), x, a)
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), x::AbstractAffineQuasiVector, b::Number) = AffineQuasiVector(one(eltype(x)), x, -b)
 
-Base.@propagate_inbounds checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::Inclusion{<:Any,<:AbstractInterval}) = QuasiArrays._affine_checkindex(inds, r)
-Base.@propagate_inbounds checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::AbstractAffineQuasiVector) = QuasiArrays._affine_checkindex(inds, r)
+Base.@propagate_inbounds _affine_checkindex(inds, r) = isempty(r) | (checkindex(Bool, inds, Base.to_indices(inds, (first(r),))...) & checkindex(Bool, inds,  Base.to_indices(inds, (last(r),))...))
+Base.@propagate_inbounds checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::Inclusion{<:Any,<:AbstractInterval}) = _affine_checkindex(inds, r)
+Base.@propagate_inbounds checkindex(::Type{Bool}, inds::Inclusion{<:Any,<:AbstractInterval}, r::AbstractAffineQuasiVector) = _affine_checkindex(inds, r)
 
 minimum(d::AbstractAffineQuasiVector) = signbit(d.A) ? last(d) : first(d)
 maximum(d::AbstractAffineQuasiVector) = signbit(d.A) ? first(d) : last(d)
@@ -112,7 +113,7 @@ end
 AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {T,V} =
     AffineMap{promote_type(T,V), typeof(domain),typeof(range)}(domain,range)
 
-measure(x::Inclusion) = last(x)-first(x)
+measure(x::Inclusion{<:Any,<:AbstractInterval}) = last(x)-first(x)
 
 function getproperty(A::AffineMap, d::Symbol)
     domain, range = getfield(A, :domain), getfield(A, :range)
