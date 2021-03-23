@@ -108,3 +108,6 @@ function QuasiArrays._getindex(::Type{IND}, A::HvcatBasis{T}, (x,j)::IND) where 
     J = Int(block(Jj))
     hvcat(A.n, zeros(J-1)..., A.args[J][x, blockindex(Jj)], zeros(length(A.args)-J)...)::T
 end
+
+
+@simplify *(D::Derivative, H::ApplyQuasiMatrix{<:Any,typeof(hcat)}) = hcat((Ref(D) .* H.args)...)

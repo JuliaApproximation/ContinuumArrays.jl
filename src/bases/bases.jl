@@ -139,9 +139,14 @@ grid(T::TransformFactorization) = T.grid
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
-
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
 \(a::TransformFactorization, b::AbstractVector) = a.plan * b
+
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiMatrix{T}) where T = a.iplan \  convert(Array{T}, b[a.grid,:])
+\(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractMatrix) = a.iplan \  b
+\(a::TransformFactorization, b::AbstractMatrix) = a.plan * b
+
 
 function _factorize(::AbstractBasisLayout, L)
     p = grid(L)
