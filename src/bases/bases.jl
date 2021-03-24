@@ -139,9 +139,20 @@ grid(T::TransformFactorization) = T.grid
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
-
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
 \(a::TransformFactorization, b::AbstractVector) = a.plan * b
+
+\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiMatrix{T}) where T = a \  convert(Array{T}, b[a.grid,:])
+\(a::TransformFactorization, b::AbstractQuasiMatrix) = a \ convert(Array, b[a.grid,:])
+function \(a::TransformFactorization, b::AbstractMatrix)
+    c = a \ b[:,1]
+    ret = Array{eltype(c)}(undef, length(c), size(b,2))
+    ret[:,1] = c
+    for k = 2:size(ret,2)
+        ret[:,k] = a \ b[:,k]
+    end
+    ret
+end
 
 function _factorize(::AbstractBasisLayout, L)
     p = grid(L)
@@ -177,11 +188,11 @@ end
 transform_ldiv(A, B, _) = factorize(A) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
 
-copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
-    transform_ldiv(L.A, L.B)
-
-copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
-    transform_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
+# TODO: redesign to use simplifiable(\, A, B)
+copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv(L.A, L.B)
 
 struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
     w::WW
