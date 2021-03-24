@@ -1,5 +1,5 @@
 using ContinuumArrays, BlockArrays, Test
-import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout
+import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints
 
 @testset "ConcatBasis" begin
     @testset "PiecewiseBasis" begin
@@ -8,6 +8,7 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
         S = PiecewiseBasis(S1, S2)
 
         @test S == S
+        @test checkpoints(S) == union(checkpoints(S1), checkpoints(S2))
 
         @test S[0.5,1:4] == [S1[0.5,1:2]; zeros(2)]
         @test S[2.5,1:4] == [zeros(2); S2[2.5,1:2]]

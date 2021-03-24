@@ -188,11 +188,11 @@ end
 transform_ldiv(A, B, _) = factorize(A) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
 
-copy(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiVector}) =
-    transform_ldiv(L.A, L.B)
-
-copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) =
-    transform_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
+# TODO: redesign to use simplifiable(\, A, B)
+copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv(L.A, L.B)
 
 struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
     w::WW
