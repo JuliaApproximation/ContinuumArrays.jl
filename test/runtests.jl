@@ -7,25 +7,37 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
 
 
 @testset "Inclusion" begin
-    x = Inclusion(-1..1)
-    @test eltype(x) == Float64
-    @test x[0.1] ≡ 0.1
-    @test x[0] ≡ x[0.0] ≡ 0.0
+    @testset "basics" begin
+        x = Inclusion(-1..1)
+        @test eltype(x) == Float64
+        @test x[0.1] ≡ 0.1
+        @test x[0] ≡ x[0.0] ≡ 0.0
+    end
 
-    x = Inclusion(-1.0..1)
-    X = QuasiDiagonal(x)
-    @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
-    @test Base.BroadcastStyle(typeof(x)) == LazyQuasiArrayStyle{1}()
-    @test x .* x isa BroadcastQuasiArray
-    @test (x.*x)[0.1] == 0.1^2
+    @testset "broadcast" begin
+        x = Inclusion(-1.0..1)
+        X = QuasiDiagonal(x)
+        @test X[-1:0.1:1,-1:0.1:1] == Diagonal(-1:0.1:1)
+        @test Base.BroadcastStyle(typeof(x)) == LazyQuasiArrayStyle{1}()
+        @test x .* x isa BroadcastQuasiArray
+        @test (x.*x)[0.1] == 0.1^2
 
-    @test exp.(x)[1.0] == exp(1.0)
-    @test exp.(-x)[1.0] == exp(-1.0)
-    @test exp.(x.^2)[1.0] == exp(1.0)
-    @test exp.(-x.^2/(20/2))[1.0] == exp(-1.0^2/(20/2))
+        @test exp.(x)[1.0] == exp(1.0)
+        @test exp.(-x)[1.0] == exp(-1.0)
+        @test exp.(x.^2)[1.0] == exp(1.0)
+        @test exp.(-x.^2/(20/2))[1.0] == exp(-1.0^2/(20/2))
 
-    @test dot(x,x) ≈ 2/3
-    @test norm(x) ≈ sqrt(2/3)
+        @test dot(x,x) ≈ 2/3
+        @test norm(x) ≈ sqrt(2/3)
+    end
+
+    @testset "Derivative" begin
+        x = Inclusion(-1..1)
+        D = Derivative(x)
+        @test D*x ≡ QuasiOnes(x)
+        @test D^2 * x ≡ QuasiZeros(x)
+        @test D*[x D*x] == [D*x D^2*x]
+    end
 end
 
 include("test_maps.jl")
@@ -76,7 +88,7 @@ end
         @test_throws BoundsError H[[0.1,2.1], 1]
         @test MemoryLayout(typeof(H)) == BasisLayout()
         @test ApplyStyle(*, typeof(H), typeof([1,2])) isa MulStyle
-        
+
         f = H*[1,2]
         @test f isa ApplyQuasiArray
         @test axes(f) == (Inclusion(1.0..3.0),)
@@ -496,6 +508,8 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         g = grid(F)
         @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
         @test all(checkpoints(T) .∈ Ref(axes(T,1)))
+
+        @test F \ [exp.(x) cos.(x)] ≈ [F \ exp.(x) F \ cos.(x)]
     end
 
     @testset "Weighted" begin
@@ -535,7 +549,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
             @test 2 ∉ m
             @test 0.1 ∈ mi
             @test -0.1 ∉ mi
-            
+
             @test m[findfirst(isequal(0.1), m)] ≈ 0.1
             @test m[findlast(isequal(0.1), m)] ≈ 0.1
             @test m[findall(isequal(0.1), m)] ≈ [0.1]
