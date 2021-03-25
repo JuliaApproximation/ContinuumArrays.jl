@@ -85,6 +85,12 @@ end
     demap(A)\demap(B)
 end
 
+function copy(P::Ldiv{<:MappedBasisLayouts,<:AbstractLazyLayout})
+    A,B = P.A, P.B
+    demap(A) \ B[invmap(basismap(A))]
+end
+copy(P::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(P.A,P.B))
+
 @inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = apply(\, L.A, ApplyQuasiArray(L.B))
 @inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout}) 
     P = parent(L.A)
