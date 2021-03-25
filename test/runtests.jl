@@ -431,6 +431,11 @@ end
             @test f + g isa Expansion
             @test (f+g)[0.1] ≈ f[0.1] + g[0.1]
         end
+
+        @testset "vec demap" begin
+            @test L[y,:] \ exp.(axes(L,1))[y] ≈ L[y,:] \ exp.(y)
+            @test ContinuumArrays.demap(view(axes(L,1),y)) == axes(L,1)
+        end
     end
 
     @testset "diff" begin
