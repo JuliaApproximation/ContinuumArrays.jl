@@ -433,7 +433,7 @@ end
         end
 
         @testset "vec demap" begin
-            @test L[y,:] \ exp.(axes(L,1))[y] ≈ L[y,:] \ exp.(y)
+            @test L[y,:] \ exp.(axes(L,1))[y] ≈ L[y,:] \ exp.(y) ≈  factorize(L[y,:]) \ exp.(y)
             @test ContinuumArrays.demap(view(axes(L,1),y)) == axes(L,1)
         end
     end
