@@ -344,15 +344,14 @@ sublayout(::MappedWeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVect
 
 demap(x) = x
 demap(x::BroadcastQuasiArray) = BroadcastQuasiArray(x.f, map(demap, arguments(x))...)
-demap(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Slice}}) = parent(V)
-demap(V::SubQuasiArray{<:Any,1,<:Any,<:Tuple{<:AbstractAffineQuasiVector}}) = parent(V)
+demap(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{Any,Slice}}) = parent(V)
+demap(V::SubQuasiArray{<:Any,1}) = parent(V)
 function demap(V::SubQuasiArray{<:Any,2}) 
     kr, jr = parentindices(V)
     demap(parent(V)[kr,:])[:,jr]
 end
 
-basismap(x::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) = parentindices(x)[1]
-basismap(x::SubQuasiArray{<:Any,1,<:Any,<:Tuple{<:AbstractAffineQuasiVector}}) = parentindices(x)[1]
+basismap(x::SubQuasiArray) = parentindices(x)[1]
 basismap(x::BroadcastQuasiArray) = basismap(x.args[1])
 
 
