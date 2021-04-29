@@ -404,6 +404,19 @@ function __sum(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
     first(apply(*, sum(a[1]; dims=1), tail(a)...))
 end
 
+__sum(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(sum(Vm'; dims=(isone(dims) ? 2 : 1)))
+
+# sum is equivalent to hitting by ones(n) on the left or rifght
+function __sum(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiMatrix, d::Int)
+    a = arguments(LAY, V)
+    if d == 1
+        *(sum(first(a); dims=1), tail(a)...)
+    else
+        @assert d == 2
+        *(most(a)..., sum(last(a); dims=2))
+    end
+end
+
 function __sum(::MappedBasisLayouts, V::AbstractQuasiArray, dims)
     kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
