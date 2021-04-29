@@ -347,9 +347,14 @@ end
         B = H[5x .+ 1,:]
         @test sum(B; dims=1) * [1,1,1] == [1]
         @test sum(H[:,1:2]; dims=1) * [1,1] == [2]
+        @test sum(H'; dims=2) == permutedims(sum(H; dims=1))
 
         u = H * randn(3)
         @test sum(u[5x .+ 1]) ≈ sum(view(u,5x .+ 1)) ≈ sum(u)/5
+
+        L = LinearSpline([1,2,3,6])
+        D = Derivative(axes(L,1))
+        @test sum(D*L; dims=1) ≈ sum((D*L)'; dims=2)' ≈ [-1 zeros(1,2) 1]
     end
 
     @testset "Poisson" begin
