@@ -605,4 +605,10 @@ include("test_basisconcat.jl")
     u = L*randn(6)
     rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
     @test rep[1].args == (L.points,u[L.points])
+
+    @testset "padded" begin
+        u = L * Vcat(rand(3), Zeros(3))
+        rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
+        @test rep[1].args == (L.points,u[L.points])
+    end
 end

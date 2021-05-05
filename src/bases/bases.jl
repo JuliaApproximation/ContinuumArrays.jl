@@ -133,7 +133,7 @@ end
 _grid(::MappedBasisLayout, P) = invmap(parentindices(P)[1])[grid(demap(P))]
 _grid(::SubBasisLayout, P) = grid(parent(P))
 _grid(::WeightedBasisLayouts, P) = grid(unweightedbasis(P))
-grid(P) = _grid(MemoryLayout(typeof(P)), P)
+grid(P) = _grid(MemoryLayout(P), P)
 
 
 struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
