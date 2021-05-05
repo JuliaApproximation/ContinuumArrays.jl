@@ -12,12 +12,15 @@ _plotgrid(_, P) = grid(P)
 
 plotgrid(g) = _plotgrid(MemoryLayout(g), g)
 
+_split_svec(x) = (x,)
+_split_svec(x::AbstractArray{<:StaticVector{2}}) = (map(first,x), map(last,x))
+
 @recipe function f(g::AbstractQuasiVector)
     x = plotgrid(g)
-    x,g[x]
+    tuple(_split_svec(x)...,g[x])
 end
 
 @recipe function f(g::AbstractQuasiMatrix)
     x = plotgrid(g)
-    x,g[x,:]
+    tuple(_split_svec(x)...,g[x,:])
 end
