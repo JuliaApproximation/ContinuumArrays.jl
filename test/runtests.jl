@@ -1,4 +1,4 @@
-using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64
+using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64, RecipesBase
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
                         Expansion, basis, invmap, Map, checkpoints
@@ -596,3 +596,13 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
 end
 
 include("test_basisconcat.jl")
+
+@testset "Plotting" begin
+    L = LinearSpline(0:5)
+    rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), L)
+    @test rep[1].args == (L.points,L[L.points,:])
+
+    u = L*randn(6)
+    rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
+    @test rep[1].args == (L.points,u[L.points])
+end

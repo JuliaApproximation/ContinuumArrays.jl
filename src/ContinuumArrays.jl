@@ -1,5 +1,5 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays
+using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays, RecipesBase
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, _maybetail, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
@@ -87,5 +87,7 @@ checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
 include("operators.jl")
 include("bases/bases.jl")
 include("basisconcat.jl")
+
+include("plotting.jl")
 
 end

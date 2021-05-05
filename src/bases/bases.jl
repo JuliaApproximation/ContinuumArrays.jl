@@ -122,6 +122,7 @@ copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQu
 
 # expansion
 _grid(_, P) = error("Overload Grid")
+_grid(lay::ApplyLayout{typeof(*)}, P) = grid(first(arguments(lay,P)))
 _grid(::MappedBasisLayout, P) = invmap(parentindices(P)[1])[grid(demap(P))]
 _grid(::SubBasisLayout, P) = grid(parent(P))
 _grid(::WeightedBasisLayouts, P) = grid(unweightedbasis(P))
