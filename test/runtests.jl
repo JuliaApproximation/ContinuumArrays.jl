@@ -626,6 +626,6 @@ include("test_basisconcat.jl")
         wrep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), v)
         @test wrep[1].args == (grid(wT), v[grid(wT)])
     
-        @test plotgrid(v) == plotgrid(u) == grid(T) == grid(wT) == _plotgrid(MemoryLayout(v),v) == _plotgrid(MemoryLayout(v), v) == _plotgrid(MemoryLayout(u), u)
+        @test plotgrid(v) == plotgrid(u) == grid(T) == grid(wT) == _plotgrid(MemoryLayout(v), v) == _plotgrid(MemoryLayout(u), u)
     end
 end
