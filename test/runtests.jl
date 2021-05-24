@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64, RecipesBase
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        Expansion, basis, invmap, Map, checkpoints
+                        Expansion, basis, invmap, Map, checkpoints, _plotgrid
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -471,7 +471,7 @@ end
 end
 
 """
-This is a simple implementation of Chebyshev for testing. Use OrthogonalPolynomialsQuasi
+This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
 for the real implementation.
 """
 struct Chebyshev <: Basis{Float64}
@@ -610,5 +610,22 @@ include("test_basisconcat.jl")
         u = L * Vcat(rand(3), Zeros(3))
         rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
         @test rep[1].args == (L.points,u[L.points])
+    end
+
+    @testset "Chebyshev and weighted Chebyshev" begin
+        T =  Chebyshev(10)
+        w =  ChebyshevWeight()
+        wT = w .* T
+        x =  axes(T, 1)
+    
+        u = T * Vcat(rand(3), Zeros(7))
+        v = wT * Vcat(rand(3), Zeros(7))
+    
+        rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
+        @test rep[1].args == (grid(T), u[grid(T)])
+        wrep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), v)
+        @test wrep[1].args == (grid(wT), v[grid(wT)])
+    
+        @test plotgrid(v) == plotgrid(u) == grid(T) == grid(wT) == _plotgrid(MemoryLayout(v), v) == _plotgrid(MemoryLayout(u), u)
     end
 end
