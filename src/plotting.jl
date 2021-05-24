@@ -10,6 +10,8 @@ end
 
 _plotgrid(_, P) = grid(P)
 
+_plotgrid(::WeightedBasisLayouts, wP) = plotgrid(unweightedbasis(wP))
+
 plotgrid(g) = _plotgrid(MemoryLayout(g), g)
 
 _split_svec(x) = (x,)
