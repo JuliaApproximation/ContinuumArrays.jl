@@ -391,11 +391,7 @@ end
 # sum
 ####
 
-_sum(V::AbstractQuasiArray, dims) = __sum(MemoryLayout(typeof(V)), V, dims)
-_sum(V::AbstractQuasiArray, ::Colon) = __sum(MemoryLayout(typeof(V)), V, :)
-sum(V::AbstractQuasiArray; dims=:) = _sum(V, dims)
 
-__sum(L, Vm, _) = error("Override for $L")
 function __sum(::SubBasisLayout, Vm, dims) 
     @assert dims == 1
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
@@ -407,16 +403,6 @@ end
 
 __sum(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(sum(Vm'; dims=(isone(dims) ? 2 : 1)))
 
-# sum is equivalent to hitting by ones(n) on the left or rifght
-function __sum(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiMatrix, d::Int)
-    a = arguments(LAY, V)
-    if d == 1
-        *(sum(first(a); dims=1), tail(a)...)
-    else
-        @assert d == 2
-        *(most(a)..., sum(last(a); dims=2))
-    end
-end
 
 function __sum(::MappedBasisLayouts, V::AbstractQuasiArray, dims)
     kr = basismap(V)
