@@ -396,10 +396,6 @@ function __sum(::SubBasisLayout, Vm, dims)
     @assert dims == 1
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
-function __sum(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, ::Colon)
-    a = arguments(LAY, V)
-    first(apply(*, sum(a[1]; dims=1), tail(a)...))
-end
 
 __sum(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(sum(Vm'; dims=(isone(dims) ? 2 : 1)))
 
