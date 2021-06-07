@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, FastTransforms, InfiniteArrays, Test, Base64, RecipesBase
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        Expansion, basis, invmap, Map, checkpoints, _plotgrid
+                        Expansion, basis, invmap, Map, checkpoints, _plotgrid, mul
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -34,6 +34,7 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
     @testset "Derivative" begin
         x = Inclusion(-1..1)
         D = Derivative(x)
+        @test D == Derivative{Float64}(x) == Derivative{Float64}(-1..1)
         @test D*x ≡ QuasiOnes(x)
         @test D^2 * x ≡ QuasiZeros(x)
         @test D*[x D*x] == [D*x D^2*x]
@@ -137,6 +138,7 @@ end
             δ = DiracDelta(1.2,1..3)
             L = LinearSpline([1,2,3])
             @test @inferred(δ'L) ≈ [0.8, 0.2, 0.0]
+            @test δ'f == mul(δ',f) == dot(δ,f) == f[1.2]
 
             @test @inferred(L'L) == SymTridiagonal([1/3,2/3,1/3], [1/6,1/6])
 
