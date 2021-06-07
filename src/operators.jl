@@ -84,8 +84,9 @@ function getindex(δ::DiracDelta{T}, x::Number) where T
 end
 
 
-@simplify *(A::QuasiAdjoint{<:Any,<:DiracDelta}, B::AbstractQuasiVector) = B[parent(A).x]
 @simplify *(A::QuasiAdjoint{<:Any,<:DiracDelta}, B::AbstractQuasiMatrix) = B[parent(A).x,:]
+dot(δ::DiracDelta, B::AbstractQuasiVector) = B[δ.x]
+@simplify *(A::QuasiAdjoint{<:Any,<:DiracDelta}, B::AbstractQuasiVector) = dot(parent(A),B)
 
 show(io::IO, δ::DiracDelta) = print(io, "δ at $(δ.x) over $(axes(δ,1))")
 show(io::IO, ::MIME"text/plain", δ::DiracDelta) = show(io, δ)
@@ -99,7 +100,7 @@ struct Derivative{T,D} <: LazyQuasiMatrix{T}
     axis::Inclusion{T,D}
 end
 
-Derivative{T}(axis::A) where {T,A<:Inclusion} = Derivative{T,A}(axis)
+Derivative{T}(axis::Inclusion{<:Any,D}) where {T,D} = Derivative{T,D}(axis)
 Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
 
 axes(D::Derivative) = (D.axis, D.axis)
