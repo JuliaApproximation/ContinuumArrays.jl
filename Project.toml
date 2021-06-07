@@ -1,6 +1,6 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.7.6"
+version = "0.8"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -27,8 +27,8 @@ IntervalSets = "0.5"
 LazyArrays = "0.21"
 QuasiArrays = "0.6"
 RecipesBase = "1.0"
-StaticArrays = "0.12, 1"
-julia = "1.5"
+StaticArrays = "1.0"
+julia = "1.6"
 
 [extras]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
