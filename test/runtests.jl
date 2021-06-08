@@ -97,13 +97,8 @@ end
         @test f[2.1] ≈ 2
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
-        if VERSION < v"1.6-"
-            @test summary(f) == "(Spline{0,Float64,Array{$Int,1}}) * (2-element Array{$Int,1})"
-            @test stringmime("text/plain", f) == "Spline{0,Float64,Array{$Int,1}} * [1, 2]"
-        else
-            @test summary(f) == "(HeavisideSpline{Float64, Vector{$Int}}) * (2-element Vector{$Int})"
-            @test stringmime("text/plain", f) == "HeavisideSpline{Float64, Vector{$Int}} * [1, 2]"
-        end
+        @test summary(f) == "(HeavisideSpline{Float64, Vector{$Int}}) * (2-element Vector{$Int})"
+        @test stringmime("text/plain", f) == "HeavisideSpline{Float64, Vector{$Int}} * [1, 2]"
     end
 
     @testset "LinearSpline" begin
@@ -457,11 +452,7 @@ end
         H = HeavisideSpline([1,2,3,6])
         B = H[5x .+ 1,:]
         u = H * [1,2,3]
-        if VERSION < v"1.6-"
-            @test stringmime("text/plain", B) == "Spline{0,Float64,Array{$Int,1}} affine mapped to 0..1"
-        else
-            @test stringmime("text/plain", B) == "HeavisideSpline{Float64, Vector{$Int}} affine mapped to 0..1"
-        end
+        @test stringmime("text/plain", B) == "HeavisideSpline{Float64, Vector{$Int}} affine mapped to 0..1"
     end
 end
 
