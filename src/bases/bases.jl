@@ -119,6 +119,9 @@ _broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 
+# ambiguity
+copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
+
 
 # expansion
 _grid(_, P) = error("Overload Grid")
@@ -268,6 +271,9 @@ function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(*), a::Expansion, f::Exp
 end
 
 
+_function_mult_broadcasted(_, _, a, B) = Base.Broadcast.Broadcasted{LazyQuasiArrayStyle{2}}(*, (a, B))
+broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion, B::AbstractQuasiMatrix) = _function_mult_broadcasted(MemoryLayout(a), MemoryLayout(B), a, B)
+
 @eval function ==(f::Expansion, g::Expansion)
     S,c = arguments(f)
     T,d = arguments(g)
@@ -351,6 +357,11 @@ function demap(V::SubQuasiArray{<:Any,2})
     kr, jr = parentindices(V)
     demap(parent(V)[kr,:])[:,jr]
 end
+function demap(wB::ApplyQuasiArray{<:Any,typeof(*)})
+    a = arguments(wB)
+    *(demap(first(a)), tail(a)...)
+end
+
 
 basismap(x::SubQuasiArray) = parentindices(x)[1]
 basismap(x::BroadcastQuasiArray) = basismap(x.args[1])
