@@ -362,7 +362,7 @@ function demap(V::SubQuasiArray{<:Any,2})
     kr, jr = parentindices(V)
     demap(parent(V)[kr,:])[:,jr]
 end
-function demap(wB::ApplyQuasiArray{<:Any,typeof(*)})
+function demap(wB::ApplyQuasiArray{<:Any,N,typeof(*)}) where N
     a = arguments(wB)
     *(demap(first(a)), tail(a)...)
 end

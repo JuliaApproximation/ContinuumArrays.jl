@@ -440,6 +440,10 @@ end
 
             @test L[y,:] \ (y .* exp.(y)) ≈ L[y,:] \ BroadcastQuasiVector(y -> y*exp(y), y)
             @test L[y,:] \ (y .* L[y,1:3]) ≈ [L[y,:]\(y .* L[y,1]) L[y,:]\(y .* L[y,2]) L[y,:]\(y .* L[y,3])]
+
+            c = randn(size(L,2))
+            @test L[y,:] \ (L[y,:] * c) ≈ c
+            @test ContinuumArrays.demap(L[y,:] * c) == L*c
         end
     end
 
