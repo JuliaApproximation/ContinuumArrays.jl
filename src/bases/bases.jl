@@ -89,7 +89,8 @@ function copy(P::Ldiv{<:MappedBasisLayouts,<:AbstractLazyLayout})
     A,B = P.A, P.B
     demap(A) \ B[invmap(basismap(A))]
 end
-copy(P::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(P.A,P.B))
+copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A,L.B))
+copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = apply(\, L.A, ApplyQuasiArray(L.B))
 @inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout}) 
@@ -110,7 +111,7 @@ end
     a,b = arguments(B)
     @assert a isa AbstractQuasiVector # Only works for vec .* mat
     ab = (A * (A \ a)) .* b # broadcasted should be overloaded
-    MemoryLayout(ab) isa BroadcastLayout && error("Overload broadcasted(_, ::typeof(*), ::$(typeof(ab.args[1])), ::$(typeof(b)))")
+    # MemoryLayout(ab) isa BroadcastLayout && error("Overload broadcasted(_, ::typeof(*), ::$(typeof(ab.args[1])), ::$(typeof(b)))")
     A \ ab
 end
 
