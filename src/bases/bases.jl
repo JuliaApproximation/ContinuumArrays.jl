@@ -111,7 +111,7 @@ end
     a,b = arguments(B)
     @assert a isa AbstractQuasiVector # Only works for vec .* mat
     ab = (A * (A \ a)) .* b # broadcasted should be overloaded
-    # MemoryLayout(ab) isa BroadcastLayout && error("Overload broadcasted(_, ::typeof(*), ::$(typeof(ab.args[1])), ::$(typeof(b)))")
+    MemoryLayout(ab) isa BroadcastLayout && return transform_ldiv(A, ab)
     A \ ab
 end
 
@@ -177,6 +177,7 @@ struct ProjectionFactorization{T, FAC<:Factorization{T}, INDS} <: Factorization{
 end
 
 \(a::ProjectionFactorization, b::AbstractQuasiVector) = (a.F \ b)[a.inds]
+\(a::ProjectionFactorization, b::AbstractQuasiMatrix) = (a.F \ b)[a.inds,:]
 \(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
 
 _factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), parentindices(L)[2])
@@ -188,6 +189,8 @@ end
 
 \(a::MappedFactorization, b::AbstractQuasiVector) = a.F \ view(b, a.map)
 \(a::MappedFactorization, b::AbstractVector) = a.F \ b
+\(a::MappedFactorization, b::AbstractQuasiMatrix) = a.F \ view(b, a.map, :)
+
 
 function invmap end
 

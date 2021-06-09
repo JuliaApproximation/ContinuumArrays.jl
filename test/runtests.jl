@@ -439,7 +439,7 @@ end
             @test ContinuumArrays.demap(view(axes(L,1),y)) == axes(L,1)
 
             @test L[y,:] \ (y .* exp.(y)) ≈ L[y,:] \ BroadcastQuasiVector(y -> y*exp(y), y)
-            @ent L[y,:] \ (y .* L[y,:])
+            @test L[y,:] \ (y .* L[y,1:3]) ≈ [L[y,:]\(y .* L[y,1]) L[y,:]\(y .* L[y,2]) L[y,:]\(y .* L[y,3])]
         end
     end
 
