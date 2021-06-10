@@ -89,7 +89,8 @@ function copy(P::Ldiv{<:MappedBasisLayouts,<:AbstractLazyLayout})
     A,B = P.A, P.B
     demap(A) \ B[invmap(basismap(A))]
 end
-copy(P::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(P.A,P.B))
+copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A,L.B))
+copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = apply(\, L.A, ApplyQuasiArray(L.B))
 @inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout}) 
@@ -110,7 +111,7 @@ end
     a,b = arguments(B)
     @assert a isa AbstractQuasiVector # Only works for vec .* mat
     ab = (A * (A \ a)) .* b # broadcasted should be overloaded
-    MemoryLayout(ab) isa BroadcastLayout && error("Overload broadcasted(_, ::typeof(*), ::$(typeof(ab.args[1])), ::$(typeof(b)))")
+    MemoryLayout(ab) isa BroadcastLayout && return transform_ldiv(A, ab)
     A \ ab
 end
 
@@ -118,6 +119,10 @@ _broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
+
+# ambiguity
+copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
+copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 
 
 # expansion
@@ -172,6 +177,7 @@ struct ProjectionFactorization{T, FAC<:Factorization{T}, INDS} <: Factorization{
 end
 
 \(a::ProjectionFactorization, b::AbstractQuasiVector) = (a.F \ b)[a.inds]
+\(a::ProjectionFactorization, b::AbstractQuasiMatrix) = (a.F \ b)[a.inds,:]
 \(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
 
 _factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), parentindices(L)[2])
@@ -183,6 +189,8 @@ end
 
 \(a::MappedFactorization, b::AbstractQuasiVector) = a.F \ view(b, a.map)
 \(a::MappedFactorization, b::AbstractVector) = a.F \ b
+\(a::MappedFactorization, b::AbstractQuasiMatrix) = a.F \ view(b, a.map, :)
+
 
 function invmap end
 
@@ -268,6 +276,9 @@ function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(*), a::Expansion, f::Exp
 end
 
 
+_function_mult_broadcasted(_, _, a, B) = Base.Broadcast.Broadcasted{LazyQuasiArrayStyle{2}}(*, (a, B))
+broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion, B::AbstractQuasiMatrix) = _function_mult_broadcasted(MemoryLayout(a), MemoryLayout(B), a, B)
+
 @eval function ==(f::Expansion, g::Expansion)
     S,c = arguments(f)
     T,d = arguments(g)
@@ -351,6 +362,11 @@ function demap(V::SubQuasiArray{<:Any,2})
     kr, jr = parentindices(V)
     demap(parent(V)[kr,:])[:,jr]
 end
+function demap(wB::ApplyQuasiArray{<:Any,N,typeof(*)}) where N
+    a = arguments(wB)
+    *(demap(first(a)), tail(a)...)
+end
+
 
 basismap(x::SubQuasiArray) = parentindices(x)[1]
 basismap(x::BroadcastQuasiArray) = basismap(x.args[1])

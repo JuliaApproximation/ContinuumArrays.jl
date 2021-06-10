@@ -97,13 +97,8 @@ end
         @test f[2.1] ≈ 2
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
-        if VERSION < v"1.6-"
-            @test summary(f) == "(Spline{0,Float64,Array{$Int,1}}) * (2-element Array{$Int,1})"
-            @test stringmime("text/plain", f) == "Spline{0,Float64,Array{$Int,1}} * [1, 2]"
-        else
-            @test summary(f) == "(HeavisideSpline{Float64, Vector{$Int}}) * (2-element Vector{$Int})"
-            @test stringmime("text/plain", f) == "HeavisideSpline{Float64, Vector{$Int}} * [1, 2]"
-        end
+        @test summary(f) == "(HeavisideSpline{Float64, Vector{$Int}}) * (2-element Vector{$Int})"
+        @test stringmime("text/plain", f) == "HeavisideSpline{Float64, Vector{$Int}} * [1, 2]"
     end
 
     @testset "LinearSpline" begin
@@ -442,6 +437,13 @@ end
         @testset "vec demap" begin
             @test L[y,:] \ exp.(axes(L,1))[y] ≈ L[y,:] \ exp.(y) ≈  factorize(L[y,:]) \ exp.(y)
             @test ContinuumArrays.demap(view(axes(L,1),y)) == axes(L,1)
+
+            @test L[y,:] \ (y .* exp.(y)) ≈ L[y,:] \ BroadcastQuasiVector(y -> y*exp(y), y)
+            @test L[y,:] \ (y .* L[y,1:3]) ≈ [L[y,:]\(y .* L[y,1]) L[y,:]\(y .* L[y,2]) L[y,:]\(y .* L[y,3])]
+
+            c = randn(size(L,2))
+            @test L[y,:] \ (L[y,:] * c) ≈ c
+            @test ContinuumArrays.demap(L[y,:] * c) == L*c
         end
     end
 
@@ -457,11 +459,7 @@ end
         H = HeavisideSpline([1,2,3,6])
         B = H[5x .+ 1,:]
         u = H * [1,2,3]
-        if VERSION < v"1.6-"
-            @test stringmime("text/plain", B) == "Spline{0,Float64,Array{$Int,1}} affine mapped to 0..1"
-        else
-            @test stringmime("text/plain", B) == "HeavisideSpline{Float64, Vector{$Int}} affine mapped to 0..1"
-        end
+        @test stringmime("text/plain", B) == "HeavisideSpline{Float64, Vector{$Int}} affine mapped to 0..1"
     end
 end
 
