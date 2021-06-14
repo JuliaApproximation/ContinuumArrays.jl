@@ -115,6 +115,10 @@ end
     A \ ab
 end
 
+function _broadcast_mul_ldiv(::Tuple{ScalarLayout,Any}, A, B)
+    a,b = arguments(B)
+    a * (A \ b)
+end
 _broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
@@ -208,6 +212,7 @@ copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
 struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
     w::WW
