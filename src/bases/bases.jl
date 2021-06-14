@@ -119,6 +119,9 @@ function _broadcast_mul_ldiv(::Tuple{ScalarLayout,Any}, A, B)
     a,b = arguments(B)
     a * (A \ b)
 end
+
+_broadcast_mul_ldiv(::Tuple{ScalarLayout,AbstractBasisLayout}, A, B) =
+    _broadcast_mul_ldiv((ScalarLayout(),UnknownLayout()), A, B)
 _broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)

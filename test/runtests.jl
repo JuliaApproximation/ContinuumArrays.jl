@@ -470,6 +470,11 @@ end
     @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
 end
 
+@testset "A \ ( c .* B) == c .* (A\B) #101" begin
+    L = LinearSpline(0:5)
+    @test L \ (2L) == 2(L\L)
+end
+
 """
 This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
 for the real implementation.
