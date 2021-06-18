@@ -204,7 +204,7 @@ function _factorize(::MappedBasisLayout, L)
     MappedFactorization(factorize(view(P,:,jr)), invmap(parentindices(L)[1]))
 end
 
-transform_ldiv(A, B, _) = factorize(A) \ B
+transform_ldiv(A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}, _) where {T,V} = factorize(convert(AbstractQuasiArray{promote_type(T,V)}, A)) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
