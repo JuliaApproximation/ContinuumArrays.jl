@@ -334,6 +334,8 @@ end
             x = axes(L,1)
             @test L[0.123,:]'* (L \ exp.(x)) ≈ exp(0.123) atol=1E-9
             @test L[0.123,2:end-1]'* (L[:,2:end-1] \ exp.(x)) ≈ exp(0.123) atol=1E-9
+
+            @test L \ zeros(x) ≡ Zeros(3)
         end
     end
 
