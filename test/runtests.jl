@@ -334,6 +334,8 @@ end
             x = axes(L,1)
             @test L[0.123,:]'* (L \ exp.(x)) ≈ exp(0.123) atol=1E-9
             @test L[0.123,2:end-1]'* (L[:,2:end-1] \ exp.(x)) ≈ exp(0.123) atol=1E-9
+
+            @test L \ zeros(x) ≡ Zeros(10_000)
         end
     end
 
@@ -468,6 +470,11 @@ end
     K = x .- x'
     @test K[0.1,0.2] == K[Inclusion(0..0.5), Inclusion(0..0.5)][0.1,0.2] == 0.1 - 0.2
     @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
+end
+
+@testset "A \\ ( c .* B) == c .* (A\\B) #101" begin
+    L = LinearSpline(0:5)
+    @test L \ (2L) == 2(L\L)
 end
 
 """

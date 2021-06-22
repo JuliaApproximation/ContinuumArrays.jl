@@ -115,6 +115,13 @@ end
     A \ ab
 end
 
+function _broadcast_mul_ldiv(::Tuple{ScalarLayout,Any}, A, B)
+    a,b = arguments(B)
+    a * (A \ b)
+end
+
+_broadcast_mul_ldiv(::Tuple{ScalarLayout,AbstractBasisLayout}, A, B) =
+    _broadcast_mul_ldiv((ScalarLayout(),UnknownLayout()), A, B)
 _broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
@@ -200,7 +207,7 @@ function _factorize(::MappedBasisLayout, L)
     MappedFactorization(factorize(view(P,:,jr)), invmap(parentindices(L)[1]))
 end
 
-transform_ldiv(A, B, _) = factorize(A) \ B
+transform_ldiv(A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}, _) where {T,V} = factorize(convert(AbstractQuasiArray{promote_type(T,V)}, A)) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
@@ -208,6 +215,7 @@ copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
 struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
     w::WW
