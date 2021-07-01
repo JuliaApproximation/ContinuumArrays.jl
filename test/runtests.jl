@@ -634,5 +634,7 @@ include("test_basisconcat.jl")
         @test wrep[1].args == (grid(wT), v[grid(wT)])
     
         @test plotgrid(v) == plotgrid(u) == grid(T) == grid(wT) == _plotgrid(MemoryLayout(v), v) == _plotgrid(MemoryLayout(u), u)
+        y = affine(0..1, x)
+        @test plotgrid(T[y,:]) == (plotgrid(T) .+ 1)/2
     end
 end
