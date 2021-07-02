@@ -25,6 +25,9 @@ import ContinuumArrays: AffineQuasiVector
         @test_throws BoundsError y[Inclusion(0..2)]
 
         @test y == y
+
+        @test x == affine(x,x)
+        @test affine(x,x) == x
     end
 
     @testset "find" begin
