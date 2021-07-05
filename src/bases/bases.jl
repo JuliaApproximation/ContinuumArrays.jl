@@ -59,6 +59,8 @@ end
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
     transform_ldiv(L.A, L.B)
+@inline copy(L::Ldiv{Lay,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) where Lay<:MappedBasisLayouts =
+        copy(Ldiv{Lay,LazyLayout}(L.A,L.B))
 
 @inline function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
     a,b = arguments(L.B)
@@ -85,7 +87,7 @@ end
     demap(A)\demap(B)
 end
 
-function copy(P::Ldiv{<:MappedBasisLayouts,<:AbstractLazyLayout})
+function copy(P::Ldiv{<:MappedBasisLayouts,<:AbstractLazyLayout,<:Any,<:AbstractQuasiVector})
     A,B = P.A, P.B
     demap(A) \ B[invmap(basismap(A))]
 end

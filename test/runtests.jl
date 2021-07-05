@@ -447,6 +447,10 @@ end
             @test L[y,:] \ (L[y,:] * c) ≈ c
             @test ContinuumArrays.demap(L[y,:] * c) == L*c
         end
+
+        @testset "Mapped and BroadcastLayout{typeof(+)}" begin
+            @test L[y,:] \ (y .+ y) ≈ L[y,:] \ (2y)
+        end
     end
 
     @testset "diff" begin

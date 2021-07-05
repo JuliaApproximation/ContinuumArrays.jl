@@ -73,6 +73,8 @@ copy(A::AbstractAffineQuasiVector) = A
 inbounds_getindex(A::AbstractAffineQuasiVector{<:Any,<:Any,<:Inclusion}, k::Number) = A.A*k .+ A.b
 isempty(A::AbstractAffineQuasiVector) = isempty(A.x)
 ==(a::AbstractAffineQuasiVector, b::AbstractAffineQuasiVector) = a.A == b.A && a.x == b.x && a.b == b.b
+==(a::AbstractAffineQuasiVector, b::Inclusion) =  a == affine(b,b)
+==(a::Inclusion, b::AbstractAffineQuasiVector) =  affine(a,a) == b
 
 BroadcastStyle(::Type{<:AbstractAffineQuasiVector}) = LazyQuasiArrayStyle{1}()
 
@@ -100,7 +102,6 @@ maximum(d::AbstractAffineQuasiVector) = signbit(d.A) ? first(d) : last(d)
 
 union(d::AbstractAffineQuasiVector) = Inclusion(minimum(d)..maximum(d))
 invmap(d::AbstractAffineQuasiVector) = affine(union(d), axes(d,1))
-
 
 
 
