@@ -60,7 +60,7 @@ end
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
     transform_ldiv(L.A, L.B)
 for op in (:+, :-)
-    @eval @inline copy(L::Ldiv{Lay,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) where Lay<:MappedBasisLayouts =
+    @eval @inline copy(L::Ldiv{Lay,BroadcastLayout{typeof($op)},<:Any,<:AbstractQuasiVector}) where Lay<:MappedBasisLayouts =
         copy(Ldiv{Lay,LazyLayout}(L.A,L.B))
 end
 
