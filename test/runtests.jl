@@ -450,6 +450,7 @@ end
 
         @testset "Mapped and BroadcastLayout{typeof(+)}" begin
             @test L[y,:] \ (y .+ y) ≈ L[y,:] \ (2y)
+            @test L[y,:] \ (y .- y) ≈ zeros(10)
         end
     end
 
