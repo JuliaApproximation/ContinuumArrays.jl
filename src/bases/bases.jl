@@ -337,7 +337,7 @@ _der_sub(DP, inds...) = DP[inds...]
 _der_sub(DP::ApplyQuasiMatrix{T,typeof(*),<:Tuple{Derivative,Any}}, kr, jr) where T = ApplyQuasiMatrix{T}(*, DP.args[1], view(DP.args[2], kr, jr))
 
 # need to customise simplifiable so can't use @simplify
-simplifiable(::typeof(*), A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})= simplifiable(*, A, parent(B))
+simplifiable(::typeof(*), A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})= simplifiable(*, Derivative(axes(parent(B),1)), parent(B))
 simplifiable(::typeof(*), Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = simplifiable(*, Bc', Ac')
 function mul(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
@@ -346,7 +346,7 @@ function mul(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tup
 end
 mul(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = mul(Bc', Ac')'
 
-simplifiable(::typeof(*), A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) = simplifiable(*, A, parent(B))
+simplifiable(::typeof(*), A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) = simplifiable(*, Derivative(axes(parent(B),1)), parent(B))
 simplifiable(::typeof(*), Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = simplifiable(*, Bc', Ac')
 function mul(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
