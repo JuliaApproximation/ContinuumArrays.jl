@@ -176,7 +176,7 @@ TransformFactorization{T}(grid, ::Nothing, iplan) where T = TransformFactorizati
     TransformFactorization(grid, nothing, iplan)
 
 associates a planned inverse transform with a grid. That is, if `F` is a `TransformFactorization`, then
-`F \\ f` is equivalent to `F.iplan \ f[F.grid]`.
+`F \\ f` is equivalent to `F.iplan \\ f[F.grid]`.
 """
 TransformFactorization(grid, ::Nothing, iplan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(iplan))}(grid, nothing, iplan)
 
@@ -209,7 +209,7 @@ end
     ProjectionFactorization(F, inds)
 
 projects a factorization to a subset of coefficients. That is, if `P` is a `ProjectionFactorization`
-then `P \ f` is equivalent to `(F \ f)[inds]`
+then `P \\ f` is equivalent to `(F \\ f)[inds]`
 """
 struct ProjectionFactorization{T, FAC<:Factorization{T}, INDS} <: Factorization{T}
     F::FAC
@@ -227,7 +227,7 @@ _factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), 
     MappedFactorization(F, map)
 
 remaps a factorization to a different domain. That is, if `M` is a `MappedFactorization`
-then `M \ f` is equivalent to `F \ f[map]`
+then `M \\ f` is equivalent to `F \\ f[map]`
 """
 struct MappedFactorization{T, FAC<:Factorization{T}, MAP} <: Factorization{T}
     F::FAC
