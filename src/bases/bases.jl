@@ -160,10 +160,24 @@ struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
 end
 
 TransformFactorization{T}(grid, plan) where T = TransformFactorization{T,typeof(grid),typeof(plan),Nothing}(grid, plan, nothing)
+
+"""
+    TransformFactorization(grid, plan)
+
+associates a planned transform with a grid. That is, if `F` is a `TransformFactorization`, then
+`F \\ f` is equivalent to `F.plan * f[F.grid]`.
+"""
 TransformFactorization(grid, plan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(plan))}(grid, plan)
 
 
 TransformFactorization{T}(grid, ::Nothing, iplan) where T = TransformFactorization{T,typeof(grid),Nothing,typeof(iplan)}(grid, nothing, iplan)
+
+"""
+    TransformFactorization(grid, nothing, iplan)
+
+associates a planned inverse transform with a grid. That is, if `F` is a `TransformFactorization`, then
+`F \\ f` is equivalent to `F.iplan \ f[F.grid]`.
+"""
 TransformFactorization(grid, ::Nothing, iplan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(iplan))}(grid, nothing, iplan)
 
 grid(T::TransformFactorization) = T.grid    
@@ -190,6 +204,13 @@ function _factorize(::AbstractBasisLayout, L)
     TransformFactorization(p, nothing, factorize(L[p,:]))
 end
 
+
+"""
+    ProjectionFactorization(F, inds)
+
+projects a factorization to a subset of coefficients. That is, if `P` is a `ProjectionFactorization`
+then `P \ f` is equivalent to `(F \ f)[inds]`
+"""
 struct ProjectionFactorization{T, FAC<:Factorization{T}, INDS} <: Factorization{T}
     F::FAC
     inds::INDS
@@ -201,6 +222,13 @@ end
 
 _factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), parentindices(L)[2])
 
+
+"""
+    MappedFactorization(F, map)
+
+remaps a factorization to a different domain. That is, if `M` is a `MappedFactorization`
+then `M \ f` is equivalent to `F \ f[map]`
+"""
 struct MappedFactorization{T, FAC<:Factorization{T}, MAP} <: Factorization{T}
     F::FAC
     map::MAP
@@ -229,6 +257,11 @@ copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownL
 copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
+"""
+    WeightedFactorization(w, F)
+
+weights a factorization `F` by `w`. 
+"""
 struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
     w::WW
     F::FAC
