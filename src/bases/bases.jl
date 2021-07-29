@@ -261,7 +261,7 @@ copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiV
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Ldiv{<:AbstractBasisLayout,<:BroadcastLayout}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,QuasiArrayLayout}) = transform_ldiv(L.A, L.B)
-copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = ApplyQuasiArray(L)
+copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = ApplyQuasiArray(\, L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
 """
