@@ -141,6 +141,7 @@ end
                 @test 2f == f*2 == 2 .* f == f .* 2
                 @test 2\f == f/2 == 2 .\ f == f ./ 2
                 @test sum(f) ≈ 4.5
+                @test L \ BroadcastQuasiArray(*,2,f) ≈ [2,4,8]
             end
         end
 
