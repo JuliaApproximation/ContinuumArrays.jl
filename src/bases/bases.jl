@@ -103,6 +103,9 @@ copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVe
     layout_getindex(apply(\, P, L.B), jr, :) # avoid sparse arrays
 end
 
+# default to transform for expanding weights
+copy(L::Ldiv{<:AbstractBasisLayout,WeightLayout}) = transform_ldiv(L.A, L.B)
+
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
     @eval ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2}) =
