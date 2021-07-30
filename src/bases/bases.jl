@@ -263,7 +263,9 @@ copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 # A BroadcastLayout of unknown function is only knowable pointwise
-copy(L::Ldiv{<:AbstractBasisLayout,<:BroadcastLayout}) = transform_ldiv(L.A, L.B)
+transform_ldiv_if_columns(A, B, _) = ApplyQuasiArray(\, A, B)
+transform_ldiv_if_columns(A, B, ::Base.OneTo) = transform_ldiv(A,B)
+copy(L::Ldiv{<:AbstractBasisLayout,<:BroadcastLayout}) = transform_ldiv_if_columns(L.A, L.B, axes(L.B,2))
 # Inclusion are QuasiArrayLayout
 copy(L::Ldiv{<:AbstractBasisLayout,QuasiArrayLayout}) = transform_ldiv(L.A, L.B)
 # Otherwise keep lazy to support, e.g., U\D*T
