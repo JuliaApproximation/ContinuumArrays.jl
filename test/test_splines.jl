@@ -410,7 +410,7 @@ using ContinuumArrays, LinearAlgebra, Test
         @test L \ (2L) == 2(L\L)
     end
 
-    @testset "H\D*L" begin
+    @testset "H\\D*L" begin
         L = LinearSpline(0:5)
         H = HeavisideSpline(L)
         x = axes(L,1)
