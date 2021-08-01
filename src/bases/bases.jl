@@ -57,7 +57,7 @@ end
 
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
-@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) = 
+@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) =
     transform_ldiv(L.A, L.B)
 for op in (:+, :-)
     @eval @inline copy(L::Ldiv{Lay,BroadcastLayout{typeof($op)},<:Any,<:AbstractQuasiVector}) where Lay<:MappedBasisLayouts =
@@ -75,7 +75,7 @@ end
 @inline function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
     A, B = P.A, P.B
     A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
-    SquareEye{eltype(eltype(P))}((axes(A,2),)) # use double eltype for array-valued 
+    SquareEye{eltype(eltype(P))}((axes(A,2),)) # use double eltype for array-valued
 end
 @inline function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
     A, B = P.A, P.B
@@ -97,11 +97,14 @@ copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLa
 copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = apply(\, L.A, ApplyQuasiArray(L.B))
-@inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout}) 
+@inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout})
     P = parent(L.A)
     kr, jr = parentindices(L.A)
     layout_getindex(apply(\, P, L.B), jr, :) # avoid sparse arrays
 end
+
+# default to transform for expanding weights
+copy(L::Ldiv{<:AbstractBasisLayout,WeightLayout}) = transform_ldiv(L.A, L.B)
 
 
 for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
@@ -185,7 +188,7 @@ associates a planned inverse transform with a grid. That is, if `F` is a `Transf
 """
 TransformFactorization(grid, ::Nothing, iplan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(iplan))}(grid, nothing, iplan)
 
-grid(T::TransformFactorization) = T.grid    
+grid(T::TransformFactorization) = T.grid
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
@@ -259,13 +262,20 @@ copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 # TODO: redesign to use simplifiable(\, A, B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
-copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv(L.A, L.B)
+# A BroadcastLayout of unknown function is only knowable pointwise
+transform_ldiv_if_columns(A, B, _) = ApplyQuasiArray(\, A, B)
+transform_ldiv_if_columns(A, B, ::Base.OneTo) = transform_ldiv(A,B)
+copy(L::Ldiv{<:AbstractBasisLayout,<:BroadcastLayout}) = transform_ldiv_if_columns(L.A, L.B, axes(L.B,2))
+# Inclusion are QuasiArrayLayout
+copy(L::Ldiv{<:AbstractBasisLayout,QuasiArrayLayout}) = transform_ldiv(L.A, L.B)
+# Otherwise keep lazy to support, e.g., U\D*T
+copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = ApplyQuasiArray(\, L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
 """
     WeightedFactorization(w, F)
 
-weights a factorization `F` by `w`. 
+weights a factorization `F` by `w`.
 """
 struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
     w::WW
@@ -416,7 +426,7 @@ demap(x) = x
 demap(x::BroadcastQuasiArray) = BroadcastQuasiArray(x.f, map(demap, arguments(x))...)
 demap(V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{Any,Slice}}) = parent(V)
 demap(V::SubQuasiArray{<:Any,1}) = parent(V)
-function demap(V::SubQuasiArray{<:Any,2}) 
+function demap(V::SubQuasiArray{<:Any,2})
     kr, jr = parentindices(V)
     demap(parent(V)[kr,:])[:,jr]
 end
@@ -466,7 +476,7 @@ end
 ####
 
 
-function __sum(::SubBasisLayout, Vm, dims) 
+function __sum(::SubBasisLayout, Vm, dims)
     @assert dims == 1
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end

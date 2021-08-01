@@ -1,5 +1,5 @@
 using ContinuumArrays, BlockArrays, Test
-import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints
+import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain
 
 @testset "ConcatBasis" begin
     @testset "PiecewiseBasis" begin
@@ -30,6 +30,10 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
             Sv = PiecewiseBasis([S1,S2])
             @test axes(Sv,2) isa BlockedUnitRange
             @test Sv[0.5,1:4] == S[0.5,1:4]
+        end
+
+        @testset "UnionDomain with point checkpoints" begin
+            @test 0 ∈ checkpoints(UnionDomain(0, 1..2))
         end
     end
 

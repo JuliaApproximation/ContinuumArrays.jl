@@ -7,6 +7,7 @@ const LinearSpline = Spline{1}
 const HeavisideSpline = Spline{0}
 
 Spline{o}(pts::AbstractVector{T}) where {o,T} = Spline{o,float(T)}(pts)
+Spline{o}(S::Spline) where {o} = Spline{o}(S.points)
 
 axes(B::Spline{o}) where o =
     (Inclusion(first(B.points)..last(B.points)), OneTo(length(B.points)+o-1))

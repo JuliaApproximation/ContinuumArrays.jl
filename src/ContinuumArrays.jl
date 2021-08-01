@@ -15,7 +15,7 @@ import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange,
 import FillArrays: AbstractFill, getindex_value, SquareEye
 import ArrayLayouts: mul, ZerosLayout, ScalarLayout
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
-                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
+                    QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize,
                     AbstractQuasiFill, UnionDomain, __sum
@@ -78,6 +78,7 @@ end
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractArray{<:BlockIndex{1}}, Vararg{Any}}) =
     (inds[1][I[1]], to_indices(A, _maybetail(inds), tail(I))...)    
 
+checkpoints(x::Number) = x
 checkpoints(d::AbstractInterval{T}) where T = width(d) .* SVector{3,float(T)}(0.823972,0.01,0.3273484) .+ leftendpoint(d)
 checkpoints(d::UnionDomain) = mapreduce(checkpoints,union,d.domains)
 checkpoints(x::Inclusion) = checkpoints(x.domain)
