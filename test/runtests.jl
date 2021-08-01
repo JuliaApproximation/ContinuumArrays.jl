@@ -70,6 +70,11 @@ end
     K = x .- x'
     @test K[0.1,0.2] == K[Inclusion(0..0.5), Inclusion(0..0.5)][0.1,0.2] == 0.1 - 0.2
     @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
+
+    L = LinearSpline(0:0.1:1)
+    @test_broken L\K isa ApplyQuasiArray # broken since it assumes non-broadcasting
+    @test L \ exp.(K) isa ApplyQuasiArray
+    
 end
 
 include("test_splines.jl")
