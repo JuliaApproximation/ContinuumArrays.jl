@@ -6,6 +6,8 @@ with modified axes.
 """
 abstract type AbstractConcatBasis{T} <: Basis{T} end
 
+copy(S::AbstractConcatBasis) = S
+
 @simplify function *(D::Derivative, S::AbstractConcatBasis)
     axes(D,2) == axes(S,1) || throw(DimensionMismatch())
     args = arguments.(Ref(ApplyLayout{typeof(*)}()), Derivative.(axes.(S.args,1)) .* S.args)
