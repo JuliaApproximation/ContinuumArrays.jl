@@ -7,7 +7,7 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
         S2 = LinearSpline(2:3)
         S = PiecewiseBasis(S1, S2)
 
-        @test S == S
+        @test S == S == copy(S)
         @test checkpoints(S) == union(checkpoints(S1), checkpoints(S2))
 
         @test S[0.5,1:4] == [S1[0.5,1:2]; zeros(2)]
