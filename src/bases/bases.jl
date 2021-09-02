@@ -125,7 +125,7 @@ end
 @inline function _broadcast_mul_ldiv(::Tuple{Any,ApplyLayout{typeof(*)}}, A, B)
     a,b = arguments(B)
     @assert a isa AbstractQuasiVector # Only works for vec .* mat
-    args = arguments(ApplyLayout{typeof(*)}(), b)
+    args = arguments(*, b)
     *(A \ (a .* first(args)), tail(args)...)
 end
 
