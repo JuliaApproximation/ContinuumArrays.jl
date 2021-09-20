@@ -97,16 +97,25 @@ using ContinuumArrays, LinearAlgebra, Test
 
         @testset "+" begin
             L = LinearSpline([1,2,3])
-            b = L*[3,4,5] + L*[1.,2,3]
+            b = @inferred(L*[3,4,5] + L*[1.,2,3])
             @test ApplyStyle(\, typeof(L), typeof(b)) == LdivStyle()
             @test (L\b) == [4,6,8]
             B = BroadcastQuasiArray(+, L, L)
             @test L\B == 2Eye(3)
 
+            @test L*[3,4,5] + L*[1.,2,3] + L*[4,5,6] == @inferred(broadcast(+, L*[3,4,5], L*[1.,2,3], L*[4,5,6])) == L*[8,11,14]
+
             b = L*[3,4,5] - L*[1.,2,3]
             @test (L\b) == [2,2,2]
             B = BroadcastQuasiArray(-, L, L)
             @test L\B == 0Eye(3)
+
+            @testset "sub" begin
+                v = ApplyQuasiArray(*, L[:,2:end], [1,2])
+                f = L * [1,2,3]
+                @test v + f == f + v == L*[1,3,5]
+                @test v + v == L*[0,2,4]
+            end
         end
     end
 
