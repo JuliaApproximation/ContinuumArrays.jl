@@ -323,18 +323,29 @@ function _broadcastbasis(::typeof(+), _, _, a, b)
 end
 
 _broadcastbasis(::typeof(+), ::MappedBasisLayouts, ::MappedBasisLayouts, a, b) = broadcastbasis(+, demap(a), demap(b))[basismap(a), :]
+_broadcastbasis(::typeof(+), ::SubBasisLayout, ::SubBasisLayout, a, b) = broadcastbasis(+, parent(a), parent(b))
+_broadcastbasis(::typeof(+), ::SubBasisLayout, _, a, b) = broadcastbasis(+, parent(a), b)
+_broadcastbasis(::typeof(+), _, ::SubBasisLayout, a, b) = broadcastbasis(+, a, parent(b))
 
 broadcastbasis(::typeof(+), a, b) = _broadcastbasis(+, MemoryLayout(a), MemoryLayout(b), a, b)
+broadcastbasis(::typeof(+), a, b, c...) = broadcastbasis(+, broadcastbasis(+, a, b), c...)
 
 broadcastbasis(::typeof(-), a, b) = broadcastbasis(+, a, b)
 
-for op in (:+, :-)
-    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), f::Expansion, g::Expansion)
-        S,c = arguments(f)
-        T,d = arguments(g)
-        ST = broadcastbasis($op, S, T)
-        ST * $op((ST \ S) * c , (ST \ T) * d)
-    end
+@eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), f::Expansion, g::Expansion)
+    S,c = arguments(f)
+    T,d = arguments(g)
+    ST = broadcastbasis(-, S, T)
+    ST * ((ST \ S) * c - (ST \ T) * d)
+end
+
+_plus_P_ldiv_Ps_cs(P, ::Tuple{}, ::Tuple{}) = ()
+_plus_P_ldiv_Ps_cs(P, Q::Tuple, cs::Tuple) = tuple((P \ first(Q)) * first(cs), _plus_P_ldiv_Ps_cs(P, tail(Q), tail(cs))...)
+@eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(+), fs::Expansion...)
+    Ps = first.(arguments.(fs))
+    cs = last.(arguments.(fs))
+    P = broadcastbasis(+, Ps...)
+    P * +(_plus_P_ldiv_Ps_cs(P, Ps, cs)...)  # +((Ref(P) .\ Ps .* cs)...)
 end
 
 function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(*), a::Expansion, f::Expansion)

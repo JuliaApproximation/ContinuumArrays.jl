@@ -97,11 +97,13 @@ using ContinuumArrays, LinearAlgebra, Test
 
         @testset "+" begin
             L = LinearSpline([1,2,3])
-            b = L*[3,4,5] + L*[1.,2,3]
+            b = @inferred(L*[3,4,5] + L*[1.,2,3])
             @test ApplyStyle(\, typeof(L), typeof(b)) == LdivStyle()
             @test (L\b) == [4,6,8]
             B = BroadcastQuasiArray(+, L, L)
             @test L\B == 2Eye(3)
+
+            @test L*[3,4,5] + L*[1.,2,3] + L*[4,5,6] == @inferred(broadcast(+, L*[3,4,5], L*[1.,2,3], L*[4,5,6])) == L*[8,11,14]
 
             b = L*[3,4,5] - L*[1.,2,3]
             @test (L\b) == [2,2,2]
