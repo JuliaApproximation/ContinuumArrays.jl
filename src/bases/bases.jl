@@ -323,7 +323,12 @@ function _broadcastbasis(::typeof(+), _, _, a, b)
 end
 
 _broadcastbasis(::typeof(+), ::MappedBasisLayouts, ::MappedBasisLayouts, a, b) = broadcastbasis(+, demap(a), demap(b))[basismap(a), :]
-_broadcastbasis(::typeof(+), ::SubBasisLayout, ::SubBasisLayout, a, b) = broadcastbasis(+, parent(a), parent(b))
+function _broadcastbasis(::typeof(+), ::SubBasisLayout, ::SubBasisLayout, a, b)
+    kr_a,jr_a = parentindices(a)
+    kr_b,jr_b = parentindices(b)
+    @assert kr_a == kr_b # frist axes must match
+    view(broadcastbasis(+, parent(a), parent(b)), kr_a, union(jr_a,jr_b))
+end
 _broadcastbasis(::typeof(+), ::SubBasisLayout, _, a, b) = broadcastbasis(+, parent(a), b)
 _broadcastbasis(::typeof(+), _, ::SubBasisLayout, a, b) = broadcastbasis(+, a, parent(b))
 

@@ -109,6 +109,13 @@ using ContinuumArrays, LinearAlgebra, Test
             @test (L\b) == [2,2,2]
             B = BroadcastQuasiArray(-, L, L)
             @test L\B == 0Eye(3)
+
+            @testset "sub" begin
+                v = ApplyQuasiArray(*, L[:,2:end], [1,2])
+                f = L * [1,2,3]
+                @test v + f == f + v == L*[1,3,5]
+                @test v + v == L*[0,2,4]
+            end
         end
     end
 
