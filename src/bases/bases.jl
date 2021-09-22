@@ -362,6 +362,11 @@ end
 
 
 _function_mult_broadcasted(_, _, a, B) = Base.Broadcast.Broadcasted{LazyQuasiArrayStyle{2}}(*, (a, B))
+function _function_mult_broadcasted(_, ::SubBasisLayout, a, B)
+    kr,jr = parentindices(B)
+    @assert kr isa Inclusion
+    (a .* parent(B))[kr,jr]
+end
 broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion, B::AbstractQuasiMatrix) = _function_mult_broadcasted(MemoryLayout(a), MemoryLayout(B), a, B)
 
 @eval function ==(f::Expansion, g::Expansion)
