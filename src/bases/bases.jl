@@ -189,25 +189,23 @@ associates a planned inverse transform with a grid. That is, if `F` is a `Transf
 TransformFactorization(grid, ::Nothing, iplan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(iplan))}(grid, nothing, iplan)
 
 grid(T::TransformFactorization) = T.grid
+function size(T::TransformFactorization, k)
+    @assert k == 2 # TODO: make consistent
+    size(T.plan,1)
+end
+
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
 \(a::TransformFactorization, b::AbstractVector) = a.plan * b
+ldiv!(ret::AbstractVecOrMat, a::TransformFactorization, b::AbstractVecOrMat) = mul!(ret, a.plan, b)
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiMatrix{T}) where T = a \  convert(Array{T}, b[a.grid,:])
 \(a::TransformFactorization, b::AbstractQuasiMatrix) = a \ convert(Array, b[a.grid,:])
-function \(a::TransformFactorization, b::AbstractMatrix)
-    c = a \ b[:,1]
-    ret = Array{eltype(c)}(undef, length(c), size(b,2))
-    ret[:,1] = c
-    for k = 2:size(ret,2)
-        ret[:,k] = a \ b[:,k]
-    end
-    ret
-end
+\(a::TransformFactorization, b::AbstractMatrix) = ldiv!(Array{promote_type(eltype(a),eltype(b))}(undef,size(a,2),size(b,2)), a, b)
 
-function _factorize(::AbstractBasisLayout, L)
+function _factorize(::AbstractBasisLayout, L, dims...; kws...)
     p = grid(L)
     TransformFactorization(p, nothing, factorize(L[p,:]))
 end
@@ -228,7 +226,7 @@ end
 \(a::ProjectionFactorization, b::AbstractQuasiMatrix) = (a.F \ b)[a.inds,:]
 \(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
 
-_factorize(::SubBasisLayout, L) = ProjectionFactorization(factorize(parent(L)), parentindices(L)[2])
+_factorize(::SubBasisLayout, L, dims...; kws...) = ProjectionFactorization(factorize(parent(L), dims...; kws...), parentindices(L)[2])
 
 
 """
@@ -249,13 +247,16 @@ end
 
 function invmap end
 
-function _factorize(::MappedBasisLayout, L)
+function _factorize(::MappedBasisLayout, L, dims...; kws...)
     kr, jr = parentindices(L)
     P = parent(L)
-    MappedFactorization(factorize(view(P,:,jr)), invmap(parentindices(L)[1]))
+    MappedFactorization(factorize(view(P,:,jr), dims...; kws...), invmap(parentindices(L)[1]))
 end
 
-transform_ldiv(A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}, _) where {T,V} = factorize(convert(AbstractQuasiArray{promote_type(T,V)}, A)) \ B
+plan_ldiv(A, B::AbstractQuasiVector) = factorize(A)
+plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(A, size(B,2))
+
+transform_ldiv(A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}, _) where {T,V} = plan_ldiv(A, B) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
 
 copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
@@ -283,7 +284,7 @@ struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
     F::FAC
 end
 
-_factorize(::WeightedBasisLayouts, wS) = WeightedFactorization(weight(wS), factorize(unweightedbasis(wS)))
+_factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(weight(wS), factorize(unweightedbasis(wS), dims...; kws...))
 
 
 \(F::WeightedFactorization, b::AbstractQuasiVector) = F.F \ (b ./ F.w)
