@@ -9,7 +9,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
                         simplifiable, _simplify, AbstractLazyLayout, PaddedLayout
-import LinearAlgebra: pinv, dot, norm2
+import LinearAlgebra: pinv, dot, norm2, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
 import FillArrays: AbstractFill, getindex_value, SquareEye

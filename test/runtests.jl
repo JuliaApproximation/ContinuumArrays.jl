@@ -74,7 +74,6 @@ end
     L = LinearSpline(0:0.1:1)
     @test_broken L\K isa ApplyQuasiArray # broken since it assumes non-broadcasting
     @test L \ exp.(K) isa ApplyQuasiArray
-    
 end
 
 include("test_splines.jl")

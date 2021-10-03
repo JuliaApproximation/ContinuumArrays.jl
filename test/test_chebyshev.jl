@@ -22,6 +22,8 @@ Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 
 LinearAlgebra.factorize(L::Chebyshev) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
+LinearAlgebra.factorize(L::Chebyshev, n) =
+    TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2),n),1))    
 
 # This is wrong but just for tests
 Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Chebyshev}, b::Chebyshev) = b * Matrix(I, 5, 5)
@@ -52,7 +54,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
         @test all(checkpoints(T) .∈ Ref(axes(T,1)))
 
-        @test F \ [exp.(x) cos.(x)] ≈ [F \ exp.(x) F \ cos.(x)]
+        @test T \ [exp.(x) cos.(x)] ≈ [F \ exp.(x) F \ cos.(x)]
     end
 
     @testset "Weighted" begin

@@ -194,12 +194,18 @@ function size(T::TransformFactorization, k)
     size(T.plan,1)
 end
 
+function size(T::TransformFactorization{<:Any,<:Any,Nothing}, k)
+    @assert k == 2 # TODO: make consistent
+    size(T.iplan,2)
+end
+
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
 \(a::TransformFactorization, b::AbstractVector) = a.plan * b
 ldiv!(ret::AbstractVecOrMat, a::TransformFactorization, b::AbstractVecOrMat) = mul!(ret, a.plan, b)
+ldiv!(ret::AbstractVecOrMat, a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVecOrMat) = ldiv!(ret, a.iplan, b)
 
 \(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiMatrix{T}) where T = a \  convert(Array{T}, b[a.grid,:])
 \(a::TransformFactorization, b::AbstractQuasiMatrix) = a \ convert(Array, b[a.grid,:])
