@@ -1,4 +1,7 @@
-using ContinuumArrays, LinearAlgebra, Test
+using ContinuumArrays, LinearAlgebra, LazyArrays, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
+using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
+import LazyArrays: MulStyle, LdivStyle, arguments
+import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout
 
 @testset "Splines" begin
     @testset "HeavisideSpline" begin
@@ -32,8 +35,7 @@ using ContinuumArrays, LinearAlgebra, Test
         @test f[2.1] ≈ 2
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
-        @test summary(f) == "(HeavisideSpline{Float64, Vector{$Int}}) * (2-element Vector{$Int})"
-        @test stringmime("text/plain", f) == "HeavisideSpline{Float64, Vector{$Int}} * [1, 2]"
+        @test summary(f) == stringmime("text/plain", f) == "HeavisideSpline([1, 2, 3]) * [1, 2]" 
     end
 
     @testset "LinearSpline" begin
@@ -124,13 +126,13 @@ using ContinuumArrays, LinearAlgebra, Test
         f = L*[1,2,4]
         g = L*[5,6,7]
 
-        @test f isa Expansion
-        @test 2f isa Expansion
-        @test f*2 isa Expansion
-        @test 2\f isa Expansion
-        @test f/2 isa Expansion
-        @test f+g isa Expansion
-        @test f-g isa Expansion
+        @test MemoryLayout(f) isa ExpansionLayout
+        @test MemoryLayout(2f) isa ExpansionLayout
+        @test MemoryLayout(f*2) isa ExpansionLayout
+        @test MemoryLayout(2\f) isa ExpansionLayout
+        @test MemoryLayout(f/2) isa ExpansionLayout
+        @test MemoryLayout(f+g) isa ExpansionLayout
+        @test MemoryLayout(f-g) isa ExpansionLayout
         @test f[1.2] == 1.2
         @test (2f)[1.2] == (f*2)[1.2] == 2.4
         @test (2\f)[1.2] == (f/2)[1.2] == 0.6
@@ -377,7 +379,7 @@ using ContinuumArrays, LinearAlgebra, Test
         @testset "algebra" begin
             f = L[y,:] * randn(10)
             g = L[y,:] * randn(10)
-            @test f + g isa Expansion
+            @test MemoryLayout(f + g) isa ExpansionLayout
             @test (f+g)[0.1] ≈ f[0.1] + g[0.1]
         end
 
@@ -411,7 +413,7 @@ using ContinuumArrays, LinearAlgebra, Test
         H = HeavisideSpline([1,2,3,6])
         B = H[5x .+ 1,:]
         u = H * [1,2,3]
-        @test stringmime("text/plain", B) == "HeavisideSpline{Float64, Vector{$Int}} affine mapped to 0..1"
+        @test stringmime("text/plain", B) == "HeavisideSpline([1, 2, 3, 6]) affine mapped to 0..1"
     end
 
     @testset "A \\ ( c .* B) == c .* (A\\B) #101" begin

@@ -299,27 +299,13 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 # Algebra
 ##
 
-# struct ExpansionLayout <: MemoryLayout end
-# applylayout(::Type{typeof(*)}, ::BasisLayout, _) = ExpansionLayout()
+struct ExpansionLayout <: AbstractLazyLayout end
+applylayout(::Type{typeof(*)}, ::AbstractBasisLayout, ::Union{PaddedLayout,AbstractStridedLayout}) = ExpansionLayout()
 
-const Expansion{T,Space<:AbstractQuasiMatrix,Coeffs<:AbstractVector} = ApplyQuasiVector{T,typeof(*),<:Tuple{Space,Coeffs}}
-
-
-basis(v::Expansion) = v.args[1]
-
-for op in (:*, :\)
-    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), x::Number, f::Expansion)
-        S,c = arguments(f)
-        S * broadcast($op, x, c)
-    end
-end
-for op in (:*, :/)
-    @eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof($op), f::Expansion, x::Number)
-        S,c = arguments(f)
-        S * broadcast($op, c, x)
-    end
-end
-
+basis(v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+LazyArrays._mul_arguments(::ExpansionLayout, A) = LazyArrays._mul_arguments(ApplyLayout{typeof(*)}(), A)
+copy(L::Ldiv{Bas,ExpansionLayout}) where Bas<:AbstractBasisLayout = copy(Ldiv{Bas,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Mul{ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 
 function _broadcastbasis(::typeof(+), _, _, a, b)
     try
@@ -345,7 +331,7 @@ broadcastbasis(::typeof(+), a, b, c...) = broadcastbasis(+, broadcastbasis(+, a,
 
 broadcastbasis(::typeof(-), a, b) = broadcastbasis(+, a, b)
 
-@eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(-), f::Expansion, g::Expansion)
+@eval function layout_broadcasted(::LazyQuasiArrayStyle{1}, ::NTuple{2,ExpansionLayout}, ::typeof(-), f, g)
     S,c = arguments(f)
     T,d = arguments(g)
     ST = broadcastbasis(-, S, T)
@@ -354,37 +340,32 @@ end
 
 _plus_P_ldiv_Ps_cs(P, ::Tuple{}, ::Tuple{}) = ()
 _plus_P_ldiv_Ps_cs(P, Q::Tuple, cs::Tuple) = tuple((P \ first(Q)) * first(cs), _plus_P_ldiv_Ps_cs(P, tail(Q), tail(cs))...)
-@eval function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(+), fs::Expansion...)
+function layout_broadcasted(::LazyQuasiArrayStyle{1}, ::Tuple{Vararg{ExpansionLayout}}, ::typeof(+), fs...)
     Ps = first.(arguments.(fs))
     cs = last.(arguments.(fs))
     P = broadcastbasis(+, Ps...)
     P * +(_plus_P_ldiv_Ps_cs(P, Ps, cs)...)  # +((Ref(P) .\ Ps .* cs)...)
 end
 
-function broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(*), a::Expansion, f::Expansion)
+function layout_broadcasted(::LazyQuasiArrayStyle{1}, ::NTuple{2,ExpansionLayout}, ::typeof(*), a, f)
     axes(a,1) == axes(f,1) || throw(DimensionMismatch())
     P,c = arguments(f)
     (a .* P) * c
 end
 
-
-_function_mult_broadcasted(_, _, a, B) = Base.Broadcast.Broadcasted{LazyQuasiArrayStyle{2}}(*, (a, B))
-broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion, B::AbstractQuasiMatrix) = _function_mult_broadcasted(MemoryLayout(a), MemoryLayout(B), a, B)
-
-@eval function ==(f::Expansion, g::Expansion)
+function _equals(::ExpansionLayout, ::ExpansionLayout, f, g)
     S,c = arguments(f)
     T,d = arguments(g)
     ST = broadcastbasis(+, S, T)
     (ST \ S) * c == (ST \ T) * d
 end
 
-function show(io::IO, f::Expansion)
+function QuasiArrays._mul_summary(::ExpansionLayout, io::IO, f)
     P,c = arguments(f)
     show(io, P)
     print(io, " * ")
     show(io, c)
 end
-show(io::IO, ::MIME"text/plain", f::Expansion) = show(io, f)
 
 ## materialize views
 
@@ -513,5 +494,7 @@ function __sum(::MappedBasisLayouts, V::AbstractQuasiArray, dims)
     @assert kr isa AbstractAffineQuasiVector
     sum(demap(V); dims=dims)/kr.A
 end
+
+__sum(::ExpansionLayout, A, dims) = __sum(ApplyLayout{typeof(*)}(), A, dims)
 
 include("splines.jl")

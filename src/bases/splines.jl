@@ -9,7 +9,14 @@ const HeavisideSpline = Spline{0}
 Spline{o}(pts::AbstractVector{T}) where {o,T} = Spline{o,float(T)}(pts)
 Spline{o}(S::Spline) where {o} = Spline{o}(S.points)
 
-summary(io::IO, L::LinearSpline) = print(io, "LinearSpline($(L.points))")
+for Typ in (:LinearSpline, :HeavisideSpline)
+    STyp = string(Typ)
+    @eval function summary(io::IO, L::$Typ)
+        print(io, "$($STyp)(")
+        print(IOContext(io, :limit=>true), L.points)
+        print(io,")")
+    end
+end
 
 axes(B::Spline{o}) where o =
     (Inclusion(first(B.points)..last(B.points)), OneTo(length(B.points)+o-1))

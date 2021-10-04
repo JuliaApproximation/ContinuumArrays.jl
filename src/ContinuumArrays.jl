@@ -13,12 +13,12 @@ import LinearAlgebra: pinv, dot, norm2, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
 import FillArrays: AbstractFill, getindex_value, SquareEye
-import ArrayLayouts: mul, ZerosLayout, ScalarLayout
+import ArrayLayouts: mul, ZerosLayout, ScalarLayout, AbstractStridedLayout
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize,
-                    AbstractQuasiFill, UnionDomain, __sum
+                    AbstractQuasiFill, UnionDomain, __sum, applylayout, _equals, layout_broadcasted
 import InfiniteArrays: Infinity, InfAxes
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, WeightedBasis, grid, plotgrid, transform, affine, ..

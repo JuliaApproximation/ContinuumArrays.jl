@@ -1,5 +1,5 @@
 using ContinuumArrays, LinearAlgebra, FastTransforms, Test
-import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, Expansion, TransformFactorization
+import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization
 
 """
 This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
@@ -26,7 +26,7 @@ LinearAlgebra.factorize(L::Chebyshev, n) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2),n),1))    
 
 # This is wrong but just for tests
-Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Chebyshev}, b::Chebyshev) = b * Matrix(I, 5, 5)
+QuasiArrays.layout_broadcasted(::LazyQuasiArrayStyle{2}, ::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
 
 struct QuadraticMap{T} <: Map{T} end
 struct InvQuadraticMap{T} <: Map{T} end
