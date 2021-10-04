@@ -3,7 +3,7 @@
 _mul_plotgrid(_, args) = grid(first(args))
 _mul_plotgrid(::Tuple{Any,PaddedLayout}, (P,c)) = plotgrid(P[:,colsupport(c)])
 
-function _plotgrid(lay::ApplyLayout{typeof(*)}, P)
+function _plotgrid(lay::ExpansionLayout, P)
     args = arguments(lay,P)
     _mul_plotgrid(map(MemoryLayout,args), args)
 end
