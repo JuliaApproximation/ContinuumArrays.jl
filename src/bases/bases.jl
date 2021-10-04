@@ -270,15 +270,18 @@ copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 # A BroadcastLayout of unknown function is only knowable pointwise
-transform_ldiv_if_columns(A, B, _) = ApplyQuasiArray(\, A, B)
-transform_ldiv_if_columns(A, B, ::Base.OneTo) = transform_ldiv(A,B)
-transform_ldiv_if_columns(A, B) = transform_ldiv_if_columns(A, B, axes(B,2))
-copy(L::Ldiv{<:AbstractBasisLayout,<:BroadcastLayout}) = transform_ldiv_if_columns(L.A, L.B)
+transform_ldiv_if_columns(L, _) = ApplyQuasiArray(\, L.A, L.B)
+transform_ldiv_if_columns(L, ::OneTo) = transform_ldiv(L.A,L.B)
+transform_ldiv_if_columns(L) = transform_ldiv_if_columns(L, axes(L.B,2))
+copy(L::Ldiv{<:AbstractBasisLayout,<:BroadcastLayout}) = transform_ldiv_if_columns(L)
 # Inclusion are QuasiArrayLayout
 copy(L::Ldiv{<:AbstractBasisLayout,QuasiArrayLayout}) = transform_ldiv(L.A, L.B)
 # Otherwise keep lazy to support, e.g., U\D*T
-copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv_if_columns(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv_if_columns(L)
 copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
+
+transform_ldiv_if_columns(L::Ldiv{<:Any,<:ApplyLayout{typeof(hcat)}}, ::OneTo) = transform_ldiv(L.A, L.B)
+transform_ldiv_if_columns(L::Ldiv{<:Any,<:ApplyLayout{typeof(hcat)}}, _) = hcat((Ref(L.A) .\ arguments(hcat, L.B))...)
 
 """
     WeightedFactorization(w, F)
@@ -496,5 +499,6 @@ function __sum(::MappedBasisLayouts, V::AbstractQuasiArray, dims)
 end
 
 __sum(::ExpansionLayout, A, dims) = __sum(ApplyLayout{typeof(*)}(), A, dims)
+__cumsum(::ExpansionLayout, A, dims) = __cumsum(ApplyLayout{typeof(*)}(), A, dims)
 
 include("splines.jl")
