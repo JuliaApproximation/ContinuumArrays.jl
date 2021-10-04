@@ -299,13 +299,13 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 # Algebra
 ##
 
-struct ExpansionLayout <: AbstractLazyLayout end
-applylayout(::Type{typeof(*)}, ::AbstractBasisLayout, ::Union{PaddedLayout,AbstractStridedLayout}) = ExpansionLayout()
+struct ExpansionLayout{Lay} <: AbstractLazyLayout end
+applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
 basis(v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
 LazyArrays._mul_arguments(::ExpansionLayout, A) = LazyArrays._mul_arguments(ApplyLayout{typeof(*)}(), A)
-copy(L::Ldiv{Bas,ExpansionLayout}) where Bas<:AbstractBasisLayout = copy(Ldiv{Bas,ApplyLayout{typeof(*)}}(L.A, L.B))
-copy(L::Mul{ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+copy(L::Ldiv{Bas,<:ExpansionLayout}) where Bas<:AbstractBasisLayout = copy(Ldiv{Bas,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Mul{<:ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 
 function _broadcastbasis(::typeof(+), _, _, a, b)
     try
