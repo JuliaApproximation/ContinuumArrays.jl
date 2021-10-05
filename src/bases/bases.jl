@@ -305,6 +305,8 @@ struct ExpansionLayout{Lay} <: AbstractLazyLayout end
 applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
 basis(v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
+
 
 function unweighted(lay::ExpansionLayout, a)
     wP,c = arguments(lay, a)
