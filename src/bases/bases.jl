@@ -53,7 +53,8 @@ function _equals(::AbstractBasisLayout, ::AbstractBasisLayout, A, B)
     false
 end
 
-_equals(::SubBasisLayouts, ::SubBasisLayouts, A, B) = parentindices(A) == parentindices(B) && parent(A) == parent(B)
+_equals(::SubBasisLayouts, ::SubBasisLayouts, A::SubQuasiArray, B::SubQuasiArray) = parentindices(A) == parentindices(B) && parent(A) == parent(B)
+_equals(::MappedBasisLayouts, ::MappedBasisLayouts, A::SubQuasiArray, B::SubQuasiArray) = parentindices(A) == parentindices(B) && demap(A) == demap(B)
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) =
@@ -88,10 +89,16 @@ end
     demap(A)\demap(B)
 end
 
-function copy(P::Ldiv{<:MappedBasisLayouts,<:AbstractLazyLayout,<:Any,<:AbstractQuasiVector})
+function transform_ldiv_if_columns(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiVector}, ::OneTo)
     A,B = P.A, P.B
     demap(A) \ B[invmap(basismap(A))]
 end
+
+function transform_ldiv_if_columns(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiMatrix}, ::OneTo)
+    A,B = P.A, P.B
+    demap(A) \ B[invmap(basismap(A)),:]
+end
+
 copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A,L.B))
 copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
 
@@ -357,10 +364,19 @@ end
 function layout_broadcasted(::Tuple{ExpansionLayout{<:AbstractWeightedBasisLayout},AbstractBasisLayout}, ::typeof(*), a, P)
     axes(a,1) == axes(P,1) || throw(DimensionMismatch())
     wQ,c = arguments(a)
-    w,Q = arguments(wQ)
+    w,Q = weight(wQ),unweighted(wQ)
     uP = unweighted(a) .* P
     w .* uP
 end
+
+# function layout_broadcasted(::Tuple{InclusionLayout,MappedBasisLayouts}, ::typeof(*), x, P)
+#     axes(a,1) == axes(P,1) || throw(DimensionMismatch())
+#     wQ,c = arguments(a)
+#     w,Q = arguments(wQ)
+#     uP = unweighted(a) .* P
+#     w .* uP
+# end
+
 
 function _equals(::ExpansionLayout, ::ExpansionLayout, f, g)
     S,c = arguments(f)
@@ -375,6 +391,58 @@ function QuasiArrays._mul_summary(::ExpansionLayout, io::IO, f)
     print(io, " * ")
     show(io, c)
 end
+
+##
+# Multiplication for mapped and subviews x .* view(P,...)
+##
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
+    T = promote_type(eltype(x), eltype(C))
+    x == axes(C,1) || throw(DimensionMismatch())
+    P = parent(C)
+    kr,jr = parentindices(C)
+    y = axes(P,1)
+    Y = P \ (y .* P)
+    X = kr.A \ (Y     - kr.b * I)
+    P[kr, :] * view(X,:,jr)
+end
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Slice}})
+    T = promote_type(eltype(x), eltype(C))
+    x == axes(C,1) || throw(DimensionMismatch())
+    P = parent(C)
+    kr,_ = parentindices(C)
+    y = axes(P,1)
+    Y = P \ (y .* P)
+    X = kr.A \ (Y     - kr.b * I)
+    P[kr, :] * X
+end
+
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::AbstractQuasiVector, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Slice}})
+    T = promote_type(eltype(f), eltype(C))
+    axes(f,1) == axes(C,1) || throw(DimensionMismatch())
+    P = parent(C)
+    kr,jr = parentindices(C)
+    (f[invmap(kr)] .* P)[kr,jr]
+end
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::AbstractQuasiVector, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
+    T = promote_type(eltype(f), eltype(C))
+    axes(f,1) == axes(C,1) || throw(DimensionMismatch())
+    P = parent(C)
+    kr,jr = parentindices(C)
+    (f[invmap(kr)] .* P)[kr,jr]
+end
+
+broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::Broadcasted, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) =
+    broadcast(*, materialize(f), C)
+
+function layout_broadcasted(::Tuple{InclusionLayout,WeightedBasisLayout}, ::typeof(*), x, C)
+    x == axes(C,1) || throw(DimensionMismatch())
+    weight(C) .* (x .* unweighted(C))
+end
+
 
 ## materialize views
 
@@ -448,6 +516,8 @@ function demap(wB::ApplyQuasiArray{<:Any,N,typeof(*)}) where N
     a = arguments(wB)
     *(demap(first(a)), tail(a)...)
 end
+
+mapping(P::SubQuasiArray{<:Any,2}) = parentindices(P)[1]
 
 
 basismap(x::SubQuasiArray) = parentindices(x)[1]
