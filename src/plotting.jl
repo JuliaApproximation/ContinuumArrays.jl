@@ -10,7 +10,7 @@ end
 
 _plotgrid(_, P) = grid(P)
 
-_plotgrid(::WeightedBasisLayouts, wP) = plotgrid(unweightedbasis(wP))
+_plotgrid(::WeightedBasisLayouts, wP) = plotgrid(unweighted(wP))
 _plotgrid(::MappedBasisLayout, P) = invmap(parentindices(P)[1])[plotgrid(demap(P))]
 
 plotgrid(g) = _plotgrid(MemoryLayout(g), g)

@@ -21,7 +21,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     AbstractQuasiFill, UnionDomain, __sum, __cumsum, applylayout, _equals, layout_broadcasted
 import InfiniteArrays: Infinity, InfAxes
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, WeightedBasis, grid, plotgrid, transform, affine, ..
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, transform, affine, ..
 
 
 

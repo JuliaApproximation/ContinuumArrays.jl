@@ -2,14 +2,13 @@ abstract type Basis{T} <: LazyQuasiMatrix{T} end
 abstract type Weight{T} <: LazyQuasiVector{T} end
 
 
-const WeightedBasis{T, A<:AbstractQuasiVector, B<:Basis} = BroadcastQuasiMatrix{T,typeof(*),<:Tuple{A,B}}
-
 struct WeightLayout <: AbstractQuasiLazyLayout end
 abstract type AbstractBasisLayout <: AbstractQuasiLazyLayout end
+abstract type AbstractWeightedBasisLayout <: AbstractBasisLayout end
 struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
 struct MappedBasisLayout <: AbstractBasisLayout end
-struct WeightedBasisLayout <: AbstractBasisLayout end
+struct WeightedBasisLayout <: AbstractWeightedBasisLayout end
 struct SubWeightedBasisLayout <: AbstractBasisLayout end
 struct MappedWeightedBasisLayout <: AbstractBasisLayout end
 
@@ -38,23 +37,23 @@ sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Map,AbstractVector}}) = MappedBa
 
 
 ## Weighted basis interface
-unweightedbasis(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = last(P.args)
-unweightedbasis(V::SubQuasiArray) = view(unweightedbasis(parent(V)), parentindices(V)...)
+unweighted(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = last(P.args)
+unweighted(V::SubQuasiArray) = view(unweighted(parent(V)), parentindices(V)...)
 weight(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = first(P.args)
 weight(V::SubQuasiArray) = weight(parent(V))[parentindices(V)[1]]
 
-
-
+unweighted(a::AbstractQuasiArray) = unweighted(MemoryLayout(a), a)
 # Default is lazy
 ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
 
 
-function ==(A::Basis, B::Basis)
+function _equals(::AbstractBasisLayout, ::AbstractBasisLayout, A, B)
     axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
     false
 end
 
+_equals(::SubBasisLayouts, ::SubBasisLayouts, A, B) = parentindices(A) == parentindices(B) && parent(A) == parent(B)
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) =
@@ -106,13 +105,6 @@ end
 # default to transform for expanding weights
 copy(L::Ldiv{<:AbstractBasisLayout,WeightLayout}) = transform_ldiv(L.A, L.B)
 
-
-for Bas1 in (:Basis, :WeightedBasis), Bas2 in (:Basis, :WeightedBasis)
-    @eval ==(A::SubQuasiArray{<:Any,2,<:$Bas1}, B::SubQuasiArray{<:Any,2,<:$Bas2}) =
-        parentindices(A) == parentindices(B) && parent(A) == parent(B)
-end
-
-
 # multiplication operators, reexpand in basis A
 @inline function _broadcast_mul_ldiv(::Tuple{Any,AbstractBasisLayout}, A, B)
     a,b = arguments(B)
@@ -157,7 +149,7 @@ _grid(_, P) = error("Overload Grid")
 
 _grid(::MappedBasisLayout, P) = invmap(parentindices(P)[1])[grid(demap(P))]
 _grid(::SubBasisLayout, P) = grid(parent(P))
-_grid(::WeightedBasisLayouts, P) = grid(unweightedbasis(P))
+_grid(::WeightedBasisLayouts, P) = grid(unweighted(P))
 grid(P) = _grid(MemoryLayout(P), P)
 
 
@@ -293,7 +285,7 @@ struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
     F::FAC
 end
 
-_factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(weight(wS), factorize(unweightedbasis(wS), dims...; kws...))
+_factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(weight(wS), factorize(unweighted(wS), dims...; kws...))
 
 
 \(F::WeightedFactorization, b::AbstractQuasiVector) = F.F \ (b ./ F.w)
@@ -306,6 +298,12 @@ struct ExpansionLayout{Lay} <: AbstractLazyLayout end
 applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
 basis(v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+
+function unweighted(lay::ExpansionLayout, a)
+    wP,c = arguments(lay, a)
+    unweighted(wP) * c
+end
+
 LazyArrays._mul_arguments(::ExpansionLayout, A) = LazyArrays._mul_arguments(ApplyLayout{typeof(*)}(), A)
 copy(L::Ldiv{Bas,<:ExpansionLayout}) where Bas<:AbstractBasisLayout = copy(Ldiv{Bas,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Mul{<:ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
@@ -334,7 +332,7 @@ broadcastbasis(::typeof(+), a, b, c...) = broadcastbasis(+, broadcastbasis(+, a,
 
 broadcastbasis(::typeof(-), a, b) = broadcastbasis(+, a, b)
 
-@eval function layout_broadcasted(::LazyQuasiArrayStyle{1}, ::NTuple{2,ExpansionLayout}, ::typeof(-), f, g)
+@eval function layout_broadcasted(::NTuple{2,ExpansionLayout}, ::typeof(-), f, g)
     S,c = arguments(f)
     T,d = arguments(g)
     ST = broadcastbasis(-, S, T)
@@ -343,17 +341,25 @@ end
 
 _plus_P_ldiv_Ps_cs(P, ::Tuple{}, ::Tuple{}) = ()
 _plus_P_ldiv_Ps_cs(P, Q::Tuple, cs::Tuple) = tuple((P \ first(Q)) * first(cs), _plus_P_ldiv_Ps_cs(P, tail(Q), tail(cs))...)
-function layout_broadcasted(::LazyQuasiArrayStyle{1}, ::Tuple{Vararg{ExpansionLayout}}, ::typeof(+), fs...)
+function layout_broadcasted(::Tuple{Vararg{ExpansionLayout}}, ::typeof(+), fs...)
     Ps = first.(arguments.(fs))
     cs = last.(arguments.(fs))
     P = broadcastbasis(+, Ps...)
     P * +(_plus_P_ldiv_Ps_cs(P, Ps, cs)...)  # +((Ref(P) .\ Ps .* cs)...)
 end
 
-function layout_broadcasted(::LazyQuasiArrayStyle{1}, ::NTuple{2,ExpansionLayout}, ::typeof(*), a, f)
+function layout_broadcasted(::NTuple{2,ExpansionLayout}, ::typeof(*), a, f)
     axes(a,1) == axes(f,1) || throw(DimensionMismatch())
     P,c = arguments(f)
     (a .* P) * c
+end
+
+function layout_broadcasted(::Tuple{ExpansionLayout{<:AbstractWeightedBasisLayout},AbstractBasisLayout}, ::typeof(*), a, P)
+    axes(a,1) == axes(P,1) || throw(DimensionMismatch())
+    wQ,c = arguments(a)
+    w,Q = arguments(wQ)
+    uP = unweighted(a) .* P
+    w .* uP
 end
 
 function _equals(::ExpansionLayout, ::ExpansionLayout, f, g)

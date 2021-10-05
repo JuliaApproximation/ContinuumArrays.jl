@@ -26,7 +26,7 @@ LinearAlgebra.factorize(L::Chebyshev, n) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2),n),1))    
 
 # This is wrong but just for tests
-QuasiArrays.layout_broadcasted(::LazyQuasiArrayStyle{2}, ::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
+QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
 
 struct QuadraticMap{T} <: Map{T} end
 struct InvQuadraticMap{T} <: Map{T} end
@@ -68,9 +68,9 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test MemoryLayout(wT3) == SubWeightedBasisLayout()
         @test grid(wT) == grid(wT2) == grid(wT3) == grid(T)
 
-        @test ContinuumArrays.unweightedbasis(wT) ≡ T
-        @test ContinuumArrays.unweightedbasis(wT2) ≡ T[:,2:4]
-        @test ContinuumArrays.unweightedbasis(wT3) ≡ T[:,2:4]
+        @test ContinuumArrays.unweighted(wT) ≡ T
+        @test ContinuumArrays.unweighted(wT2) ≡ T[:,2:4]
+        @test ContinuumArrays.unweighted(wT3) ≡ T[:,2:4]
 
         @test ContinuumArrays.weight(wT) ≡ ContinuumArrays.weight(wT2) ≡ ContinuumArrays.weight(wT3) ≡ w
 
