@@ -8,28 +8,23 @@ abstract type AbstractWeightedBasisLayout <: AbstractBasisLayout end
 struct BasisLayout <: AbstractBasisLayout end
 struct SubBasisLayout <: AbstractBasisLayout end
 struct MappedBasisLayout <: AbstractBasisLayout end
-struct WeightedBasisLayout <: AbstractWeightedBasisLayout end
-struct SubWeightedBasisLayout <: AbstractBasisLayout end
-struct MappedWeightedBasisLayout <: AbstractBasisLayout end
+struct WeightedBasisLayout{Basis} <: AbstractWeightedBasisLayout end
+const SubWeightedBasisLayout = WeightedBasisLayout{SubBasisLayout}
+const MappedWeightedBasisLayout = WeightedBasisLayout{MappedBasisLayout}
 
 SubBasisLayouts = Union{SubBasisLayout,SubWeightedBasisLayout}
 WeightedBasisLayouts = Union{WeightedBasisLayout,SubWeightedBasisLayout,MappedWeightedBasisLayout}
 MappedBasisLayouts = Union{MappedBasisLayout,MappedWeightedBasisLayout}
 
-abstract type AbstractAdjointBasisLayout <: AbstractQuasiLazyLayout end
-struct AdjointBasisLayout <: AbstractAdjointBasisLayout end
-struct AdjointSubBasisLayout <: AbstractAdjointBasisLayout end
-struct AdjointMappedBasisLayout <: AbstractAdjointBasisLayout end
+struct AdjointBasisLayout{Basis} <: AbstractQuasiLazyLayout end
+const AdjointSubBasisLayout = AdjointBasisLayout{SubBasisLayout}
+const AdjointMappedBasisLayout = AdjointBasisLayout{MappedBasisLayout}
 
 MemoryLayout(::Type{<:Basis}) = BasisLayout()
 MemoryLayout(::Type{<:Weight}) = WeightLayout()
 
-adjointlayout(::Type, ::AbstractBasisLayout) = AdjointBasisLayout()
-adjointlayout(::Type, ::SubBasisLayout) = AdjointSubBasisLayout()
-adjointlayout(::Type, ::MappedBasisLayouts) = AdjointMappedBasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::AbstractBasisLayout) = WeightedBasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::SubBasisLayout) = WeightedBasisLayout()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::MappedBasisLayouts) = MappedWeightedBasisLayout()
+adjointlayout(::Type, ::Basis) where Basis<:AbstractBasisLayout = AdjointBasisLayout{Basis}()
+broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::Basis) where Basis<:AbstractBasisLayout = WeightedBasisLayout{Basis}()
 
 # A sub of a weight is still a weight
 sublayout(::WeightLayout, _) = WeightLayout()
@@ -421,21 +416,21 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Sub
 end
 
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::AbstractQuasiVector, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Slice}})
-    T = promote_type(eltype(f), eltype(C))
-    axes(f,1) == axes(C,1) || throw(DimensionMismatch())
-    P = parent(C)
-    kr,jr = parentindices(C)
-    (f[invmap(kr)] .* P)[kr,jr]
-end
+# function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::AbstractQuasiVector, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Slice}})
+#     T = promote_type(eltype(f), eltype(C))
+#     axes(f,1) == axes(C,1) || throw(DimensionMismatch())
+#     P = parent(C)
+#     kr,jr = parentindices(C)
+#     (f[invmap(kr)] .* P)[kr,jr]
+# end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::AbstractQuasiVector, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
-    T = promote_type(eltype(f), eltype(C))
-    axes(f,1) == axes(C,1) || throw(DimensionMismatch())
-    P = parent(C)
-    kr,jr = parentindices(C)
-    (f[invmap(kr)] .* P)[kr,jr]
-end
+# function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::AbstractQuasiVector, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
+#     T = promote_type(eltype(f), eltype(C))
+#     axes(f,1) == axes(C,1) || throw(DimensionMismatch())
+#     P = parent(C)
+#     kr,jr = parentindices(C)
+#     (f[invmap(kr)] .* P)[kr,jr]
+# end
 
 broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::Broadcasted, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) =
     broadcast(*, materialize(f), C)

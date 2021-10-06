@@ -63,9 +63,9 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
 
         wT2 = w .* T[:,2:4]
         wT3 = wT[:,2:4]
-        @test MemoryLayout(wT) == WeightedBasisLayout()
-        @test MemoryLayout(wT2) == WeightedBasisLayout()
-        @test MemoryLayout(wT3) == SubWeightedBasisLayout()
+        @test MemoryLayout(wT) isa WeightedBasisLayout
+        @test MemoryLayout(wT2) isa WeightedBasisLayout
+        @test MemoryLayout(wT3) isa SubWeightedBasisLayout
         @test grid(wT) == grid(wT2) == grid(wT3) == grid(T)
 
         @test ContinuumArrays.unweighted(wT) ≡ T

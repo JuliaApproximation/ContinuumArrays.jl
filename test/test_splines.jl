@@ -93,7 +93,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
 
         @testset "Adjoint layout" begin
             L = LinearSpline([1,2,3])
-            @test MemoryLayout(L') == AdjointBasisLayout()
+            @test MemoryLayout(L') isa AdjointBasisLayout
             @test @inferred([3,4,5]'*L') isa ApplyQuasiArray
         end
 
