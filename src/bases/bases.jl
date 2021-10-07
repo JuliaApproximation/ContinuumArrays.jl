@@ -366,7 +366,7 @@ function layout_broadcasted(::Tuple{ExpansionLayout{<:AbstractWeightedBasisLayou
     w .* uP
 end
 
-# function layout_broadcasted(::Tuple{InclusionLayout,MappedBasisLayouts}, ::typeof(*), x, P)
+# function layout_broadcasted(::Tuple{PolynomialLayout,MappedBasisLayouts}, ::typeof(*), x, P)
 #     axes(a,1) == axes(P,1) || throw(DimensionMismatch())
 #     wQ,c = arguments(a)
 #     w,Q = arguments(wQ)
@@ -435,7 +435,7 @@ end
 broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), f::Broadcasted, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) =
     broadcast(*, materialize(f), C)
 
-function layout_broadcasted(::Tuple{InclusionLayout,WeightedBasisLayout}, ::typeof(*), x, C)
+function layout_broadcasted(::Tuple{PolynomialLayout,WeightedBasisLayout}, ::typeof(*), x, C)
     x == axes(C,1) || throw(DimensionMismatch())
     weight(C) .* (x .* unweighted(C))
 end
@@ -565,7 +565,7 @@ end
 __sum(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(sum(Vm'; dims=(isone(dims) ? 2 : 1)))
 
 
-function __sum(::MappedBasisLayouts, V::AbstractQuasiArray, dims)
+function __sum(::MappedBasisLayouts, V, dims)
     kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
     sum(demap(V); dims=dims)/kr.A
