@@ -212,8 +212,15 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             M = L[a,:]
             M̃ = L[a,1:5]
             x = axes(M,1)
+
+            @test M == M
+            @test M == M̃
+            @test M̃ == M
+            
             @test (x .* M)[0.25,:] ≈ (x .* M̃)[0.25,:] ≈ 0.25 * M[0.25,:]
             @test (exp.(x) .* M)[0.25,:] ≈ exp(0.25) * M[0.25,:]
+
+            @test M \ [ones(x) x] ≈ [M\ones(x) M\x]
         end
     end
 
@@ -289,7 +296,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @testset "transform" begin
             L = LinearSpline([1,2,3])
             x = axes(L,1)
-            @test (L \ x) == [1,2,3]
+            @test (L \ x) == pinv(L)x == [1,2,3]
             @test factorize(L[:,2:end-1]) isa ContinuumArrays.ProjectionFactorization
             @test L[:,1:2] \ x == [1,2]
             @test L \ [x one(x)] ≈ [L\x L\one(x)]

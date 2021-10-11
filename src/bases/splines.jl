@@ -49,11 +49,6 @@ end
 
 grid(L::HeavisideSpline) = L.points[1:end-1] .+ diff(L.points)/2
 grid(L::LinearSpline) = L.points
-transform(L::LinearSpline{T}) where T = grid(L),Eye{T}(size(L,2))
-function transform(V::SubQuasiArray{<:Any,2,<:LinearSpline,<:Tuple{<:Inclusion,<:Any}})
-    g, T = transform(parent(V))
-    g, qr(layout_getindex(T,:,parentindices(V)[2])) # avoid sparse matrices of sub-diagonal
-end
 
 ## Sub-bases
 
