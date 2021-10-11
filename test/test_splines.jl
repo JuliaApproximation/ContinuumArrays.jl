@@ -36,6 +36,13 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
         @test summary(f) == stringmime("text/plain", f) == "HeavisideSpline([1, 2, 3]) * [1, 2]" 
+
+        @testset "sum/cumsum" begin
+            H = HeavisideSpline(range(0,1;length=1000));
+            x = axes(H,1)
+            @test sum(H/H \ exp.(x)) ≈ ℯ-1 atol=1E-5
+            @test last(cumsum(H/H \ exp.(x))) ≈ sum(H/H\exp.(x))
+        end
     end
 
     @testset "LinearSpline" begin
@@ -196,6 +203,16 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test ContinuumArrays.simplifiable(*, L[:,jr]', D') isa Val{true}
             @test ContinuumArrays.simplifiable(*, D̃, L[a,jr]) isa Val{true}
             @test ContinuumArrays.simplifiable(*, L[a,jr]', D̃') isa Val{true}
+        end
+
+        @testset "maps broadcasted" begin
+            L = LinearSpline(1:5)
+            a = affine(0..1, 1..5)
+            M = L[a,:]
+            M̃ = L[a,1:5]
+            x = axes(M,1)
+            @test (x .* M)[0.25,:] ≈ (x .* M̃)[0.25,:] ≈ 0.25 * M[0.25,:]
+            @test (exp.(x) .* M)[0.25,:] ≈ exp(0.25) * M[0.25,:]
         end
     end
 

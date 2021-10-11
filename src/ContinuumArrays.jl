@@ -18,7 +18,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize,
-                    AbstractQuasiFill, UnionDomain, __sum, __cumsum, applylayout, _equals, layout_broadcasted, PolynomialLayout
+                    AbstractQuasiFill, UnionDomain, __sum, _cumsum, __cumsum, applylayout, _equals, layout_broadcasted, PolynomialLayout
 import InfiniteArrays: Infinity, InfAxes
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, transform, affine, ..
@@ -59,6 +59,7 @@ sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
 sub_materialize(::ApplyLayout{typeof(hcat)}, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
+sub_materialize(::ApplyLayout{typeof(hcat)}, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
 
 #
 # BlockQuasiArrays

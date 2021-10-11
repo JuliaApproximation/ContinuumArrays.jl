@@ -77,6 +77,8 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test wT \ @.(exp(x) / sqrt(1-x^2)) ≈ T \ exp.(x)
 
         @test wT \ w ≈ [1; zeros(4)]
+
+        @test (x .* wT)[0.1,:] ≈ 0.1 * wT[0.1,:]
     end
     @testset "Mapped" begin
         y = affine(0..1, x)

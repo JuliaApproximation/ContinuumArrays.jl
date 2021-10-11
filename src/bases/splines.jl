@@ -47,6 +47,7 @@ function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
     return zero(T)
 end
 
+grid(L::HeavisideSpline) = L.points[1:end-1] .+ diff(L.points)/2
 grid(L::LinearSpline) = L.points
 transform(L::LinearSpline{T}) where T = grid(L),Eye{T}(size(L,2))
 function transform(V::SubQuasiArray{<:Any,2,<:LinearSpline,<:Tuple{<:Inclusion,<:Any}})
@@ -148,3 +149,5 @@ function _sum(P::LinearSpline, dims)
     ret[end] = d[end]/2
     permutedims(ret)
 end
+
+_cumsum(H::HeavisideSpline{T}, dims) where T = LinearSpline(H.points) * tril(Ones{T}(length(H.points),length(H.points)-1) .* diff(H.points)',-1)

@@ -514,8 +514,6 @@ function demap(wB::ApplyQuasiArray{<:Any,N,typeof(*)}) where N
     *(demap(first(a)), tail(a)...)
 end
 
-mapping(P::SubQuasiArray{<:Any,2}) = parentindices(P)[1]
-
 
 basismap(x::SubQuasiArray) = parentindices(x)[1]
 basismap(x::BroadcastQuasiArray) = basismap(x.args[1])
