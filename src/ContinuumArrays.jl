@@ -1,27 +1,27 @@
 module ContinuumArrays
 using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays, RecipesBase
-import Base: @_inline_meta, @_propagate_inbounds_meta, axes, getindex, convert, prod, *, /, \, +, -, ==, ^,
+import Base: @_inline_meta, @_propagate_inbounds_meta, axes, size, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, _maybetail, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
                 getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices, view
-import Base.Broadcast: materialize, BroadcastStyle, broadcasted
+import Base.Broadcast: materialize, BroadcastStyle, broadcasted, Broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, most, combine_mul_styles, AbstractArrayApplyStyle,
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
                         simplifiable, _simplify, AbstractLazyLayout, PaddedLayout
-import LinearAlgebra: pinv, dot, norm2
+import LinearAlgebra: pinv, dot, norm2, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
 import FillArrays: AbstractFill, getindex_value, SquareEye
-import ArrayLayouts: mul, ZerosLayout, ScalarLayout
+import ArrayLayouts: mul, ZerosLayout, ScalarLayout, AbstractStridedLayout
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize,
-                    AbstractQuasiFill, UnionDomain, __sum
+                    AbstractQuasiFill, UnionDomain, __sum, _cumsum, __cumsum, applylayout, _equals, layout_broadcasted, PolynomialLayout
 import InfiniteArrays: Infinity, InfAxes
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, WeightedBasis, grid, plotgrid, transform, affine, ..
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, ..
 
 
 
@@ -58,6 +58,8 @@ sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
 # ambiguity error
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
+sub_materialize(::ApplyLayout{typeof(hcat)}, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
+sub_materialize(::ApplyLayout{typeof(hcat)}, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
 
 #
 # BlockQuasiArrays

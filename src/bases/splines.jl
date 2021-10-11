@@ -9,7 +9,14 @@ const HeavisideSpline = Spline{0}
 Spline{o}(pts::AbstractVector{T}) where {o,T} = Spline{o,float(T)}(pts)
 Spline{o}(S::Spline) where {o} = Spline{o}(S.points)
 
-summary(io::IO, L::LinearSpline) = print(io, "LinearSpline($(L.points))")
+for Typ in (:LinearSpline, :HeavisideSpline)
+    STyp = string(Typ)
+    @eval function summary(io::IO, L::$Typ)
+        print(io, "$($STyp)(")
+        print(IOContext(io, :limit=>true), L.points)
+        print(io,")")
+    end
+end
 
 axes(B::Spline{o}) where o =
     (Inclusion(first(B.points)..last(B.points)), OneTo(length(B.points)+o-1))
@@ -40,12 +47,8 @@ function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
     return zero(T)
 end
 
+grid(L::HeavisideSpline) = L.points[1:end-1] .+ diff(L.points)/2
 grid(L::LinearSpline) = L.points
-transform(L::LinearSpline{T}) where T = grid(L),Eye{T}(size(L,2))
-function transform(V::SubQuasiArray{<:Any,2,<:LinearSpline,<:Tuple{<:Inclusion,<:Any}})
-    g, T = transform(parent(V))
-    g, qr(layout_getindex(T,:,parentindices(V)[2])) # avoid sparse matrices of sub-diagonal
-end
 
 ## Sub-bases
 
@@ -141,3 +144,5 @@ function _sum(P::LinearSpline, dims)
     ret[end] = d[end]/2
     permutedims(ret)
 end
+
+_cumsum(H::HeavisideSpline{T}, dims) where T = LinearSpline(H.points) * tril(Ones{T}(length(H.points),length(H.points)-1) .* diff(H.points)',-1)

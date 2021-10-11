@@ -1,7 +1,16 @@
-using ContinuumArrays, BlockArrays, Test
+using ContinuumArrays, BlockArrays, InfiniteArrays, Test
 import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain
 
 @testset "ConcatBasis" begin
+    @testset "hcat" begin
+        x = Inclusion(-1..1)
+        H = [ones(x) x]
+        @test H[:,1:2] isa SubQuasiArray
+        Q  =QuasiFill(2,(x,Base.oneto(∞)))
+        H∞ = [ones(x) Q]
+        @test H∞[:,1:∞] isa SubQuasiArray
+        @test (H∞')[1:∞,:] isa SubQuasiArray
+    end
     @testset "PiecewiseBasis" begin
         S1 = LinearSpline(0:1)
         S2 = LinearSpline(2:3)

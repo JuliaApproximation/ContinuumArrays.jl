@@ -103,6 +103,12 @@ end
 Derivative{T}(axis::Inclusion{<:Any,D}) where {T,D} = Derivative{T,D}(axis)
 Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
 
+function summary(io::IO, D::Derivative)
+    print(io, "Derivative(")
+    summary(io,D.axis)
+    print(io,")")
+end
+
 axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis
 copy(D::Derivative) = Derivative(copy(D.axis))

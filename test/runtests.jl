@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, LazyArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, InfiniteArrays, Test, Base64, RecipesBase
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        Expansion, basis, invmap, Map, checkpoints, _plotgrid, mul
+                        basis, invmap, Map, checkpoints, _plotgrid, mul
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -38,6 +38,7 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
         @test D*x ≡ QuasiOnes(x)
         @test D^2 * x ≡ QuasiZeros(x)
         @test D*[x D*x] == [D*x D^2*x]
+        @test stringmime("text/plain", D) == "Derivative(Inclusion(-1..1))"
     end
 end
 
@@ -74,7 +75,6 @@ end
     L = LinearSpline(0:0.1:1)
     @test_broken L\K isa ApplyQuasiArray # broken since it assumes non-broadcasting
     @test L \ exp.(K) isa ApplyQuasiArray
-    
 end
 
 include("test_splines.jl")

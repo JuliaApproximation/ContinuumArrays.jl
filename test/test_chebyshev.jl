@@ -1,5 +1,5 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, Test
-import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, Expansion, TransformFactorization
+using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, Test
+import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization, ExpansionLayout
 
 """
 This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
@@ -12,6 +12,7 @@ end
 struct ChebyshevWeight <: Weight{Float64} end
 
 Base.:(==)(::Chebyshev, ::Chebyshev) = true
+Base.:(==)(::ChebyshevWeight, ::ChebyshevWeight) = true
 Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
 ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
@@ -22,9 +23,11 @@ Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 
 LinearAlgebra.factorize(L::Chebyshev) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
+LinearAlgebra.factorize(L::Chebyshev, n) =
+    TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2),n),1))
 
 # This is wrong but just for tests
-Base.broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:Chebyshev}, b::Chebyshev) = b * Matrix(I, 5, 5)
+QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
 
 struct QuadraticMap{T} <: Map{T} end
 struct InvQuadraticMap{T} <: Map{T} end
@@ -52,29 +55,36 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
         @test all(checkpoints(T) .∈ Ref(axes(T,1)))
 
-        @test F \ [exp.(x) cos.(x)] ≈ [F \ exp.(x) F \ cos.(x)]
+        @test T \ [exp.(x) cos.(x)] ≈ [F \ exp.(x) F \ cos.(x)]
     end
 
     @testset "Weighted" begin
         @test MemoryLayout(w) isa WeightLayout
         @test MemoryLayout(w[Inclusion(0..1)]) isa WeightLayout
 
+        @test wT == wT
+
         wT2 = w .* T[:,2:4]
         wT3 = wT[:,2:4]
-        @test MemoryLayout(wT) == WeightedBasisLayout()
-        @test MemoryLayout(wT2) == WeightedBasisLayout()
-        @test MemoryLayout(wT3) == SubWeightedBasisLayout()
+        @test MemoryLayout(wT) isa WeightedBasisLayout
+        @test MemoryLayout(wT2) isa WeightedBasisLayout
+        @test MemoryLayout(wT3) isa SubWeightedBasisLayout
         @test grid(wT) == grid(wT2) == grid(wT3) == grid(T)
 
-        @test ContinuumArrays.unweightedbasis(wT) ≡ T
-        @test ContinuumArrays.unweightedbasis(wT2) ≡ T[:,2:4]
-        @test ContinuumArrays.unweightedbasis(wT3) ≡ T[:,2:4]
+        @test ContinuumArrays.unweighted(wT) ≡ T
+        @test ContinuumArrays.unweighted(wT2) ≡ T[:,2:4]
+        @test ContinuumArrays.unweighted(wT3) ≡ T[:,2:4]
 
         @test ContinuumArrays.weight(wT) ≡ ContinuumArrays.weight(wT2) ≡ ContinuumArrays.weight(wT3) ≡ w
 
         @test wT \ @.(exp(x) / sqrt(1-x^2)) ≈ T \ exp.(x)
 
         @test wT \ w ≈ [1; zeros(4)]
+
+        @test (x .* wT)[0.1,:] ≈ 0.1 * wT[0.1,:]
+
+        a = wT / wT \ @.(exp(x) / sqrt(1-x^2))
+        @test wT \ (a .* T) == I # fake multiplication matrix
     end
     @testset "Mapped" begin
         y = affine(0..1, x)

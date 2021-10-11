@@ -3,14 +3,14 @@
 _mul_plotgrid(_, args) = grid(first(args))
 _mul_plotgrid(::Tuple{Any,PaddedLayout}, (P,c)) = plotgrid(P[:,colsupport(c)])
 
-function _plotgrid(lay::ApplyLayout{typeof(*)}, P)
+function _plotgrid(lay::ExpansionLayout, P)
     args = arguments(lay,P)
     _mul_plotgrid(map(MemoryLayout,args), args)
 end
 
 _plotgrid(_, P) = grid(P)
 
-_plotgrid(::WeightedBasisLayouts, wP) = plotgrid(unweightedbasis(wP))
+_plotgrid(::WeightedBasisLayouts, wP) = plotgrid(unweighted(wP))
 _plotgrid(::MappedBasisLayout, P) = invmap(parentindices(P)[1])[plotgrid(demap(P))]
 
 plotgrid(g) = _plotgrid(MemoryLayout(g), g)

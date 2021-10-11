@@ -42,6 +42,8 @@ abstract type AbstractAffineQuasiVector{T,AA,X,B} <: Map{T} end
 
 summary(io::IO, a::AbstractAffineQuasiVector) = print(io, "$(a.A) * $(a.x) .+ ($(a.b))")
 
+MemoryLayout(::Type{<:AbstractAffineQuasiVector}) = PolynomialLayout()
+
 struct AffineQuasiVector{T,AA,X,B} <: AbstractAffineQuasiVector{T,AA,X,B}
     A::AA
     x::X
