@@ -1,5 +1,5 @@
 using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, Test
-import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization
+import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization, ExpansionLayout
 
 """
 This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
@@ -12,6 +12,7 @@ end
 struct ChebyshevWeight <: Weight{Float64} end
 
 Base.:(==)(::Chebyshev, ::Chebyshev) = true
+Base.:(==)(::ChebyshevWeight, ::ChebyshevWeight) = true
 Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
 ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
@@ -61,6 +62,8 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test MemoryLayout(w) isa WeightLayout
         @test MemoryLayout(w[Inclusion(0..1)]) isa WeightLayout
 
+        @test wT == wT
+
         wT2 = w .* T[:,2:4]
         wT3 = wT[:,2:4]
         @test MemoryLayout(wT) isa WeightedBasisLayout
@@ -81,7 +84,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test (x .* wT)[0.1,:] ≈ 0.1 * wT[0.1,:]
 
         a = wT / wT \ @.(exp(x) / sqrt(1-x^2))
-        @test (a .* T)[0.1,:] ≈ a[0.1] * T[0.1,:]
+        @test wT \ (a .* T) == I # fake multiplication matrix
     end
     @testset "Mapped" begin
         y = affine(0..1, x)
