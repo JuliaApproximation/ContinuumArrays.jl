@@ -1,4 +1,4 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, Test
+using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, Test
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization
 
 """
@@ -23,7 +23,7 @@ Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 LinearAlgebra.factorize(L::Chebyshev) =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
 LinearAlgebra.factorize(L::Chebyshev, n) =
-    TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2),n),1))    
+    TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2),n),1))
 
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
@@ -79,6 +79,9 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test wT \ w ≈ [1; zeros(4)]
 
         @test (x .* wT)[0.1,:] ≈ 0.1 * wT[0.1,:]
+
+        a = wT / wT \ @.(exp(x) / sqrt(1-x^2))
+        @test (a .* T)[0.1,:] ≈ a[0.1] * T[0.1,:]
     end
     @testset "Mapped" begin
         y = affine(0..1, x)

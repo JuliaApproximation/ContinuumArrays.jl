@@ -38,6 +38,7 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
         @test D*x ≡ QuasiOnes(x)
         @test D^2 * x ≡ QuasiZeros(x)
         @test D*[x D*x] == [D*x D^2*x]
+        @test stringmime("text/plain", D) == "Derivative(Inclusion(-1..1))"
     end
 end
 

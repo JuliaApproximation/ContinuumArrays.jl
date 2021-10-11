@@ -1,7 +1,7 @@
 using ContinuumArrays, LinearAlgebra, LazyArrays, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
 import LazyArrays: MulStyle, LdivStyle, arguments
-import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout
+import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout, coefficients
 
 @testset "Splines" begin
     @testset "HeavisideSpline" begin
@@ -70,6 +70,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             f = L*[1,2,4]
 
             @test basis(f) == L
+            @test coefficients(f) == [1,2,4]
             @test axes(f) == (Inclusion(1.0..3.0),)
             @test f[1.1] ≈ 1.1
             @test f[2.1] ≈ 2.2
