@@ -96,6 +96,13 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test MemoryLayout(wT[y,1:3]) isa MappedWeightedBasisLayout
         @test wT[y,1:3][[0.1,0.2],1:2] == wT[y[[0.1,0.2]],1:2]
 
+        @testset "Derivative" begin
+            wU = Weighted(ChebyshevU())
+            D = Derivative(Inclusion(0..1))
+            @test isbanded(wT[y,:] \ D * wU[y,:])
+            @test isbanded((wU[y,:]' * D').args[1])
+        end
+
         @testset "QuadraticMap" begin
             m = QuadraticMap()
             mi = InvQuadraticMap()
