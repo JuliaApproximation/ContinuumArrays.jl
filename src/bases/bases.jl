@@ -159,10 +159,9 @@ grid(P) = _grid(MemoryLayout(P), P)
 struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
     grid::Grid
     plan::Plan
-    iplan::IPlan
 end
 
-TransformFactorization{T}(grid, plan) where T = TransformFactorization{T,typeof(grid),typeof(plan),Nothing}(grid, plan, nothing)
+TransformFactorization{T}(grid, plan) where T = TransformFactorization{T,typeof(grid),typeof(plan)}(grid, plan)
 
 """
     TransformFactorization(grid, plan)
@@ -173,15 +172,6 @@ associates a planned transform with a grid. That is, if `F` is a `TransformFacto
 TransformFactorization(grid, plan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(plan))}(grid, plan)
 
 
-TransformFactorization{T}(grid, ::Nothing, iplan) where T = TransformFactorization{T,typeof(grid),Nothing,typeof(iplan)}(grid, nothing, iplan)
-
-"""
-    TransformFactorization(grid, nothing, iplan)
-
-associates a planned inverse transform with a grid. That is, if `F` is a `TransformFactorization`, then
-`F \\ f` is equivalent to `F.iplan \\ f[F.grid]`.
-"""
-TransformFactorization(grid, ::Nothing, iplan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(iplan))}(grid, nothing, iplan)
 
 grid(T::TransformFactorization) = T.grid
 function size(T::TransformFactorization, k)
@@ -189,27 +179,21 @@ function size(T::TransformFactorization, k)
     size(T.plan,1)
 end
 
-function size(T::TransformFactorization{<:Any,<:Any,Nothing}, k)
-    @assert k == 2 # TODO: make consistent
-    size(T.iplan,2)
-end
 
-
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
 \(a::TransformFactorization, b::AbstractVector) = a.plan * b
+\(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
+
 ldiv!(ret::AbstractVecOrMat, a::TransformFactorization, b::AbstractVecOrMat) = mul!(ret, a.plan, b)
-ldiv!(ret::AbstractVecOrMat, a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVecOrMat) = ldiv!(ret, a.iplan, b)
+ldiv!(ret::AbstractArray, a::TransformFactorization, b::AbstractArray) = mul!(ret, a.plan, b)
 
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiMatrix{T}) where T = a \  convert(Array{T}, b[a.grid,:])
-\(a::TransformFactorization, b::AbstractQuasiMatrix) = a \ convert(Array, b[a.grid,:])
-\(a::TransformFactorization, b::AbstractMatrix) = ldiv!(Array{promote_type(eltype(a),eltype(b))}(undef,size(a,2),size(b,2)), a, b)
-
-function _factorize(::AbstractBasisLayout, L, dims...; kws...)
+function plan_transform(L, arr)
     p = grid(L)
-    TransformFactorization(p, nothing, factorize(L[p,:]))
+    p, inv(L[p,:])
 end
+
+_factorize(::AbstractBasisLayout, L, dims...; kws...) =
+    TransformFactorization(plan_transform(L, Array{eltype(L)}(undef, length(p), dims...))...)
 
 
 """
