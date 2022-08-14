@@ -184,9 +184,6 @@ end
 \(a::TransformFactorization, b::AbstractVector) = a.plan * b
 \(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
 
-ldiv!(ret::AbstractVecOrMat, a::TransformFactorization, b::AbstractVecOrMat) = mul!(ret, a.plan, b)
-ldiv!(ret::AbstractArray, a::TransformFactorization, b::AbstractArray) = mul!(ret, a.plan, b)
-
 function plan_transform(L, arr)
     p = grid(L)
     p, inv(L[p,:])
