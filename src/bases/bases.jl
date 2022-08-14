@@ -156,7 +156,7 @@ _grid(::WeightedBasisLayouts, P) = grid(unweighted(P))
 grid(P) = _grid(MemoryLayout(P), P)
 
 
-struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
+struct TransformFactorization{T,Grid,Plan} <: Factorization{T}
     grid::Grid
     plan::Plan
 end
@@ -193,7 +193,8 @@ function plan_transform(L, arr)
 end
 
 _factorize(::AbstractBasisLayout, L, dims...; kws...) =
-    TransformFactorization(plan_transform(L, Array{eltype(L)}(undef, length(p), dims...))...)
+    TransformFactorization(plan_transform(L, Array{eltype(L)}(undef, size(L,2), dims...))...)
+
 
 
 """
