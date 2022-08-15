@@ -184,10 +184,63 @@ end
 \(a::TransformFactorization, b::AbstractVector) = a.plan * b
 \(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
 
+"""
+    FactorizationPlan(factorization, dims)
+
+Takes a factorization and supports it applied to different dimensions.
+"""
+struct FactorizationPlan{T, Fact, Dims} <: Plan{T}
+    factorization::Fact
+    dims::Dims
+end
+
+FactorizationPlan(fact, dims=1) = Factorization{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+
+function *(P::FactorizationPlan{<:Any,<:Any,Int}, x::AbstractVector)
+    @assert P.dims == 1
+    P.factorization \ x
+end
+
+function *(P::FactorizationPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
+    if P.dims == 1
+        P.factorization \ X
+    else
+        @assert P.dims == 2
+        permutedims(P.factorization \ permutedims(X))
+    end
+end
+
+function *(P::FactorizationPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
+    Y = similar(X)
+    if P.dims == 1
+        for j in axes(X,3)
+            Y[:,:,j] = P.factorization \ X[:,:,j]
+        end
+    elseif P.dims == 2
+        for k in axes(X,1)
+            Y[k,:,:] = P.factorization \ X[k,:,:]
+        end
+    else
+        @assert P.dims == 3
+        for k in axes(X,1), j in axes(X,2)
+            Y[k,j,:] = P.factorization \ X[k,j,:]
+        end
+    end
+    Y
+end
+
+function *(P::FactorizationPlan, X::AbstractArray)
+    for d in P.dims
+        X = FactorizationPlan(P.factorization, d) * X
+    end
+    X
+end
+
+
 function plan_transform(L, arr, dims=1)
     @assert dims == 1
     p = grid(L)
-    p, inv(L[p,:])
+    p, FactorizationPlan(factorize(L[p,:]), dims)
 end
 
 _factorize(::AbstractBasisLayout, L, dims...; kws...) =
