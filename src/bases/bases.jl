@@ -214,6 +214,7 @@ end
 
 # if parent is finite dimensional default to its transform and project down
 _sub_factorize(::Tuple{Any,Int}, (kr,jr), L, dims...; kws...) = ProjectionFactorization(factorize(parent(L), dims...; kws...), jr)
+_sub_factorize(::Tuple{Any,Int}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) = ProjectionFactorization(factorize(parent(L), dims...; kws...), jr)
 
 # ∞-dimensional parents need to use transforms. For now we assume the size of the transform is equal to the size of the truncation
 _sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) =
@@ -255,6 +256,29 @@ plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(A, size(B,2))
 
 transform_ldiv(A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}, _) where {T,V} = plan_ldiv(A, B) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
+
+
+"""
+    transform(A, f)
+
+finds the coefficients of a function `f` expanded in a basis defined as the columns of a quasi matrix `A`.
+It is equivalent to
+```
+A \ f.(axes(A,1))
+```
+"""
+transform(A, f) = A \ f.(axes(A,1))
+
+"""
+    expand(A, f)
+
+expands a function `f` im a basis defined as the columns of a quasi matrix `A`.
+It is equivalent to
+```
+A / A \ f.(axes(A,1))
+```
+"""
+expand(A, f) = A * transform(A, f)
 
 copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 # TODO: redesign to use simplifiable(\, A, B)
