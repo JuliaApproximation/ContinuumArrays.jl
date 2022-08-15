@@ -31,14 +31,14 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
         @test norm(x) ≈ sqrt(2/3)
     end
 
-    @testset "Diff" begin
+    @testset "Derivative" begin
         x = Inclusion(-1..1)
-        D = Diff(x)
-        @test D == Diff{Float64}(x) == Diff{Float64}(-1..1)
+        D = Derivative(x)
+        @test D == Derivative{Float64}(x) == Derivative{Float64}(-1..1)
         @test D*x ≡ QuasiOnes(x)
         @test D^2 * x ≡ QuasiZeros(x)
         @test D*[x D*x] == [D*x D^2*x]
-        @test stringmime("text/plain", D) == "Diff(Inclusion(-1..1))"
+        @test stringmime("text/plain", D) == "Derivative(Inclusion(-1..1))"
     end
 end
 

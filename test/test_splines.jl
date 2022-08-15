@@ -148,11 +148,11 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test (f-g)[1.2] ≈ f[1.2] - g[1.2]
     end
 
-    @testset "Diff" begin
+    @testset "Derivative" begin
         L = LinearSpline([1,2,3])
         f = L*[1,2,4]
 
-        D = Diff(L)
+        D = Derivative(L)
         @test copy(D) == D
 
         @test D*L isa MulQuasiMatrix
@@ -180,11 +180,11 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test fp[2.2] ≈ 2
 
 
-        @testset "View Diffs" begin
+        @testset "View Derivatives" begin
             L = LinearSpline(1:5)
             H = HeavisideSpline(1:5)
             x = axes(L,1)
-            D = Diff(x)
+            D = Derivative(x)
 
             @test view(D, x, x) ≡ D
             @test_throws BoundsError view(D, Inclusion(0..1), x)
@@ -195,7 +195,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test L[:,jr]'D'D*L[:,jr] == (L'D'D*L)[jr,jr]
 
             a = affine(0..1, 1..5)
-            D̃ = Diff(axes(a,1))
+            D̃ = Derivative(axes(a,1))
             @test H[a,:] \ (D̃ * L[a,:]) == H[a,:] \ (L[a,:]'D̃')' ==  4*(H\(D*L))
             @test_throws DimensionMismatch D * L[a,:]
             @test_throws DimensionMismatch D̃ * L[:,jr]
@@ -227,7 +227,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
     @testset "Weak Laplacian" begin
         H = HeavisideSpline(0:2)
         L = LinearSpline(0:2)
-        D = Diff(L)
+        D = Derivative(L)
 
         @test apply(*,L',D') isa MulQuasiMatrix
         @test MemoryLayout(typeof(L')) isa AdjointBasisLayout
@@ -324,7 +324,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test sum(u[5x .+ 1]) ≈ sum(view(u,5x .+ 1)) ≈ sum(u)/5
 
         L = LinearSpline([1,2,3,6])
-        D = Diff(L)
+        D = Derivative(L)
         @test sum(D*L; dims=1) ≈ sum((D*L)'; dims=2)' ≈ [-1 zeros(1,2) 1]
     end
 
@@ -332,7 +332,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         L = LinearSpline(range(0,stop=1,length=10))
         B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
         @test B'B == (L'L)[2:end-1,2:end-1]
-        D = Diff(L)
+        D = Derivative(L)
         @test apply(*,D,B) isa MulQuasiMatrix
         @test D*B isa MulQuasiMatrix
         @test apply(*,D,B)[0.1,1] == (D*B)[0.1,1] == 9
@@ -360,7 +360,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
     @testset "Helmholtz" begin
         L = LinearSpline(range(0,stop=1,length=10))
         B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
-        D = Diff(L)
+        D = Derivative(L)
 
         A = -((B'D')*(D*B)) + 100^2*B'B # Weak Laplacian
 
@@ -378,7 +378,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test L[y,:]'L[y,:] isa SymTridiagonal
         @test L[y,:]'L[y,:] == 1/2*(L'L)
 
-        D = Diff(L)
+        D = Derivative(L)
         H = HeavisideSpline(L.points)
         @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 
@@ -389,7 +389,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
         @test @inferred(grid(L[y,:])) ≈ (grid(L) .+ 1) ./ 2
 
-        D = Diff(x)
+        D = Derivative(x)
         @test (D*L[y,:])[0.1,1] ≈ -9
         @test H[y,:] \ (D*L[y,:]) isa BandedMatrix
         @test H[y,:] \ (D*L[y,:]) ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
@@ -450,7 +450,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         L = LinearSpline(0:5)
         H = HeavisideSpline(L)
         x = axes(L,1)
-        D = Diff(x)
+        D = Derivative(x)
         @test H\D*L == H\(D*L)
     end
 end

@@ -74,7 +74,7 @@ us to form the weak Laplacian.
 ```julia
 julia> B = L[:,2:end-1]; # drop boundary terms to impose zero Dirichlet
 
-julia> D = Diff(L); # Differentiation operator
+julia> D = Derivative(L); # Differentiation operator
 
 julia> Δ = (D*B)'D*B # weak Laplacian
 4×4 BandedMatrices.BandedMatrix{Float64,Array{Float64,2},Base.OneTo{Int64}}:

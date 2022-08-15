@@ -96,41 +96,39 @@ show(io::IO, ::MIME"text/plain", δ::DiracDelta) = show(io, δ)
 #########
 
 """
-    Diff(axis)
+Derivative(axis)
 
 represents the differentiation (or finite-differences) operator on the
 specified axis.
 """
-struct Diff{T,D} <: LazyQuasiMatrix{T}
+struct Derivative{T,D} <: LazyQuasiMatrix{T}
     axis::Inclusion{T,D}
 end
 
-Diff{T}(axis::Inclusion{<:Any,D}) where {T,D} = Diff{T,D}(axis)
-Diff{T}(domain) where T = Diff{T}(Inclusion(domain))
+Derivative{T}(axis::Inclusion{<:Any,D}) where {T,D} = Derivative{T,D}(axis)
+Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
 
-Diff(L::AbstractQuasiMatrix) = Diff(axes(L,1))
+Derivative(L::AbstractQuasiMatrix) = Derivative(axes(L,1))
 
-@deprecate Derivative(x) Diff(x)
-
-function summary(io::IO, D::Diff)
-    print(io, "Diff(")
+function summary(io::IO, D::Derivative)
+    print(io, "Derivative(")
     summary(io,D.axis)
     print(io,")")
 end
 
-axes(D::Diff) = (D.axis, D.axis)
-==(a::Diff, b::Diff) = a.axis == b.axis
-copy(D::Diff) = Diff(copy(D.axis))
+axes(D::Derivative) = (D.axis, D.axis)
+==(a::Derivative, b::Derivative) = a.axis == b.axis
+copy(D::Derivative) = Derivative(copy(D.axis))
 
 function diff(d::AbstractQuasiVector)
     x = axes(d,1)
-    Diff(x)*d
+    Derivative(x)*d
 end
 
-^(D::Diff, k::Integer) = ApplyQuasiArray(^, D, k)
+^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
 
 
-function view(D::Diff, kr::Inclusion, jr::Inclusion)
+function view(D::Derivative, kr::Inclusion, jr::Inclusion)
     @boundscheck axes(D,1) == kr == jr || throw(BoundsError(D,(kr,jr)))
     D
 end
@@ -145,5 +143,5 @@ const Identity{T,D} = QuasiDiagonal{T,Inclusion{T,D}}
 
 Identity(d::Inclusion) = QuasiDiagonal(d)
 
-@simplify *(D::Diff, x::Inclusion) = ones(promote_type(eltype(D),eltype(x)), x)
-@simplify *(D::Diff, c::AbstractQuasiFill) = zeros(promote_type(eltype(D),eltype(c)), axes(c,1))
+@simplify *(D::Derivative, x::Inclusion) = ones(promote_type(eltype(D),eltype(x)), x)
+@simplify *(D::Derivative, c::AbstractQuasiFill) = zeros(promote_type(eltype(D),eltype(c)), axes(c,1))
