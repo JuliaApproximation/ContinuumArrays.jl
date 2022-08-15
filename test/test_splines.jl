@@ -1,6 +1,6 @@
 using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
-import LazyArrays: MulStyle, LdivStyle, arguments
+import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply
 import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout, coefficients
 
 @testset "Splines" begin
