@@ -5,12 +5,13 @@ using ContinuumArrays, DifferentialEquations, Plots
 ##
 
 L = LinearSpline(range(-1,1; length=20))
-D = Derivative(x)
+x = axes(L,1)
+D = Diff(x)
 M = L'L
 Δ = -((D*L)'D*L)
-u0 = transform(L, exp)
+u0 = L \ exp.(x)
 
-heat(u,(M,Δ),t) = M\(Δ*u)
+heat(u,(M,Δ),t) = M \ (Δ*u)
 prob = ODEProblem(heat,u0,(0.0,1.0),(M,Δ))
 sol = solve(prob,Tsit5(),reltol=1e-8,abstol=1e-8)
 

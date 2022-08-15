@@ -94,9 +94,9 @@ end
 end
 
 
-## Derivative
+## Differentiation
 function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
-                 M::QMul2{<:Derivative,<:LinearSpline})
+                 M::QMul2{<:Diff,<:LinearSpline})
     D, L = M.A, M.B
     H, A = dest.args
     x = H.points
@@ -112,14 +112,14 @@ function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
     dest
 end
 
-function similar(M::QMul2{<:Derivative,<:LinearSpline}, ::Type{T}) where T
+function similar(M::QMul2{<:Diff,<:LinearSpline}, ::Type{T}) where T
     D, B = M.A, M.B
     n = size(B,2)
     ApplyQuasiMatrix(*, HeavisideSpline{T}(B.points),
         BandedMatrix{T}(undef, (n-1,n), (0,1)))
 end
 
-@simplify function *(D::Derivative, L::LinearSpline)
+@simplify function *(D::Diff, L::LinearSpline)
     M = Mul(D, L)
     copyto!(similar(M, eltype(M)), M)
 end

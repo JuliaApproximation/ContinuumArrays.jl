@@ -24,9 +24,9 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
         @test_throws BoundsError S[1.5,2]
         @test_throws BoundsError S[0.5,5]
 
-        D = Derivative(axes(S,1))
-        D1 = Derivative(axes(S1,1))
-        D2 = Derivative(axes(S2,1))
+        D = Diff(axes(S,1))
+        D1 = Diff(axes(S1,1))
+        D2 = Diff(axes(S2,1))
         @test (D*S)[0.5,1:4] == [(D1 * S1)[0.5,1:2]; zeros(2)]
         @test (D*S)[2.5,1:4] == [zeros(2); (D2 * S2)[2.5,1:2]]
 
@@ -63,7 +63,7 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
 
         @test permutedims(S)[1:5,0.1] == S[0.1,1:5]
 
-        D = Derivative(axes(S,1))
+        D = Diff(axes(S,1))
         @test (D*S)[0.1,1:5] == [vcat.((D*S1)[0.1,:],0); vcat.(0, (D*S2)[0.1,:])]
         
         @test_throws BoundsError (D*S)[1.5,2]
@@ -77,7 +77,7 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
         S1 = LinearSpline(0:1)
         S2 = LinearSpline(0:0.5:1)
         S = HvcatBasis(2, S1, S2, S2, S1)
-        D = Derivative(axes(S,1))
+        D = Diff(axes(S,1))
 
         @test S == S
 
@@ -85,7 +85,7 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
         @test S[0.1,Block(1)] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]
         @test S[0.1,Block(1)[1]] == [S1[0.1,1] 0; 0 0]
         @test S[0.1,getindex.(Block(1),1:2)] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]
-        D = Derivative(axes(S,1))
+        D = Diff(axes(S,1))
         @test_broken (D*S)[0.1,1] # throws error
 
         v = view(S, :, Block.(2:3))

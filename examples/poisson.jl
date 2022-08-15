@@ -5,11 +5,10 @@ using ContinuumArrays, Plots
 ####
 
 L = LinearSpline(range(0,1; length=10_000))[:,2:end-1]
-x = axes(L,1)
-D = Derivative(x)
+D = Diff(L)
 Δ = -((D*L)'D*L)
 M = L'L
-f = L \ exp.(x)
+f = expand(L, exp)
 u = L * (Δ \ (M*f))
 plot(u)
 

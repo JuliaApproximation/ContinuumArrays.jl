@@ -221,7 +221,7 @@ _sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) 
     TransformFactorization(plan_transform(parent(L), Array{eltype(L)}(undef, last(jr), dims...), 1)...)
 
 # If jr is not OneTo we project
-_sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,Any}, L, dims...; kws...) =
+_sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
     ProjectionFactorization(factorize(parent(L)[:,OneTo(maximum(jr))]), jr)
 
 _factorize(::SubBasisLayout, L, dims...; kws...) = _sub_factorize(size(parent(L)), parentindices(L), L, dims...; kws...)
@@ -264,7 +264,7 @@ transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
 finds the coefficients of a function `f` expanded in a basis defined as the columns of a quasi matrix `A`.
 It is equivalent to
 ```
-A \ f.(axes(A,1))
+A \\ f.(axes(A,1))
 ```
 """
 transform(A, f) = A \ f.(axes(A,1))
@@ -275,7 +275,7 @@ transform(A, f) = A \ f.(axes(A,1))
 expands a function `f` im a basis defined as the columns of a quasi matrix `A`.
 It is equivalent to
 ```
-A / A \ f.(axes(A,1))
+A / A \\ f.(axes(A,1))
 ```
 """
 expand(A, f) = A * transform(A, f)
@@ -488,29 +488,29 @@ end
 
 # Differentiation of sub-arrays
 
-# avoid stack overflow from unmaterialize Derivative() * parent()
+# avoid stack overflow from unmaterialize Diff() * parent()
 _der_sub(DP, inds...) = DP[inds...]
-_der_sub(DP::ApplyQuasiMatrix{T,typeof(*),<:Tuple{Derivative,Any}}, kr, jr) where T = ApplyQuasiMatrix{T}(*, DP.args[1], view(DP.args[2], kr, jr))
+_der_sub(DP::ApplyQuasiMatrix{T,typeof(*),<:Tuple{Diff,Any}}, kr, jr) where T = ApplyQuasiMatrix{T}(*, DP.args[1], view(DP.args[2], kr, jr))
 
 # need to customise simplifiable so can't use @simplify
-simplifiable(::typeof(*), A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})= simplifiable(*, Derivative(axes(parent(B),1)), parent(B))
-simplifiable(::typeof(*), Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = simplifiable(*, Bc', Ac')
-function mul(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})
+simplifiable(::typeof(*), A::Diff, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})= simplifiable(*, Diff(axes(parent(B),1)), parent(B))
+simplifiable(::typeof(*), Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Diff}) = simplifiable(*, Bc', Ac')
+function mul(A::Diff, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     P = parent(B)
-    _der_sub(Derivative(axes(P,1))*P, parentindices(B)...)
+    _der_sub(Diff(axes(P,1))*P, parentindices(B)...)
 end
-mul(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = mul(Bc', Ac')'
+mul(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Diff}) = mul(Bc', Ac')'
 
-simplifiable(::typeof(*), A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) = simplifiable(*, Derivative(axes(parent(B),1)), parent(B))
-simplifiable(::typeof(*), Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = simplifiable(*, Bc', Ac')
-function mul(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
+simplifiable(::typeof(*), A::Diff, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) = simplifiable(*, Diff(axes(parent(B),1)), parent(B))
+simplifiable(::typeof(*), Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Diff}) = simplifiable(*, Bc', Ac')
+function mul(A::Diff, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
     axes(A,2) == axes(B,1) || throw(DimensionMismatch())
     P = parent(B)
     kr,jr = parentindices(B)
-    (Derivative(axes(P,1))*P*kr.A)[kr,jr]
+    (Diff(axes(P,1))*P*kr.A)[kr,jr]
 end
-mul(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = mul(Bc', Ac')'
+mul(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Diff}) = mul(Bc', Ac')'
 
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = SubBasisLayout()

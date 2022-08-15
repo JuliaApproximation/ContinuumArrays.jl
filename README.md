@@ -69,10 +69,12 @@ julia> f[0.1]
 
 Creating a finite element method is possible using standard array terminology. 
 We always take the Lebesgue inner product associated with an axes, so in this
-case the mass matrix is just `L'L`. Combined with a derivative operator allows
+case the mass matrix is just `L'L`. Combined with a differentiation operator allows
 us to form the weak Laplacian.
 ```julia
 julia> B = L[:,2:end-1]; # drop boundary terms to impose zero Dirichlet
+
+julia> D = Diff(L); # Differentiation operator
 
 julia> Δ = (D*B)'D*B # weak Laplacian
 4×4 BandedMatrices.BandedMatrix{Float64,Array{Float64,2},Base.OneTo{Int64}}:
