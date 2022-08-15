@@ -184,13 +184,14 @@ end
 \(a::TransformFactorization, b::AbstractVector) = a.plan * b
 \(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
 
-function plan_transform(L, arr)
+function plan_transform(L, arr, dims=1)
+    @assert dims == 1
     p = grid(L)
     p, inv(L[p,:])
 end
 
 _factorize(::AbstractBasisLayout, L, dims...; kws...) =
-    TransformFactorization(plan_transform(L, Array{eltype(L)}(undef, size(L,2), dims...))...)
+    TransformFactorization(plan_transform(L, Array{eltype(L)}(undef, size(L,2), dims...), 1)...)
 
 
 
@@ -209,7 +210,20 @@ end
 \(a::ProjectionFactorization, b::AbstractQuasiMatrix) = (a.F \ b)[a.inds,:]
 \(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
 
-_factorize(::SubBasisLayout, L, dims...; kws...) = ProjectionFactorization(factorize(parent(L), dims...; kws...), parentindices(L)[2])
+
+
+# if parent is finite dimensional default to its transform and project down
+_sub_factorize(::Tuple{Any,Int}, (kr,jr), L, dims...; kws...) = ProjectionFactorization(factorize(parent(L), dims...; kws...), jr)
+
+# ∞-dimensional parents need to use transforms. For now we assume the size of the transform is equal to the size of the truncation
+_sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) =
+    TransformFactorization(plan_transform(parent(L), Array{eltype(L)}(undef, last(jr), dims...), 1)...)
+
+# If jr is not OneTo we project
+_sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,Any}, L, dims...; kws...) =
+    ProjectionFactorization(factorize(parent(L)[:,OneTo(maximum(jr))]), jr)
+
+_factorize(::SubBasisLayout, L, dims...; kws...) = _sub_factorize(size(parent(L)), parentindices(L), L, dims...; kws...)
 
 
 """
