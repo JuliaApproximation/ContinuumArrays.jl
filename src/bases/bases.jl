@@ -189,12 +189,12 @@ end
 
 Takes a factorization and supports it applied to different dimensions.
 """
-struct FactorizationPlan{T, Fact, Dims} <: Plan{T}
+struct FactorizationPlan{T, Fact, Dims} # <: Plan{T} We don't depend on AbstractFFTs
     factorization::Fact
     dims::Dims
 end
 
-FactorizationPlan(fact, dims=1) = Factorization{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+FactorizationPlan(fact, dims) = FactorizationPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
 
 function *(P::FactorizationPlan{<:Any,<:Any,Int}, x::AbstractVector)
     @assert P.dims == 1
@@ -237,7 +237,7 @@ function *(P::FactorizationPlan, X::AbstractArray)
 end
 
 
-function plan_transform(L, arr, dims=1)
+function plan_transform(L, arr, dims=1:ndims(arr))
     @assert dims == 1
     p = grid(L)
     p, FactorizationPlan(factorize(L[p,:]), dims)
