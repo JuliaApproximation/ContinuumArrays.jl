@@ -6,7 +6,7 @@ using ContinuumArrays, DifferentialEquations, Plots
 
 L = LinearSpline(range(-1,1; length=20))
 x = axes(L,1)
-D = Diff(x)
+D = Derivative(x)
 M = L'L
 Δ = -((D*L)'D*L)
 u0 = L \ exp.(x)

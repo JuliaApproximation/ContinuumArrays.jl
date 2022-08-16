@@ -185,23 +185,23 @@ end
 \(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
 
 """
-    FactorizationPlan(factorization, dims)
+    InvPlan(factorization, dims)
 
 Takes a factorization and supports it applied to different dimensions.
 """
-struct FactorizationPlan{T, Fact, Dims} # <: Plan{T} We don't depend on AbstractFFTs
+struct InvPlan{T, Fact, Dims} # <: Plan{T} We don't depend on AbstractFFTs
     factorization::Fact
     dims::Dims
 end
 
-FactorizationPlan(fact, dims) = FactorizationPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+InvPlan(fact, dims) = InvPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
 
-function *(P::FactorizationPlan{<:Any,<:Any,Int}, x::AbstractVector)
+function *(P::InvPlan{<:Any,<:Any,Int}, x::AbstractVector)
     @assert P.dims == 1
     P.factorization \ x
 end
 
-function *(P::FactorizationPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
+function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
     if P.dims == 1
         P.factorization \ X
     else
@@ -210,7 +210,7 @@ function *(P::FactorizationPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
     end
 end
 
-function *(P::FactorizationPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
+function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
     Y = similar(X)
     if P.dims == 1
         for j in axes(X,3)
@@ -229,9 +229,9 @@ function *(P::FactorizationPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
     Y
 end
 
-function *(P::FactorizationPlan, X::AbstractArray)
+function *(P::InvPlan, X::AbstractArray)
     for d in P.dims
-        X = FactorizationPlan(P.factorization, d) * X
+        X = InvPlan(P.factorization, d) * X
     end
     X
 end
@@ -240,7 +240,7 @@ end
 function plan_transform(L, arr, dims=1:ndims(arr))
     @assert dims == 1
     p = grid(L)
-    p, FactorizationPlan(factorize(L[p,:]), dims)
+    p, InvPlan(factorize(L[p,:]), dims)
 end
 
 _factorize(::AbstractBasisLayout, L, dims...; kws...) =
@@ -646,4 +646,6 @@ end
 __sum(::ExpansionLayout, A, dims) = __sum(ApplyLayout{typeof(*)}(), A, dims)
 __cumsum(::ExpansionLayout, A, dims) = __cumsum(ApplyLayout{typeof(*)}(), A, dims)
 
+include("basisconcat.jl")
+include("basiskron.jl")
 include("splines.jl")

@@ -5,7 +5,7 @@ using ContinuumArrays, Plots
 ####
 
 L = LinearSpline(range(0,1; length=10_000))[:,2:end-1]
-D = Diff(L)
+D = Derivative(L)
 Δ = -((D*L)'D*L)
 M = L'L
 f = expand(L, exp)

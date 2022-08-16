@@ -112,4 +112,4 @@ function QuasiArrays._getindex(::Type{IND}, A::HvcatBasis{T}, (x,j)::IND) where 
 end
 
 
-@simplify *(D::Diff, H::ApplyQuasiMatrix{<:Any,typeof(hcat)}) = hcat((Ref(D) .* H.args)...)
+@simplify *(D::Derivative, H::ApplyQuasiMatrix{<:Any,typeof(hcat)}) = hcat((Ref(D) .* H.args)...)
