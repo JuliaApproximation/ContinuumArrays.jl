@@ -455,4 +455,26 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         D = Derivative(x)
         @test H\D*L == H\(D*L)
     end
+
+    @testset "plan_transform" begin
+        L = LinearSpline(0:5)
+        x = axes(L,1)
+        g = grid(L)
+        v = cos.(g)
+        g2,P = plan_transform(L, v)
+        @test g2 == g
+        @test P * v == transform(L, cos)
+
+        X = cos.(g .+ (1:3)')
+        _,P = plan_transform(L, X, 1)
+        @test P * X == L \ cos.(x .+ (1:3)')
+
+        X = cos.((1:3) .+ g')
+        _,P = plan_transform(L, X, 2)
+        @test P * X == (L \ cos.(x .+ (1:3)'))'
+
+        X = cos.(g .^2 .+ g')
+        _,P = plan_transform(L, X)
+        @test P * X ≈ L[g,:] \ X / L[g,:]'
+    end
 end

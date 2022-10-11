@@ -238,7 +238,6 @@ end
 
 
 function plan_transform(L, arr, dims=1:ndims(arr))
-    @assert dims == 1
     p = grid(L)
     p, InvPlan(factorize(L[p,:]), dims)
 end
