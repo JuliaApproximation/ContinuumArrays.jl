@@ -296,7 +296,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @testset "transform" begin
             L = LinearSpline([1,2,3])
             x = axes(L,1)
-            @test (L \ x) == pinv(L)x == [1,2,3]
+            @test (L \ x) == pinv(L)x == transform(L,identity) == [1,2,3]
             @test factorize(L[:,2:end-1]) isa ContinuumArrays.ProjectionFactorization
             @test L[:,1:2] \ x == [1,2]
             @test L \ [x one(x)] ≈ [L\x L\one(x)]
@@ -308,6 +308,8 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test L[0.123,2:end-1]'* (L[:,2:end-1] \ exp.(x)) ≈ exp(0.123) atol=1E-9
 
             @test L \ zeros(x) ≡ Zeros(10_000)
+
+            @test L / L \ exp.(x) == expand(L, exp)
         end
     end
 

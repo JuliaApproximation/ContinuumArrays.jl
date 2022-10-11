@@ -1,4 +1,4 @@
-using ContinuumArrays, QuasiArrays, IntervalSets, FillArrays, LinearAlgebra, BandedMatrices, InfiniteArrays, Test, Base64, RecipesBase
+using ContinuumArrays, QuasiArrays, IntervalSets, DomainSets, FillArrays, LinearAlgebra, BandedMatrices, InfiniteArrays, Test, Base64, RecipesBase
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
                         basis, invmap, Map, checkpoints, _plotgrid, mul
@@ -12,6 +12,9 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
         @test eltype(x) == Float64
         @test x[0.1] ≡ 0.1
         @test x[0] ≡ x[0.0] ≡ 0.0
+
+        @test size(Inclusion(ℝ),1) == ℵ₁
+        @test size(Inclusion(ℤ),1) == ℵ₀
     end
 
     @testset "broadcast" begin

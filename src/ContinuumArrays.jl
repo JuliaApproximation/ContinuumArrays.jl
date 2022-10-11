@@ -29,9 +29,7 @@ const QMul2{A,B} = Mul{<:Any, <:Any, <:A,<:B}
 const QMul3{A,B,C} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B,C}}
 
 cardinality(::AbstractInterval) = ℵ₁
-cardinality(::FullSpace{<:AbstractFloat}) = ℵ₁
-cardinality(::EuclideanDomain) = ℵ₁
-cardinality(::Union{DomainSets.RealNumbers,DomainSets.ComplexNumbers}) = ℵ₁
+cardinality(::Union{FullSpace{<:AbstractFloat},EuclideanDomain,DomainSets.RealNumbers,DomainSets.ComplexNumbers}) = ℵ₁
 cardinality(::Union{DomainSets.Integers,DomainSets.Rationals,DomainSets.NaturalNumbers}) = ℵ₀
 
 Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
