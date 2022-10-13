@@ -52,7 +52,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
     @testset "basics" begin
         F = factorize(T)
         g = grid(F)
-        @test T \ exp.(x) == F \ exp.(x) == F \ exp.(g) == chebyshevtransform(exp.(g), Val(1))
+        @test T \ exp.(x) == F \ exp.(x) == chebyshevtransform(exp.(g), Val(1))
         @test all(checkpoints(T) .∈ Ref(axes(T,1)))
 
         @test T \ [exp.(x) cos.(x)] ≈ [F \ exp.(x) F \ cos.(x)]

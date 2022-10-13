@@ -94,7 +94,7 @@ end
 end
 
 
-## Derivative
+## Differentiation
 function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
                  M::QMul2{<:Derivative,<:LinearSpline})
     D, L = M.A, M.B

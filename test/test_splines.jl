@@ -1,6 +1,6 @@
-using ContinuumArrays, LinearAlgebra, LazyArrays, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
+using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
-import LazyArrays: MulStyle, LdivStyle, arguments
+import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply
 import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout, coefficients
 
 @testset "Splines" begin
@@ -152,7 +152,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         L = LinearSpline([1,2,3])
         f = L*[1,2,4]
 
-        D = Derivative(axes(L,1))
+        D = Derivative(L)
         @test copy(D) == D
 
         @test D*L isa MulQuasiMatrix
@@ -180,7 +180,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test fp[2.2] ≈ 2
 
 
-        @testset "View derivatives" begin
+        @testset "View Derivatives" begin
             L = LinearSpline(1:5)
             H = HeavisideSpline(1:5)
             x = axes(L,1)
@@ -227,7 +227,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
     @testset "Weak Laplacian" begin
         H = HeavisideSpline(0:2)
         L = LinearSpline(0:2)
-        D = Derivative(axes(L,1))
+        D = Derivative(L)
 
         @test apply(*,L',D') isa MulQuasiMatrix
         @test MemoryLayout(typeof(L')) isa AdjointBasisLayout
@@ -296,11 +296,13 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @testset "transform" begin
             L = LinearSpline([1,2,3])
             x = axes(L,1)
-            @test (L \ x) == pinv(L)x == [1,2,3]
+            @test (L \ x) == pinv(L)x == transform(L,identity) == [1,2,3]
             @test factorize(L[:,2:end-1]) isa ContinuumArrays.ProjectionFactorization
-            @test L[:,1:2] \ x == [1,2]
+            @test factorize(L[:,Base.OneTo(2)]) isa ContinuumArrays.ProjectionFactorization
+            @test L[:,1:2] \ x ==  L[:,Base.OneTo(2)] \ x == [1,2]
             @test L \ [x one(x)] ≈ [L\x L\one(x)]
             @test factorize(L) \ QuasiOnes(x, Base.OneTo(3)) ≈ L \ QuasiOnes(x, Base.OneTo(3)) ≈ ones(3,3)
+            @test size(factorize(L), 2) == size(L, 2)
 
             L = LinearSpline(range(0,1; length=10_000))
             x = axes(L,1)
@@ -308,6 +310,8 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test L[0.123,2:end-1]'* (L[:,2:end-1] \ exp.(x)) ≈ exp(0.123) atol=1E-9
 
             @test L \ zeros(x) ≡ Zeros(10_000)
+
+            @test L / L \ exp.(x) == expand(L, exp)
         end
     end
 
@@ -324,7 +328,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test sum(u[5x .+ 1]) ≈ sum(view(u,5x .+ 1)) ≈ sum(u)/5
 
         L = LinearSpline([1,2,3,6])
-        D = Derivative(axes(L,1))
+        D = Derivative(L)
         @test sum(D*L; dims=1) ≈ sum((D*L)'; dims=2)' ≈ [-1 zeros(1,2) 1]
     end
 
@@ -332,7 +336,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         L = LinearSpline(range(0,stop=1,length=10))
         B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
         @test B'B == (L'L)[2:end-1,2:end-1]
-        D = Derivative(axes(L,1))
+        D = Derivative(L)
         @test apply(*,D,B) isa MulQuasiMatrix
         @test D*B isa MulQuasiMatrix
         @test apply(*,D,B)[0.1,1] == (D*B)[0.1,1] == 9
@@ -360,7 +364,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
     @testset "Helmholtz" begin
         L = LinearSpline(range(0,stop=1,length=10))
         B = L[:,2:end-1] # Zero dirichlet by dropping first and last spline
-        D = Derivative(axes(L,1))
+        D = Derivative(L)
 
         A = -((B'D')*(D*B)) + 100^2*B'B # Weak Laplacian
 
@@ -378,7 +382,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test L[y,:]'L[y,:] isa SymTridiagonal
         @test L[y,:]'L[y,:] == 1/2*(L'L)
 
-        D = Derivative(axes(L,1))
+        D = Derivative(L)
         H = HeavisideSpline(L.points)
         @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 
@@ -452,5 +456,41 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         x = axes(L,1)
         D = Derivative(x)
         @test H\D*L == H\(D*L)
+    end
+
+    @testset "plan_transform" begin
+        L = LinearSpline(0:5)
+        x = axes(L,1)
+        g = grid(L)
+        v = cos.(g)
+        P = plan_transform(L, v)
+        @test P * v == transform(L, cos)
+
+        X = cos.(g .+ (1:3)')
+        P = plan_transform(L, X, 1)
+        @test P * X == L \ cos.(x .+ (1:3)')
+
+        X = cos.((1:3) .+ g')
+        P = plan_transform(L, X, 2)
+        @test P * X == (L \ cos.(x .+ (1:3)'))'
+
+        X = cos.(g .^2 .+ g')
+        P = plan_transform(L, X)
+        @test P * X ≈ L[g,:] \ X / L[g,:]'
+
+        n = size(L,2)
+        X = randn(n, n, n)
+        P = plan_transform(L, X)
+        PX = P * X
+        for k = 1:n, j = 1:n
+            X[:, k, j] = L[g,:] \ X[:, k, j]
+        end
+        for k = 1:n, j = 1:n
+            X[k, :, j] = L[g,:] \ X[k, :, j]
+        end
+        for k = 1:n, j = 1:n
+            X[k, j, :] = L[g,:] \ X[k, j, :]
+        end
+        @test PX ≈ X
     end
 end

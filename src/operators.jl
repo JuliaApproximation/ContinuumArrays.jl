@@ -92,16 +92,23 @@ show(io::IO, δ::DiracDelta) = print(io, "δ at $(δ.x) over $(axes(δ,1))")
 show(io::IO, ::MIME"text/plain", δ::DiracDelta) = show(io, δ)
 
 #########
-# Derivative
+# Differentiation
 #########
 
+"""
+Derivative(axis)
 
+represents the differentiation (or finite-differences) operator on the
+specified axis.
+"""
 struct Derivative{T,D} <: LazyQuasiMatrix{T}
     axis::Inclusion{T,D}
 end
 
 Derivative{T}(axis::Inclusion{<:Any,D}) where {T,D} = Derivative{T,D}(axis)
 Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
+
+Derivative(L::AbstractQuasiMatrix) = Derivative(axes(L,1))
 
 function summary(io::IO, D::Derivative)
     print(io, "Derivative(")

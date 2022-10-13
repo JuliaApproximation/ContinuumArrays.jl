@@ -1,5 +1,5 @@
 module ContinuumArrays
-using IntervalSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays, RecipesBase
+using IntervalSets, DomainSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays, RecipesBase
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, size, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, _maybetail, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
@@ -21,7 +21,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     AbstractQuasiFill, UnionDomain, __sum, _cumsum, __cumsum, applylayout, _equals, layout_broadcasted, PolynomialLayout
 import InfiniteArrays: Infinity, InfAxes
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, ..
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform
 
 
 
@@ -29,6 +29,8 @@ const QMul2{A,B} = Mul{<:Any, <:Any, <:A,<:B}
 const QMul3{A,B,C} = Mul{<:AbstractQuasiArrayApplyStyle, <:Tuple{A,B,C}}
 
 cardinality(::AbstractInterval) = ℵ₁
+cardinality(::Union{FullSpace{<:AbstractFloat},EuclideanDomain,DomainSets.RealNumbers,DomainSets.ComplexNumbers}) = ℵ₁
+cardinality(::Union{DomainSets.Integers,DomainSets.Rationals,DomainSets.NaturalNumbers}) = ℵ₀
 
 Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
 first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
@@ -90,7 +92,6 @@ checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
 
 include("operators.jl")
 include("bases/bases.jl")
-include("basisconcat.jl")
 
 include("plotting.jl")
 

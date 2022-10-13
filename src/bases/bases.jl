@@ -156,13 +156,12 @@ _grid(::WeightedBasisLayouts, P) = grid(unweighted(P))
 grid(P) = _grid(MemoryLayout(P), P)
 
 
-struct TransformFactorization{T,Grid,Plan,IPlan} <: Factorization{T}
+struct TransformFactorization{T,Grid,Plan} <: Factorization{T}
     grid::Grid
     plan::Plan
-    iplan::IPlan
 end
 
-TransformFactorization{T}(grid, plan) where T = TransformFactorization{T,typeof(grid),typeof(plan),Nothing}(grid, plan, nothing)
+TransformFactorization{T}(grid, plan) where T = TransformFactorization{T,typeof(grid),typeof(plan)}(grid, plan)
 
 """
     TransformFactorization(grid, plan)
@@ -173,15 +172,6 @@ associates a planned transform with a grid. That is, if `F` is a `TransformFacto
 TransformFactorization(grid, plan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(plan))}(grid, plan)
 
 
-TransformFactorization{T}(grid, ::Nothing, iplan) where T = TransformFactorization{T,typeof(grid),Nothing,typeof(iplan)}(grid, nothing, iplan)
-
-"""
-    TransformFactorization(grid, nothing, iplan)
-
-associates a planned inverse transform with a grid. That is, if `F` is a `TransformFactorization`, then
-`F \\ f` is equivalent to `F.iplan \\ f[F.grid]`.
-"""
-TransformFactorization(grid, ::Nothing, iplan) = TransformFactorization{promote_type(eltype(eltype(grid)),eltype(iplan))}(grid, nothing, iplan)
 
 grid(T::TransformFactorization) = T.grid
 function size(T::TransformFactorization, k)
@@ -189,27 +179,76 @@ function size(T::TransformFactorization, k)
     size(T.plan,1)
 end
 
-function size(T::TransformFactorization{<:Any,<:Any,Nothing}, k)
-    @assert k == 2 # TODO: make consistent
-    size(T.iplan,2)
-end
 
-
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiVector{T}) where T = a.iplan \  convert(Array{T}, b[a.grid])
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVector) = a.iplan \  b
-\(a::TransformFactorization, b::AbstractVector) = a.plan * b
-ldiv!(ret::AbstractVecOrMat, a::TransformFactorization, b::AbstractVecOrMat) = mul!(ret, a.plan, b)
-ldiv!(ret::AbstractVecOrMat, a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractVecOrMat) = ldiv!(ret, a.iplan, b)
+\(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
 
-\(a::TransformFactorization{<:Any,<:Any,Nothing}, b::AbstractQuasiMatrix{T}) where T = a \  convert(Array{T}, b[a.grid,:])
-\(a::TransformFactorization, b::AbstractQuasiMatrix) = a \ convert(Array, b[a.grid,:])
-\(a::TransformFactorization, b::AbstractMatrix) = ldiv!(Array{promote_type(eltype(a),eltype(b))}(undef,size(a,2),size(b,2)), a, b)
+"""
+    InvPlan(factorization, dims)
 
-function _factorize(::AbstractBasisLayout, L, dims...; kws...)
-    p = grid(L)
-    TransformFactorization(p, nothing, factorize(L[p,:]))
+Takes a factorization and supports it applied to different dimensions.
+"""
+struct InvPlan{T, Fact, Dims} # <: Plan{T} We don't depend on AbstractFFTs
+    factorization::Fact
+    dims::Dims
 end
+
+InvPlan(fact, dims) = InvPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+
+size(F::InvPlan, k...) = size(F.factorization, k...)
+
+
+function *(P::InvPlan{<:Any,<:Any,Int}, x::AbstractVector)
+    @assert P.dims == 1
+    P.factorization \ x
+end
+
+function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
+    if P.dims == 1
+        P.factorization \ X
+    else
+        @assert P.dims == 2
+        permutedims(P.factorization \ permutedims(X))
+    end
+end
+
+function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
+    Y = similar(X)
+    if P.dims == 1
+        for j in axes(X,3)
+            Y[:,:,j] = P.factorization \ X[:,:,j]
+        end
+    elseif P.dims == 2
+        for k in axes(X,1)
+            Y[k,:,:] = P.factorization \ X[k,:,:]
+        end
+    else
+        @assert P.dims == 3
+        for k in axes(X,1), j in axes(X,2)
+            Y[k,j,:] = P.factorization \ X[k,j,:]
+        end
+    end
+    Y
+end
+
+function *(P::InvPlan, X::AbstractArray)
+    for d in P.dims
+        X = InvPlan(P.factorization, d) * X
+    end
+    X
+end
+
+
+function plan_grid_transform(L, arr, dims=1:ndims(arr))
+    p = grid(L)
+    p, InvPlan(factorize(L[p,:]), dims)
+end
+
+plan_transform(P, arr, dims...) = plan_grid_transform(P, arr, dims...)[2]
+
+_factorize(::AbstractBasisLayout, L, dims...; kws...) =
+    TransformFactorization(plan_grid_transform(L, Array{eltype(L)}(undef, size(L,2), dims...), 1)...)
+
 
 
 """
@@ -225,9 +264,22 @@ end
 
 \(a::ProjectionFactorization, b::AbstractQuasiVector) = (a.F \ b)[a.inds]
 \(a::ProjectionFactorization, b::AbstractQuasiMatrix) = (a.F \ b)[a.inds,:]
-\(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
 
-_factorize(::SubBasisLayout, L, dims...; kws...) = ProjectionFactorization(factorize(parent(L), dims...; kws...), parentindices(L)[2])
+
+
+# if parent is finite dimensional default to its transform and project down
+_sub_factorize(::Tuple{Any,Int}, (kr,jr), L, dims...; kws...) = ProjectionFactorization(factorize(parent(L), dims...; kws...), jr)
+_sub_factorize(::Tuple{Any,Int}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) = ProjectionFactorization(factorize(parent(L), dims...; kws...), jr)
+
+# ∞-dimensional parents need to use transforms. For now we assume the size of the transform is equal to the size of the truncation
+_sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) =
+    TransformFactorization(plan_grid_transform(parent(L), Array{eltype(L)}(undef, last(jr), dims...), 1)...)
+
+# If jr is not OneTo we project
+_sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
+    ProjectionFactorization(factorize(parent(L)[:,OneTo(maximum(jr))]), jr)
+
+_factorize(::SubBasisLayout, L, dims...; kws...) = _sub_factorize(size(parent(L)), parentindices(L), L, dims...; kws...)
 
 
 """
@@ -259,6 +311,29 @@ plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(A, size(B,2))
 
 transform_ldiv(A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}, _) where {T,V} = plan_ldiv(A, B) \ B
 transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
+
+
+"""
+    transform(A, f)
+
+finds the coefficients of a function `f` expanded in a basis defined as the columns of a quasi matrix `A`.
+It is equivalent to
+```
+A \\ f.(axes(A,1))
+```
+"""
+transform(A, f) = A \ f.(axes(A,1))
+
+"""
+    expand(A, f)
+
+expands a function `f` im a basis defined as the columns of a quasi matrix `A`.
+It is equivalent to
+```
+A / A \\ f.(axes(A,1))
+```
+"""
+expand(A, f) = A * transform(A, f)
 
 copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 # TODO: redesign to use simplifiable(\, A, B)
@@ -573,4 +648,6 @@ end
 __sum(::ExpansionLayout, A, dims) = __sum(ApplyLayout{typeof(*)}(), A, dims)
 __cumsum(::ExpansionLayout, A, dims) = __cumsum(ApplyLayout{typeof(*)}(), A, dims)
 
+include("basisconcat.jl")
+include("basiskron.jl")
 include("splines.jl")
