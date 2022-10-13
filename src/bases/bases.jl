@@ -181,7 +181,6 @@ end
 
 
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
-\(a::TransformFactorization, b::AbstractVector) = a.plan * b
 \(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
 
 """
@@ -195,6 +194,9 @@ struct InvPlan{T, Fact, Dims} # <: Plan{T} We don't depend on AbstractFFTs
 end
 
 InvPlan(fact, dims) = InvPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+
+size(F::InvPlan, k...) = size(F.factorization, k...)
+
 
 function *(P::InvPlan{<:Any,<:Any,Int}, x::AbstractVector)
     @assert P.dims == 1
@@ -260,7 +262,6 @@ end
 
 \(a::ProjectionFactorization, b::AbstractQuasiVector) = (a.F \ b)[a.inds]
 \(a::ProjectionFactorization, b::AbstractQuasiMatrix) = (a.F \ b)[a.inds,:]
-\(a::ProjectionFactorization, b::AbstractVector) = (a.F \ b)[a.inds]
 
 
 

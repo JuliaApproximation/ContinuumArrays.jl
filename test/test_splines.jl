@@ -298,9 +298,11 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             x = axes(L,1)
             @test (L \ x) == pinv(L)x == transform(L,identity) == [1,2,3]
             @test factorize(L[:,2:end-1]) isa ContinuumArrays.ProjectionFactorization
-            @test L[:,1:2] \ x == [1,2]
+            @test factorize(L[:,Base.OneTo(2)]) isa ContinuumArrays.ProjectionFactorization
+            @test L[:,1:2] \ x ==  L[:,Base.OneTo(2)] \ x == [1,2]
             @test L \ [x one(x)] ≈ [L\x L\one(x)]
             @test factorize(L) \ QuasiOnes(x, Base.OneTo(3)) ≈ L \ QuasiOnes(x, Base.OneTo(3)) ≈ ones(3,3)
+            @test size(factorize(L), 2) == size(L, 2)
 
             L = LinearSpline(range(0,1; length=10_000))
             x = axes(L,1)
@@ -476,5 +478,20 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         X = cos.(g .^2 .+ g')
         _,P = plan_transform(L, X)
         @test P * X ≈ L[g,:] \ X / L[g,:]'
+
+        n = size(L,2)
+        X = randn(n, n, n)
+        g,P = plan_transform(L, X)
+        PX = P * X
+        for k = 1:n, j = 1:n
+            X[:, k, j] = L[g,:] \ X[:, k, j]
+        end
+        for k = 1:n, j = 1:n
+            X[k, :, j] = L[g,:] \ X[k, :, j]
+        end
+        for k = 1:n, j = 1:n
+            X[k, j, :] = L[g,:] \ X[k, j, :]
+        end
+        @test PX ≈ X
     end
 end
