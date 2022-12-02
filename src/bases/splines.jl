@@ -65,7 +65,7 @@ end
 end
 
 function copyto!(dest::SymTridiagonal,
-                 AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}) where T
+                 AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline})
     Ac,B = AB.A,AB.B
     A = parent(Ac)
     A.points == B.points || throw(ArgumentError())
