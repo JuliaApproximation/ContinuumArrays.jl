@@ -153,7 +153,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         f = L*[1,2,4]
 
         D = Derivative(L)
-        @test copy(D) == D
+        @test copy(D) == D == diff(L; dims=1)
 
         @test D*L isa MulQuasiMatrix
         @test length((D*L).args) == 2
