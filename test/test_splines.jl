@@ -153,11 +153,12 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         f = L*[1,2,4]
 
         D = Derivative(L)
-        @test copy(D) == D == diff(L; dims=1)
+        @test copy(D) == D
 
         @test D*L isa MulQuasiMatrix
         @test length((D*L).args) == 2
         @test eltype(D*L) == Float64
+        @test typeof(diff(L; dims=1)) == typeof(D*L)
 
         M = applied(*, (D*L).args..., [1,2,4])
         @test eltype(materialize(M)) == Float64
