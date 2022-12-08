@@ -148,12 +148,12 @@ copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)},<:Any,<:AbstractQua
 
 
 # expansion
-_grid(_, P) = error("Overload Grid")
+_grid(_, P, n...) = error("Overload Grid")
 
-_grid(::MappedBasisLayout, P) = invmap(parentindices(P)[1])[grid(demap(P))]
-_grid(::SubBasisLayout, P) = grid(parent(P))
-_grid(::WeightedBasisLayouts, P) = grid(unweighted(P))
-grid(P) = _grid(MemoryLayout(P), P)
+_grid(::MappedBasisLayout, P, n...) = invmap(parentindices(P)[1])[grid(demap(P), n...)]
+_grid(::SubBasisLayout, P, n...) = grid(parent(P), n...)
+_grid(::WeightedBasisLayouts, P, n...) = grid(unweighted(P), n...)
+grid(P, n...) = _grid(MemoryLayout(P), P, n...)
 
 
 struct TransformFactorization{T,Grid,Plan} <: Factorization{T}
