@@ -1,9 +1,11 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, Test
-import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization, ExpansionLayout
+using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Test
+import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
+                        ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
+                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout
 
 """
 This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
-for the real implementation.
+    for the real implementation.
 """
 struct Chebyshev <: Basis{Float64}
     n::Int
@@ -21,7 +23,7 @@ Base.getindex(::Chebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
 Base.getindex(::ChebyshevWeight, x::Float64) = 1/sqrt(1-x^2)
 Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 
-ContinuumArrays.plan_grid_transform(L::Chebyshev, arr, dims=1:ndims(arr)) = grid(L), plan_chebyshevtransform(arr, 1:ndims(arr))
+ContinuumArrays.plan_grid_transform(L::Chebyshev, arr, dims=1:ndims(arr)) = grid(L), plan_chebyshevtransform(arr, dims)
 
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
