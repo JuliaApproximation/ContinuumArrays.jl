@@ -125,6 +125,14 @@ function diff(d::AbstractQuasiVector)
     Derivative(x)*d
 end
 
+function diff(A::AbstractQuasiArray; dims::Integer)
+    if dims == 1
+        Derivative(axes(A,1)) * A
+    else
+        error("Not implemented")
+    end
+end
+
 ^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
 
 
