@@ -151,8 +151,19 @@ copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)},<:Any,<:AbstractQua
 _grid(_, P, n...) = error("Overload Grid")
 
 _grid(::MappedBasisLayout, P, n...) = invmap(parentindices(P)[1])[grid(demap(P), n...)]
-_grid(::SubBasisLayout, P, n...) = grid(parent(P), n...)
+_grid(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), maximum(parentindices(P)[2][n]))
+_grid(::SubBasisLayout, P::AbstractQuasiMatrix) = grid(parent(P), maximum(parentindices(P)[2]))
 _grid(::WeightedBasisLayouts, P, n...) = grid(unweighted(P), n...)
+
+
+"""
+    grid(P, n...)
+
+Creates a grid of points. if `n` is unspecified it will
+be sufficient number of points to determine `size(P,2)`
+coefficients. Otherwise its enough points to determine `n`
+coefficients.
+"""
 grid(P, n...) = _grid(MemoryLayout(P), P, n...)
 
 
