@@ -167,6 +167,9 @@ coefficients.
 grid(P, n...) = _grid(MemoryLayout(P), P, n...)
 
 
+# values(f) = 
+
+
 struct TransformFactorization{T,Grid,Plan} <: Factorization{T}
     grid::Grid
     plan::Plan
@@ -250,15 +253,15 @@ function *(P::InvPlan, X::AbstractArray)
 end
 
 
-function plan_grid_transform(L, arr, dims=1:ndims(arr))
+function plan_grid_transform(L, szs, dims=1:length(szs))
     p = grid(L)
     p, InvPlan(factorize(L[p,:]), dims)
 end
 
-plan_transform(P, arr, dims...) = plan_grid_transform(P, arr, dims...)[2]
+plan_transform(P, szs, dims...) = plan_grid_transform(P, szs, dims...)[2]
 
 _factorize(::AbstractBasisLayout, L, dims...; kws...) =
-    TransformFactorization(plan_grid_transform(L, Array{eltype(L)}(undef, size(L,2), dims...), 1)...)
+    TransformFactorization(plan_grid_transform(L, (size(L,2), dims...), 1)...)
 
 
 
@@ -284,7 +287,7 @@ _sub_factorize(::Tuple{Any,Int}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) 
 
 # ∞-dimensional parents need to use transforms. For now we assume the size of the transform is equal to the size of the truncation
 _sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) =
-    TransformFactorization(plan_grid_transform(parent(L), Array{eltype(L)}(undef, last(jr), dims...), 1)...)
+    TransformFactorization(plan_grid_transform(parent(L), (last(jr), dims...), 1)...)
 
 # If jr is not OneTo we project
 _sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
