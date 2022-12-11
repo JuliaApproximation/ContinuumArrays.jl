@@ -30,6 +30,9 @@ broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::Basis) where Basis<:Abstrac
 sublayout(::WeightLayout, _) = WeightLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Map,AbstractVector}}) = MappedBasisLayout()
 
+# copy with an Inclusion can not be materialized
+copy(V::SubQuasiArray{<:Any,N,<:Basis,<:Tuple{Inclusion,Vararg{Any}}, trfl}) where {N,trfl}  = V
+
 
 ## Weighted basis interface
 unweighted(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = last(P.args)
@@ -394,6 +397,7 @@ applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout
 
 basis(v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
+coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any,Vararg{Any}}}) where N = ApplyArray(*, tail(v.args)...)
 
 
 function unweighted(lay::ExpansionLayout, a)

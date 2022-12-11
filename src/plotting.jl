@@ -32,6 +32,7 @@ _split_svec(x::AbstractArray{<:StaticVector{2}}) = (map(first,x), map(last,x))
 
 plotvalues(g::AbstractQuasiVector, x) = g[x]
 plotvalues(g::AbstractQuasiMatrix, x) = g[x,:]
+plotvalues(g::AbstractQuasiArray) = plotvalues(g, plotgrid(g))
 
 function plotgridvalues(g)
     x = plotgrid(g)
