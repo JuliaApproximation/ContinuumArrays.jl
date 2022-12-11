@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, IntervalSets, DomainSets, FillArrays, LinearAlgebra, BandedMatrices, InfiniteArrays, Test, Base64, RecipesBase
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayout, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        basis, invmap, Map, checkpoints, _plotgrid, mul
+                        basis, invmap, Map, checkpoints, _plotgrid, mul, plotvalues
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -98,6 +98,7 @@ include("test_basisconcat.jl")
     u = L*randn(6)
     rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
     @test rep[1].args == (L.points,u[L.points])
+    @test plotvalues(u) == u[plotgrid(u)]
 
     @testset "padded" begin
         u = L * Vcat(rand(3), Zeros(3))

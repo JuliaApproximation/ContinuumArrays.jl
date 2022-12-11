@@ -1,7 +1,7 @@
 using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
 import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply
-import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout, coefficients
+import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout
 
 @testset "Splines" begin
     @testset "HeavisideSpline" begin
@@ -27,6 +27,8 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test_throws BoundsError H[[0.1,2.1], 1]
         @test MemoryLayout(typeof(H)) == BasisLayout()
         @test ApplyStyle(*, typeof(H), typeof([1,2])) isa MulStyle
+
+        @test copy(H[:,1:2]) == H[:,1:2]
 
         f = H*[1,2]
         @test f isa ApplyQuasiArray
@@ -494,5 +496,11 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             X[k, j, :] = L[g,:] \ X[k, j, :]
         end
         @test PX ≈ X
+    end
+
+    @testset "Mul coefficients" begin
+        L = LinearSpline(0:5)
+        u = ApplyQuasiArray(*, L, randn(6,5), randn(5))
+        @test coefficients(u) ≈ L \ u
     end
 end
