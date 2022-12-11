@@ -89,6 +89,12 @@ include("test_basisconcat.jl")
     rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), L)
     @test rep[1].args == (L.points,L[L.points,:])
 
+    rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), L[:,1:3])
+    @test rep[1].args == (L.points,L[L.points,1:3])
+
+    @test plotgrid(L[:,1:3],3) == grid(L[:,1:3]) == grid(L[:,1:3],3) == L.points
+    
+
     u = L*randn(6)
     rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
     @test rep[1].args == (L.points,u[L.points])
