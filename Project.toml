@@ -1,6 +1,7 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.11.2"
+version = "0.12"
+
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"

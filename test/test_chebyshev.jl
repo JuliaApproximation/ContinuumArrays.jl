@@ -1,9 +1,11 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, Test
-import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization, ExpansionLayout
+using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Test
+import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
+                        ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
+                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout
 
 """
 This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
-for the real implementation.
+    for the real implementation.
 """
 struct Chebyshev <: Basis{Float64}
     n::Int
@@ -14,17 +16,14 @@ struct ChebyshevWeight <: Weight{Float64} end
 Base.:(==)(::Chebyshev, ::Chebyshev) = true
 Base.:(==)(::ChebyshevWeight, ::ChebyshevWeight) = true
 Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
-ContinuumArrays.grid(T::Chebyshev) = chebyshevpoints(Float64, T.n, Val(1))
+ContinuumArrays.grid(T::Chebyshev, n...) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
 
 Base.getindex(::Chebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
 Base.getindex(::ChebyshevWeight, x::Float64) = 1/sqrt(1-x^2)
 Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 
-LinearAlgebra.factorize(L::Chebyshev) =
-    TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2))))
-LinearAlgebra.factorize(L::Chebyshev, n) =
-    TransformFactorization(grid(L), plan_chebyshevtransform(Array{Float64}(undef, size(L,2),n),1))
+ContinuumArrays.plan_grid_transform(L::Chebyshev, szs::NTuple{N,Int}, dims=1:N) where N = grid(L), plan_chebyshevtransform(Array{eltype(L)}(undef, szs...), dims)
 
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)

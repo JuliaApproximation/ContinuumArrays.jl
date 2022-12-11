@@ -30,6 +30,9 @@ broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::Basis) where Basis<:Abstrac
 sublayout(::WeightLayout, _) = WeightLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Map,AbstractVector}}) = MappedBasisLayout()
 
+# copy with an Inclusion can not be materialized
+copy(V::SubQuasiArray{<:Any,N,<:Basis,<:Tuple{Inclusion,Vararg{Any}}, trfl}) where {N,trfl}  = V
+
 
 ## Weighted basis interface
 unweighted(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = last(P.args)
@@ -148,12 +151,26 @@ copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)},<:Any,<:AbstractQua
 
 
 # expansion
-_grid(_, P) = error("Overload Grid")
+_grid(_, P, n...) = error("Overload Grid")
 
-_grid(::MappedBasisLayout, P) = invmap(parentindices(P)[1])[grid(demap(P))]
-_grid(::SubBasisLayout, P) = grid(parent(P))
-_grid(::WeightedBasisLayouts, P) = grid(unweighted(P))
-grid(P) = _grid(MemoryLayout(P), P)
+_grid(::MappedBasisLayout, P, n...) = invmap(parentindices(P)[1])[grid(demap(P), n...)]
+_grid(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), maximum(parentindices(P)[2][n]))
+_grid(::SubBasisLayout, P::AbstractQuasiMatrix) = grid(parent(P), maximum(parentindices(P)[2]))
+_grid(::WeightedBasisLayouts, P, n...) = grid(unweighted(P), n...)
+
+
+"""
+    grid(P, n...)
+
+Creates a grid of points. if `n` is unspecified it will
+be sufficient number of points to determine `size(P,2)`
+coefficients. Otherwise its enough points to determine `n`
+coefficients.
+"""
+grid(P, n...) = _grid(MemoryLayout(P), P, n...)
+
+
+# values(f) = 
 
 
 struct TransformFactorization{T,Grid,Plan} <: Factorization{T}
@@ -239,15 +256,18 @@ function *(P::InvPlan, X::AbstractArray)
 end
 
 
-function plan_grid_transform(L, arr, dims=1:ndims(arr))
+function plan_grid_transform(L, szs::NTuple{N,Int}, dims=1:N) where N
     p = grid(L)
     p, InvPlan(factorize(L[p,:]), dims)
 end
 
-plan_transform(P, arr, dims...) = plan_grid_transform(P, arr, dims...)[2]
+plan_grid_transform(L, arr::AbstractArray{<:Any,N}, dims=1:N) where N = 
+    plan_grid_transform(L, size(arr), dims)
+
+plan_transform(P, szs, dims...) = plan_grid_transform(P, szs, dims...)[2]
 
 _factorize(::AbstractBasisLayout, L, dims...; kws...) =
-    TransformFactorization(plan_grid_transform(L, Array{eltype(L)}(undef, size(L,2), dims...), 1)...)
+    TransformFactorization(plan_grid_transform(L, (size(L,2), dims...), 1)...)
 
 
 
@@ -273,7 +293,7 @@ _sub_factorize(::Tuple{Any,Int}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) 
 
 # ∞-dimensional parents need to use transforms. For now we assume the size of the transform is equal to the size of the truncation
 _sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) =
-    TransformFactorization(plan_grid_transform(parent(L), Array{eltype(L)}(undef, last(jr), dims...), 1)...)
+    TransformFactorization(plan_grid_transform(parent(L), (last(jr), dims...), 1)...)
 
 # If jr is not OneTo we project
 _sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
@@ -377,6 +397,7 @@ applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout
 
 basis(v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
+coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any,Vararg{Any}}}) where N = ApplyArray(*, tail(v.args)...)
 
 
 function unweighted(lay::ExpansionLayout, a)
