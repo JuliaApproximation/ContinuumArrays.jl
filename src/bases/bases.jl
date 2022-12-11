@@ -253,10 +253,13 @@ function *(P::InvPlan, X::AbstractArray)
 end
 
 
-function plan_grid_transform(L, szs, dims=1:length(szs))
+function plan_grid_transform(L, szs::NTuple{N,Int}, dims=1:N) where N
     p = grid(L)
     p, InvPlan(factorize(L[p,:]), dims)
 end
+
+plan_grid_transform(L, arr::AbstractArray{<:Any,N}, dims=1:N) where N = 
+    plan_grid_transform(L, size(arr), dims)
 
 plan_transform(P, szs, dims...) = plan_grid_transform(P, szs, dims...)[2]
 
