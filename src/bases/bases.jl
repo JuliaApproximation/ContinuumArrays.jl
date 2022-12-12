@@ -31,7 +31,7 @@ sublayout(::WeightLayout, _) = WeightLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Map,AbstractVector}}) = MappedBasisLayout()
 
 # copy with an Inclusion can not be materialized
-copy(V::SubQuasiArray{<:Any,N,<:Basis,<:Tuple{Inclusion,Vararg{Any}}, trfl}) where {N,trfl}  = V
+copy(V::SubQuasiArray{<:Any,N,<:Basis,<:Tuple{AbstractQuasiVector,Vararg{Any}}, trfl}) where {N,trfl}  = V
 
 
 ## Weighted basis interface
