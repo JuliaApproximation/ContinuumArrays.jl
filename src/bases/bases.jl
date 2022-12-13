@@ -297,7 +297,7 @@ _sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,OneTo}, L, dims...; kws...) 
 
 # If jr is not OneTo we project
 _sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
-    ProjectionFactorization(factorize(parent(L)[:,OneTo(maximum(jr))]), jr)
+    ProjectionFactorization(factorize(parent(L)[:,OneTo(maximum(jr))], dims...), jr)
 
 _factorize(::SubBasisLayout, L, dims...; kws...) = _sub_factorize(size(parent(L)), parentindices(L), L, dims...; kws...)
 
