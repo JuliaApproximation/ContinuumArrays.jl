@@ -256,10 +256,17 @@ function *(P::InvPlan, X::AbstractArray)
 end
 
 
-function plan_grid_transform(L, szs::NTuple{N,Int}, dims=1:N) where N
+function plan_grid_transform(lay, L, szs::NTuple{N,Int}, dims=1:N) where N
     p = grid(L)
     p, InvPlan(factorize(L[p,:]), dims)
 end
+
+function plan_grid_transform(::MappedBasisLayout, L, szs::NTuple{N,Int}, dims=1:N) where N
+    x,F = plan_grid_transform(demap(L), szs, dims)
+    invmap(parentindices(L)[1])[x], F
+end
+
+plan_grid_transform(L, szs::NTuple{N,Int}, dims=1:N) where N = plan_grid_transform(MemoryLayout(L), L, szs, dims)
 
 plan_grid_transform(L, arr::AbstractArray{<:Any,N}, dims=1:N) where N = 
     plan_grid_transform(L, size(arr), dims)
