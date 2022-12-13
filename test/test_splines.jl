@@ -304,9 +304,13 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test factorize(L[:,2:end-1]) isa ContinuumArrays.ProjectionFactorization
             @test factorize(L[:,Base.OneTo(2)]) isa ContinuumArrays.ProjectionFactorization
             @test L[:,1:2] \ x ==  L[:,Base.OneTo(2)] \ x == [1,2]
-            @test L \ [x one(x)] ≈ [L\x L\one(x)]
-            @test factorize(L) \ QuasiOnes(x, Base.OneTo(3)) ≈ L \ QuasiOnes(x, Base.OneTo(3)) ≈ ones(3,3)
-            @test size(factorize(L), 2) == size(L, 2)
+
+            @testset "multiple" begin
+                @test L \ [x one(x)] ≈ [L\x L\one(x)]
+                @test factorize(L) \ QuasiOnes(x, Base.OneTo(3)) ≈ L \ QuasiOnes(x, Base.OneTo(3)) ≈ ones(3,3)
+                @test size(factorize(L), 2) == size(L, 2)
+                @test L \ [x exp.(x)] == L[:,1:size(L,2)] \ [x exp.(x)] == [L\x L\exp.(x)]
+            end
 
             L = LinearSpline(range(0,1; length=10_000))
             x = axes(L,1)
