@@ -1,7 +1,7 @@
 using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
 import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply
-import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout
+import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout, plan_grid_transform
 
 @testset "Splines" begin
     @testset "HeavisideSpline" begin
@@ -435,6 +435,25 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @testset "Mapped and BroadcastLayout{typeof(+)}" begin
             @test L[y,:] \ (y .+ y) ≈ L[y,:] \ (2y)
             @test L[y,:] \ (y .- y) ≈ zeros(10)
+        end
+
+        @testset "transform" begin
+            x = Inclusion(0..1)
+            y = 2x .- 1
+            L = LinearSpline(range(-1,stop=1,length=10))
+            g,P = plan_grid_transform(L[y,:], (10,))
+            X = cos.(g)
+            @test L[y,:][g,:] * (P * X) ≈ X
+            @test P \ (P * X) ≈ P * (P \ X) ≈ X
+
+            g,P = plan_grid_transform(L[y,:], (10,10))
+            X = cos.(g .+ g')
+            @test L[y,:][g,:]*(P * X)*L[y,:][g,:]' ≈ X
+            @test P \ (P * X) ≈ P * (P \ X) ≈ X
+
+            g,P = plan_grid_transform(L[y,:], (10,10,10))
+            X = randn(10,10,10)
+            @test P \ (P * X) ≈ P * (P \ X) ≈ X
         end
     end
 
