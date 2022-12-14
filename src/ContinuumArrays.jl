@@ -9,7 +9,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
                         simplifiable, _simplify, AbstractLazyLayout, PaddedLayout
-import LinearAlgebra: pinv, dot, norm2, ldiv!, mul!
+import LinearAlgebra: pinv, inv, dot, norm2, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
 import FillArrays: AbstractFill, getindex_value, SquareEye
@@ -20,6 +20,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize,
                     AbstractQuasiFill, UnionDomain, __sum, _cumsum, __cumsum, applylayout, _equals, layout_broadcasted, PolynomialLayout
 import InfiniteArrays: Infinity, InfAxes
+import AbstractFFTs: Plan
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, basis, coefficients 
 
@@ -91,6 +92,7 @@ checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
 
 
 include("operators.jl")
+include("plans.jl")
 include("bases/bases.jl")
 
 include("plotting.jl")
