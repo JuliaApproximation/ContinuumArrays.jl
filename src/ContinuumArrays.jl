@@ -1,7 +1,7 @@
 module ContinuumArrays
 using IntervalSets, DomainSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays, RecipesBase
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, size, getindex, convert, prod, *, /, \, +, -, ==, ^,
-                IndexStyle, IndexLinear, ==, OneTo, _maybetail, tail, similar, copyto!, copy, diff,
+                IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
                 getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices, view
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted, Broadcasted
@@ -17,7 +17,7 @@ import ArrayLayouts: mul, ZerosLayout, ScalarLayout, AbstractStridedLayout
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
-                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize,
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize, _cutdim,
                     AbstractQuasiFill, UnionDomain, __sum, _cumsum, __cumsum, applylayout, _equals, layout_broadcasted, PolynomialLayout
 import InfiniteArrays: Infinity, InfAxes
 import AbstractFFTs: Plan
@@ -74,15 +74,15 @@ function BlockArrays.blockaxes(A::AbstractQuasiArray{T,N}, d) where {T,N}
 end
 
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{Block{1}, Vararg{Any}}) =
-    (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
+    (unblock(A, inds, I), to_indices(A, _cutdim(inds, I[1]), tail(I))...)
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockRange{1,R}, Vararg{Any}}) where R =
-    (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
+    (unblock(A, inds, I), to_indices(A, _cutdim(inds, I[1]), tail(I))...)
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockIndex{1}, Vararg{Any}}) =
-    (inds[1][I[1]], to_indices(A, _maybetail(inds), tail(I))...)
+    (inds[1][I[1]], to_indices(A, _cutdim(inds, I[1]), tail(I))...)
 @inline to_indices(A::AbstractQuasiArray, I::Tuple{BlockRange, Vararg{Any}}) = to_indices(A, axes(A), I)
 
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractArray{<:BlockIndex{1}}, Vararg{Any}}) =
-    (inds[1][I[1]], to_indices(A, _maybetail(inds), tail(I))...)    
+    (inds[1][I[1]], to_indices(A, _cutdim(inds, I[1]), tail(I))...)    
 
 checkpoints(x::Number) = x
 checkpoints(d::AbstractInterval{T}) where T = width(d) .* SVector{3,float(T)}(0.823972,0.01,0.3273484) .+ leftendpoint(d)
