@@ -3,7 +3,7 @@ using IntervalSets, DomainSets, LinearAlgebra, LazyArrays, FillArrays, BandedMat
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, size, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
-                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices, view
+                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices, view, @propagate_inbounds
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted, Broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, combine_mul_styles, AbstractArrayApplyStyle,
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
