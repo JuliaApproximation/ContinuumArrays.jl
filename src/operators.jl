@@ -29,8 +29,8 @@ macro simplify(qt)
         if length(qt.args[1].args) == 3
             ret = quote
                 ContinuumArrays.simplifiable(::typeof(*), A::$Atyp, B::$Btyp) = Val(true)
-                @propagate_inbounds function ContinuumArrays.mul($Aname::$Atyp, $Bname::$Btyp)
-                    @boundscheck check_mul_axes($Aname, $Bname)
+                Base.@propagate_inbounds function ContinuumArrays.mul($Aname::$Atyp, $Bname::$Btyp)
+                    @boundscheck ContinuumArrays.check_mul_axes($Aname, $Bname)
                     $mat
                 end
             end
@@ -39,7 +39,7 @@ macro simplify(qt)
                 ret = quote
                     $ret
                     ContinuumArrays.simplifiable(::typeof(*), ::$Badj, A::$Aadj) = Val(true)
-                    @propagate_inbounds ContinuumArrays.mul(Bc::$Badj, Ac::$Aadj) = ContinuumArrays.mul(Ac', Bc')'
+                    Base.@propagate_inbounds ContinuumArrays.mul(Bc::$Badj, Ac::$Aadj) = ContinuumArrays.mul(Ac', Bc')'
                 end
             end
             
