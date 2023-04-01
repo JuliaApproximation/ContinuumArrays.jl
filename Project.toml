@@ -1,6 +1,6 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.12.4"
+version = "0.12.5"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -20,16 +20,16 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 AbstractFFTs = "1"
-ArrayLayouts = "0.7.7, 0.8"
+ArrayLayouts = "0.7.7, 0.8, 1"
 BandedMatrices = "0.16, 0.17"
 BlockArrays = "0.16"
 DomainSets = "0.5, 0.6"
 FastTransforms = "0.13, 0.14"
-FillArrays = "0.12, 0.13"
+FillArrays = "0.12, 0.13, 1"
 InfiniteArrays = "0.12"
 Infinities = "0.1"
 IntervalSets = "0.5, 0.6, 0.7"
-LazyArrays = "0.22"
+LazyArrays = "0.22, 1"
 QuasiArrays = "0.9.6"
 RecipesBase = "1.0"
 StaticArrays = "1.0"
