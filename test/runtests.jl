@@ -42,6 +42,7 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
         @test D^2 * x ≡ QuasiZeros(x)
         @test D*[x D*x] == [D*x D^2*x]
         @test stringmime("text/plain", D) == "Derivative(Inclusion(-1..1))"
+        @test_throws DimensionMismatch Derivative(Inclusion(0..1)) * x
     end
 end
 
