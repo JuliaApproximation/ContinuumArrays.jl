@@ -154,3 +154,4 @@ Identity(d::Inclusion) = QuasiDiagonal(d)
 
 @simplify *(D::Derivative, x::Inclusion) = ones(promote_type(eltype(D),eltype(x)), x)
 @simplify *(D::Derivative, c::AbstractQuasiFill) = zeros(promote_type(eltype(D),eltype(c)), axes(c,1))
+@simplify *(D::Derivative, x::AbstractAffineQuasiVector) = x.A * ones(promote_type(eltype(D),eltype(x)), axes(x,1))
