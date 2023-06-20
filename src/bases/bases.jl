@@ -280,6 +280,19 @@ A / A \\ f.(axes(A,1))
 """
 expand(A, f) = A * transform(A, f)
 
+"""
+    expand(v)
+
+finds a natural basis for a quasi-vector and expands
+in that basis.
+"""
+function expand(v)
+    P = basis(v)
+    P / P \ v
+end
+
+
+
 copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 # TODO: redesign to use simplifiable(\, A, B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
@@ -320,7 +333,16 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 struct ExpansionLayout{Lay} <: AbstractLazyLayout end
 applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
-basis(v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+"""
+    basis(v)
+
+gives a basis for expanding given quasi-vector.
+"""
+basis(v) = basis(MemoryLayout(v), v)
+
+basis(::ExpansionLayout, v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+basis(lay, v) = basis(lay, v, axes(v,1)) # allow choosing a basis based on axes
+
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any,Vararg{Any}}}) where N = ApplyArray(*, tail(v.args)...)
 
@@ -375,10 +397,10 @@ function layout_broadcasted(::Tuple{Vararg{ExpansionLayout}}, ::typeof(+), fs...
     P * +(_plus_P_ldiv_Ps_cs(P, Ps, cs)...)  # +((Ref(P) .\ Ps .* cs)...)
 end
 
-function layout_broadcasted(::NTuple{2,ExpansionLayout}, ::typeof(*), a, f)
-    axes(a,1) == axes(f,1) || throw(DimensionMismatch())
+function layout_broadcasted(::Tuple{Any,ExpansionLayout}, ::typeof(*), a, f)
+    axes(a)[1] == axes(f)[1] || throw(DimensionMismatch())
     P,c = arguments(f)
-    (a .* P) * c
+    (expand(a) .* P) * c
 end
 
 function layout_broadcasted(::Tuple{ExpansionLayout{<:AbstractWeightedBasisLayout},AbstractBasisLayout}, ::typeof(*), a, P)
