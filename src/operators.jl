@@ -158,5 +158,5 @@ Identity(d::Inclusion) = QuasiDiagonal(d)
 
 struct OperatorLayout <: AbstractLazyLayout end
 MemoryLayout(::Type{<:Derivative}) = OperatorLayout()
-copy(M::Mul{OperatorLayout, <:ExpansionLayout}) = simplify(M)
-copy(M::Mul{OperatorLayout, <:AbstractLazyLayout}) = M.A * expand(M.B)
+# copy(M::Mul{OperatorLayout, <:ExpansionLayout}) = simplify(M)
+# copy(M::Mul{OperatorLayout, <:AbstractLazyLayout}) = M.A * expand(M.B)
