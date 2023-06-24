@@ -288,7 +288,7 @@ in that basis.
 """
 function expand(v)
     P = basis(v)
-    P / P \ v
+    ApplyQuasiArray(*, P, P \ v)
 end
 
 
@@ -331,7 +331,7 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 ##
 
 struct ExpansionLayout{Lay} <: AbstractLazyLayout end
-applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
+applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout,ZerosLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
 """
     basis(v)
