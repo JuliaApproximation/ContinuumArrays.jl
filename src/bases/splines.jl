@@ -11,7 +11,7 @@ Spline{o}(S::Spline) where {o} = Spline{o}(S.points)
 
 for Typ in (:LinearSpline, :HeavisideSpline)
     STyp = string(Typ)
-    @eval function summary(io::IO, L::$Typ)
+    @eval function show(io::IO, L::$Typ)
         print(io, "$($STyp)(")
         print(IOContext(io, :limit=>true), L.points)
         print(io,")")

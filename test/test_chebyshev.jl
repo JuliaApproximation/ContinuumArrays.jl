@@ -1,7 +1,7 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Test
+using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Base64, Test
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
-                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout
+                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis
 
 """
 This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
@@ -27,6 +27,7 @@ ContinuumArrays.plan_grid_transform(L::Chebyshev, szs::NTuple{N,Int}, dims=1:N) 
 
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
+
 
 struct QuadraticMap{T} <: Map{T} end
 struct InvQuadraticMap{T} <: Map{T} end
@@ -89,6 +90,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         y = affine(0..1, x)
 
         @test summary(T[y,:]) == "Chebyshev affine mapped to 0..1"
+        @test stringmime("text/plain", T[y,:]) == "Chebyshev(5) affine mapped to 0..1"
         @test MemoryLayout(wT[y,:]) isa MappedWeightedBasisLayout
         @test MemoryLayout(w[y] .* T[y,:]) isa MappedWeightedBasisLayout
         @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]

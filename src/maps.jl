@@ -7,7 +7,7 @@ A subtype of `Map` is used as a one-to-one map between two domains
 via `view`. The domain of the map `m` is `axes(m,1)` and the range
 is `union(m)`.
 
-Maps must also overload `invmap` to give the inverse of the map, which 
+Maps must also overload `invmap` to give the inverse of the map, which
 is equivalent to `invmap(m)[x] == findfirst(isequal(x), m)`.
 """
 
@@ -40,6 +40,7 @@ end
 # Affine map represents A*x .+ b
 abstract type AbstractAffineQuasiVector{T,AA,X,B} <: Map{T} end
 
+show(io::IO, a::AbstractAffineQuasiVector) = summary(io, a)
 summary(io::IO, a::AbstractAffineQuasiVector) = print(io, "$(a.A) * $(a.x) .+ ($(a.b))")
 
 MemoryLayout(::Type{<:AbstractAffineQuasiVector}) = PolynomialLayout()
@@ -152,5 +153,11 @@ const AffineMappedQuasiMatrix = SubQuasiArray{<:Any, 2, <:Any, <:Tuple{AbstractA
 _sum(V::AffineMappedQuasiVector, ::Colon) = parentindices(V)[1].A \ sum(parent(V))
 
 # pretty print for bases
-summary(io::IO, P::AffineMappedQuasiMatrix) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
-summary(io::IO, P::AffineMappedQuasiVector) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
+show(io::IO, a::AffineMap) = summary(io, a)
+summary(io::IO, a::AffineMap) = print(io, "Affine map from $(a.domain) to $(a.range)")
+
+show(io::IO, P::Union{AffineMappedQuasiVector,AffineMappedQuasiMatrix}) = print(io, "$(parent(P)) affine mapped to $(parentindices(P)[1].x.domain)")
+function summary(io::IO, P::Union{AffineMappedQuasiVector,AffineMappedQuasiMatrix})
+    summary(io, parent(P))
+    print(io, " affine mapped to $(parentindices(P)[1].x.domain)")
+end

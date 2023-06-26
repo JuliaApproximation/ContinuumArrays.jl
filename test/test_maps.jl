@@ -74,6 +74,6 @@ import ContinuumArrays: AffineQuasiVector
 
     @testset "show" begin
         @test stringmime("text/plain", y) == "2.0 * Inclusion(0..1) .+ (-1.0)"
-        @test stringmime("text/plain", a) == "0.4 * Inclusion(-2..3) .+ (-0.2)"
+        @test stringmime("text/plain", a) == "Affine map from Inclusion(-2..3) to Inclusion(-1..1)"
     end
 end

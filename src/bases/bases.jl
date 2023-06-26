@@ -400,7 +400,7 @@ end
 function layout_broadcasted(::Tuple{Any,ExpansionLayout}, ::typeof(*), a, f)
     axes(a)[1] == axes(f)[1] || throw(DimensionMismatch())
     P,c = arguments(f)
-    (expand(a) .* P) * c
+    (a .* P) * c
 end
 
 function layout_broadcasted(::Tuple{ExpansionLayout{<:AbstractWeightedBasisLayout},AbstractBasisLayout}, ::typeof(*), a, P)
@@ -599,6 +599,7 @@ end
 # sum
 ####
 
+__sum(::InfiniteCardinal{1}, A, dims) = _sum(expand(A), dims)
 
 function __sum(::SubBasisLayout, Vm, dims)
     @assert dims == 1

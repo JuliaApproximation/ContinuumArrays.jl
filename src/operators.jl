@@ -111,6 +111,7 @@ Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
 
 Derivative(L::AbstractQuasiMatrix) = Derivative(axes(L,1))
 
+show(io::IO, a::Derivative) = summary(io, a)
 function summary(io::IO, D::Derivative)
     print(io, "Derivative(")
     summary(io,D.axis)
