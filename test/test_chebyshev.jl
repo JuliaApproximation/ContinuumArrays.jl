@@ -1,4 +1,4 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Base64, Test
+using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
                         SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis
@@ -156,5 +156,11 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test sum(exp.(x)) ≈ ℯ - 1/ℯ
         @test dot(x, x) ≈ 2/3
         @test dot(exp.(x), x) ≈ 2/ℯ
+    end
+
+    @testset "Expansion * Lazy" begin
+        f = T * collect(1.0:5)
+        @test (f * ones(1,4))[0.1,:] == fill(f[0.1],4)
+        @test (f * BroadcastArray(exp, (1:4)'))[0.1,:] ≈ f[0.1] * exp.(1:4)
     end
 end

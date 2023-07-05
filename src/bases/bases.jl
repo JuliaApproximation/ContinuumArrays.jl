@@ -599,9 +599,6 @@ end
 ####
 # sum
 ####
-
-sum_size(::InfiniteCardinal{1}, A, dims) = _sum(expand(A), dims)
-
 function sum_layout(::SubBasisLayout, Vm, dims)
     @assert dims == 1
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
