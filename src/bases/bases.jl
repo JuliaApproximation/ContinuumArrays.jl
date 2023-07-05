@@ -599,24 +599,24 @@ end
 # sum
 ####
 
-__sum(::InfiniteCardinal{1}, A, dims) = _sum(expand(A), dims)
+sum_size(::InfiniteCardinal{1}, A, dims) = _sum(expand(A), dims)
 
-function __sum(::SubBasisLayout, Vm, dims)
+function sum_layout(::SubBasisLayout, Vm, dims)
     @assert dims == 1
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
 
-__sum(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(sum(Vm'; dims=(isone(dims) ? 2 : 1)))
+sum_layout(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(sum(Vm'; dims=(isone(dims) ? 2 : 1)))
 
 
-function __sum(::MappedBasisLayouts, V, dims)
+function sum_layout(::MappedBasisLayouts, V, dims)
     kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
     sum(demap(V); dims=dims)/kr.A
 end
 
-__sum(::ExpansionLayout, A, dims) = __sum(ApplyLayout{typeof(*)}(), A, dims)
-__cumsum(::ExpansionLayout, A, dims) = __cumsum(ApplyLayout{typeof(*)}(), A, dims)
+sum_layout(::ExpansionLayout, A, dims) = sum_layout(ApplyLayout{typeof(*)}(), A, dims)
+cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}(), A, dims)
 
 include("basisconcat.jl")
 include("basiskron.jl")

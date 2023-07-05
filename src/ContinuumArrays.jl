@@ -18,7 +18,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize, _cutdim,
-                    AbstractQuasiFill, UnionDomain, __sum, _cumsum, __cumsum, applylayout, _equals, layout_broadcasted, PolynomialLayout, _dot
+                    AbstractQuasiFill, UnionDomain, sum_size, sum_layout, _cumsum, cumsum_layout, applylayout, _equals, layout_broadcasted, PolynomialLayout, _dot
 import InfiniteArrays: Infinity, InfAxes
 import AbstractFFTs: Plan
 
@@ -103,7 +103,7 @@ include("plotting.jl")
 # sum/dot
 ###
 
-__sum(::Tuple{InfiniteCardinal{1}}, a, dims) = _sum(expand(a), dims)
+sum_size(::Tuple{InfiniteCardinal{1}}, a, dims) = _sum(expand(a), dims)
 _dot(::InfiniteCardinal{1}, a, b) = dot(expand(a), expand(b))
 function copy(d::Dot{<:ExpansionLayout,<:ExpansionLayout,<:AbstractQuasiArray,<:AbstractQuasiArray})
     a,b = d.A,d.B
