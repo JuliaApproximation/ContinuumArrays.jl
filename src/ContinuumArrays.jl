@@ -47,7 +47,7 @@ function dot(x::Inclusion{T,<:AbstractInterval}, y::Inclusion{V,<:AbstractInterv
     convert(TV, b^3 - a^3)/3
 end
 
-sum(x::Inclusion{T,<:AbstractInterval}) where T = width(x.domain)
+sum(x::Inclusion{T,<:AbstractInterval}) where T = convert(T, width(x.domain))
 
 
 include("maps.jl")

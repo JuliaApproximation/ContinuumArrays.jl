@@ -338,10 +338,11 @@ applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout
 
 gives a basis for expanding given quasi-vector.
 """
-basis(v) = basis(MemoryLayout(v), v)
+basis(v) = basis_layout(MemoryLayout(v), v)
 
-basis(::ExpansionLayout, v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
-basis(lay, v) = basis(lay, v, axes(v,1)) # allow choosing a basis based on axes
+basis_layout(::ExpansionLayout, v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+basis_layout(lay, v) = basis_axes(axes(v,1), v) # allow choosing a basis based on axes
+basis_axes(ax, v) = error("Overload for $ax")
 
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any,Vararg{Any}}}) where N = ApplyArray(*, tail(v.args)...)
