@@ -280,6 +280,19 @@ A / A \\ f.(axes(A,1))
 """
 expand(A, f) = A * transform(A, f)
 
+"""
+    expand(v)
+
+finds a natural basis for a quasi-vector and expands
+in that basis.
+"""
+function expand(v)
+    P = basis(v)
+    ApplyQuasiArray(*, P, P \ v)
+end
+
+
+
 copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
 # TODO: redesign to use simplifiable(\, A, B)
 copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
@@ -318,9 +331,19 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 ##
 
 struct ExpansionLayout{Lay} <: AbstractLazyLayout end
-applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
+applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout,ZerosLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
-basis(v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+"""
+    basis(v)
+
+gives a basis for expanding given quasi-vector.
+"""
+basis(v) = basis_layout(MemoryLayout(v), v)
+
+basis_layout(::ExpansionLayout, v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+basis_layout(lay, v) = basis_axes(axes(v,1), v) # allow choosing a basis based on axes
+basis_axes(ax, v) = error("Overload for $ax")
+
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any,Vararg{Any}}}) where N = ApplyArray(*, tail(v.args)...)
 
@@ -333,6 +356,7 @@ end
 LazyArrays._mul_arguments(::ExpansionLayout, A) = LazyArrays._mul_arguments(ApplyLayout{typeof(*)}(), A)
 copy(L::Ldiv{Bas,<:ExpansionLayout}) where Bas<:AbstractBasisLayout = copy(Ldiv{Bas,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Mul{<:ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+copy(L::Mul{<:ExpansionLayout,Lay}) where Lay<:AbstractLazyLayout = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 
 function _broadcastbasis(::typeof(+), _, _, a, b)
     try
@@ -374,8 +398,8 @@ function layout_broadcasted(::Tuple{Vararg{ExpansionLayout}}, ::typeof(+), fs...
     P * +(_plus_P_ldiv_Ps_cs(P, Ps, cs)...)  # +((Ref(P) .\ Ps .* cs)...)
 end
 
-function layout_broadcasted(::NTuple{2,ExpansionLayout}, ::typeof(*), a, f)
-    axes(a,1) == axes(f,1) || throw(DimensionMismatch())
+function layout_broadcasted(::Tuple{Any,ExpansionLayout}, ::typeof(*), a, f)
+    axes(a)[1] == axes(f)[1] || throw(DimensionMismatch())
     P,c = arguments(f)
     (a .* P) * c
 end
@@ -575,24 +599,22 @@ end
 ####
 # sum
 ####
-
-
-function __sum(::SubBasisLayout, Vm, dims)
+function sum_layout(::SubBasisLayout, Vm, dims)
     @assert dims == 1
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
 
-__sum(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(sum(Vm'; dims=(isone(dims) ? 2 : 1)))
+sum_layout(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(sum(Vm'; dims=(isone(dims) ? 2 : 1)))
 
 
-function __sum(::MappedBasisLayouts, V, dims)
+function sum_layout(::MappedBasisLayouts, V, dims)
     kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
     sum(demap(V); dims=dims)/kr.A
 end
 
-__sum(::ExpansionLayout, A, dims) = __sum(ApplyLayout{typeof(*)}(), A, dims)
-__cumsum(::ExpansionLayout, A, dims) = __cumsum(ApplyLayout{typeof(*)}(), A, dims)
+sum_layout(::ExpansionLayout, A, dims) = sum_layout(ApplyLayout{typeof(*)}(), A, dims)
+cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}(), A, dims)
 
 include("basisconcat.jl")
 include("basiskron.jl")

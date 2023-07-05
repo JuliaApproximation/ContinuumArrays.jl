@@ -1,8 +1,9 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Test
+using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
-                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout
+                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis
 
+using IntervalSets: AbstractInterval
 """
 This is a simple implementation of Chebyshev for testing. Use ClassicalOrthogonalPolynomials
     for the real implementation.
@@ -24,9 +25,22 @@ Base.getindex(::ChebyshevWeight, x::Float64) = 1/sqrt(1-x^2)
 Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 
 ContinuumArrays.plan_grid_transform(L::Chebyshev, szs::NTuple{N,Int}, dims=1:N) where N = grid(L), plan_chebyshevtransform(Array{eltype(L)}(undef, szs...), dims)
+ContinuumArrays.basis_axes(::Inclusion{<:Any,<:AbstractInterval}, v) = Chebyshev(100)
+function ContinuumArrays._sum(T::Chebyshev, dims)
+    n = 2:size(T,2)-1
+    [2; 0; @. ((1/(n+1) - 1/(n-1)) - ((-1)^(n+1)/(n+1) - (-1)^(n-1)/(n-1)))/2]'
+end
 
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
+
+ContinuumArrays.@simplify function *(A::QuasiAdjoint{<:Any,<:Chebyshev}, B::Chebyshev)
+    m,n = size(A,1),size(B,2)
+    T = promote_type(eltype(A), eltype(B))
+    f = (k,j) -> isodd(j-k) ? zero(T) : -(((1 + (-1)^(j + k))*(-1 + j^2 + k^2))/(j^4 + (-1 + k^2)^2 - 2j^2*(1 + k^2)))
+    f.(0:m-1, (0:n-1)')
+end
+
 
 struct QuadraticMap{T} <: Map{T} end
 struct InvQuadraticMap{T} <: Map{T} end
@@ -89,6 +103,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         y = affine(0..1, x)
 
         @test summary(T[y,:]) == "Chebyshev affine mapped to 0..1"
+        @test stringmime("text/plain", T[y,:]) == "Chebyshev(5) affine mapped to 0..1"
         @test MemoryLayout(wT[y,:]) isa MappedWeightedBasisLayout
         @test MemoryLayout(w[y] .* T[y,:]) isa MappedWeightedBasisLayout
         @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]
@@ -134,5 +149,18 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
 
         ã = T * (T \ a)
         @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
+    end
+
+    @testset "sum/dot" begin
+        @test sum(x) ≡ 2.0
+        @test sum(exp.(x)) ≈ ℯ - 1/ℯ
+        @test dot(x, x) ≈ 2/3
+        @test dot(exp.(x), x) ≈ 2/ℯ
+    end
+
+    @testset "Expansion * Lazy" begin
+        f = T * collect(1.0:5)
+        @test (f * ones(1,4))[0.1,:] == fill(f[0.1],4)
+        @test (f * BroadcastArray(exp, (1:4)'))[0.1,:] ≈ f[0.1] * exp.(1:4)
     end
 end

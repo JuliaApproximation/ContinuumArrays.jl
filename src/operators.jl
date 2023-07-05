@@ -111,6 +111,7 @@ Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
 
 Derivative(L::AbstractQuasiMatrix) = Derivative(axes(L,1))
 
+show(io::IO, a::Derivative) = summary(io, a)
 function summary(io::IO, D::Derivative)
     print(io, "Derivative(")
     summary(io,D.axis)
@@ -154,3 +155,9 @@ Identity(d::Inclusion) = QuasiDiagonal(d)
 
 @simplify *(D::Derivative, x::Inclusion) = ones(promote_type(eltype(D),eltype(x)), x)
 @simplify *(D::Derivative, c::AbstractQuasiFill) = zeros(promote_type(eltype(D),eltype(c)), axes(c,1))
+# @simplify *(D::Derivative, x::AbstractQuasiVector) = D * expand(x)
+
+struct OperatorLayout <: AbstractLazyLayout end
+MemoryLayout(::Type{<:Derivative}) = OperatorLayout()
+# copy(M::Mul{OperatorLayout, <:ExpansionLayout}) = simplify(M)
+# copy(M::Mul{OperatorLayout, <:AbstractLazyLayout}) = M.A * expand(M.B)
