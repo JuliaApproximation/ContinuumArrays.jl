@@ -122,18 +122,17 @@ axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis
 copy(D::Derivative) = Derivative(copy(D.axis))
 
-function diff(d::AbstractQuasiVector)
-    x = axes(d,1)
-    Derivative(x)*d
+@simplify function *(D::Derivative, B::AbstractQuasiMatrix)
+    T = promote_type(eltype(D), eltype(B))
+    diff(convert(AbstractQuasiMatrix{T}, B); dims=1)
 end
 
-function diff(A::AbstractQuasiArray; dims::Integer)
-    if dims == 1
-        Derivative(axes(A,1)) * A
-    else
-        error("Not implemented")
-    end
+@simplify function *(D::Derivative, B::AbstractQuasiVector)
+    T = promote_type(eltype(D), eltype(B))
+    diff(convert(AbstractQuasiVector{T}, B))
 end
+
+@inline diff(a::AbstractQuasiArray; dims::Integer) = error("diff not implemented for $(typeof(a))")
 
 ^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
 
@@ -153,9 +152,8 @@ const Identity{T,D} = QuasiDiagonal{T,Inclusion{T,D}}
 
 Identity(d::Inclusion) = QuasiDiagonal(d)
 
-@simplify *(D::Derivative, x::Inclusion) = ones(promote_type(eltype(D),eltype(x)), x)
-@simplify *(D::Derivative, c::AbstractQuasiFill) = zeros(promote_type(eltype(D),eltype(c)), axes(c,1))
-# @simplify *(D::Derivative, x::AbstractQuasiVector) = D * expand(x)
+diff(x::Inclusion; dims::Integer=1) = ones(eltype(x), x)
+diff(c::AbstractQuasiFill{<:Any,1}; dims::Integer=1) =  zeros(eltype(c), axes(c,1))
 
 struct OperatorLayout <: AbstractLazyLayout end
 MemoryLayout(::Type{<:Derivative}) = OperatorLayout()

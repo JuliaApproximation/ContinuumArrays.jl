@@ -95,33 +95,15 @@ end
 
 
 ## Differentiation
-function copyto!(dest::MulQuasiMatrix{<:Any,<:Tuple{<:HeavisideSpline,<:Any}},
-                 M::QMul2{<:Derivative,<:LinearSpline})
-    D, L = M.A, M.B
-    H, A = dest.args
-    x = H.points
-
-    axes(dest) == axes(M) || throw(DimensionMismatch("axes must be same"))
-    x == L.points || throw(ArgumentError("Cannot multiply incompatible splines"))
-    bandwidths(A) == (0,1) || throw(ArgumentError("Not implemented"))
-
+function diff(L::LinearSpline{T}; dims::Integer) where T
+    @assert dims == 1
+    n = size(L,2)
+    x = L.points
+    D = BandedMatrix{T}(undef, (n-1,n), (0,1))
     d = diff(x)
-    A[band(0)] .= inv.((-).(d))
-    A[band(1)] .= inv.(d)
-
-    dest
-end
-
-function similar(M::QMul2{<:Derivative,<:LinearSpline}, ::Type{T}) where T
-    D, B = M.A, M.B
-    n = size(B,2)
-    ApplyQuasiMatrix(*, HeavisideSpline{T}(B.points),
-        BandedMatrix{T}(undef, (n-1,n), (0,1)))
-end
-
-@simplify function *(D::Derivative, L::LinearSpline)
-    M = Mul(D, L)
-    copyto!(similar(M, eltype(M)), M)
+    D[band(0)] .= inv.((-).(d))
+    D[band(1)] .= inv.(d)
+    ApplyQuasiMatrix(*, HeavisideSpline{T}(x), D)
 end
 
 
