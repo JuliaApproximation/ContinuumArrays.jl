@@ -590,11 +590,9 @@ end
 sum_layout(::ExpansionLayout, A, dims) = sum_layout(ApplyLayout{typeof(*)}(), A, dims)
 cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}(), A, dims)
 
-####
+###
 # diff
-####
-
-@inline diff(a::AbstractQuasiArray; dims::Integer=1) = diff_layout(MemoryLayout(a), a, dims)
+###
 
 function diff_layout(::SubBasisLayout, Vm, dims::Integer)
     dims == 1 || error("not implemented")
@@ -608,13 +606,6 @@ function diff_layout(::MappedBasisLayouts, V, dims)
 end
 
 diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(), A, dims...)
-function diff_layout(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, dims...)
-    a = arguments(LAY, V)
-    *(diff(a[1]), tail(a)...)
-end
-
-diff_layout(::MemoryLayout, A, dims...) = diff_size(size(A), A, dims...)
-diff_size(sz, a; dims...) = error("diff not implemented for $(typeof(a))")
 
 include("basisconcat.jl")
 include("basiskron.jl")

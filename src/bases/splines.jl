@@ -95,7 +95,7 @@ end
 
 
 ## Differentiation
-function diff(L::LinearSpline{T}; dims::Integer) where T
+function diff(L::LinearSpline{T}; dims::Integer=1) where T
     dims == 1 || error("not implemented")
     n = size(L,2)
     x = L.points

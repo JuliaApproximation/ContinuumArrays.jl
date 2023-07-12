@@ -160,7 +160,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test D*L isa MulQuasiMatrix
         @test length((D*L).args) == 2
         @test eltype(D*L) == Float64
-        @test typeof(diff(L; dims=1)) == typeof(D*L)
+        @test typeof(diff(L)) == typeof(diff(L; dims=1)) == typeof(D*L)
         @test_throws ErrorException diff(L; dims=2)
 
         M = applied(*, (D*L).args..., [1,2,4])

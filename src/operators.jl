@@ -153,9 +153,6 @@ const Identity{T,D} = QuasiDiagonal{T,Inclusion{T,D}}
 
 Identity(d::Inclusion) = QuasiDiagonal(d)
 
-diff(x::Inclusion; dims::Integer=1) = ones(eltype(x), x)
-diff(c::AbstractQuasiFill{<:Any,1}; dims::Integer=1) =  zeros(eltype(c), axes(c,1))
-
 struct OperatorLayout <: AbstractLazyLayout end
 MemoryLayout(::Type{<:Derivative}) = OperatorLayout()
 # copy(M::Mul{OperatorLayout, <:ExpansionLayout}) = simplify(M)
