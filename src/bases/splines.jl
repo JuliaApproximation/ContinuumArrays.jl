@@ -53,25 +53,10 @@ grid(L::LinearSpline, n...) = L.points
 ## Sub-bases
 
 
-## Mass matrix
-function similar(AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline}, ::Type{T}) where T
-    n = size(AB,1)
-    SymTridiagonal(Vector{T}(undef, n), Vector{T}(undef, n-1))
-end
-#
-@simplify function *(Ac::QuasiAdjoint{<:Any,<:LinearSpline}, B::LinearSpline) 
-    M = Mul(Ac, B)
-    copyto!(similar(M, eltype(M)), M)
-end
-
-function copyto!(dest::SymTridiagonal,
-                 AB::QMul2{<:QuasiAdjoint{<:Any,<:LinearSpline},<:LinearSpline})
-    Ac,B = AB.A,AB.B
-    A = parent(Ac)
-    A.points == B.points || throw(ArgumentError())
-    dv,ev = dest.dv,dest.ev
+## Gram matrix
+function grammatrix(A::LinearSpline{T}) where T
     x = A.points; n = length(x)
-    length(dv) == n || throw(DimensionMismatch())
+    dv,ev = Vector{T}(undef, n), Vector{T}(undef, n-1)
 
     dv[1] = (x[2]-x[1])/3
     @inbounds for k = 2:n-1
@@ -83,15 +68,11 @@ function copyto!(dest::SymTridiagonal,
         ev[k] = (x[k+1]-x[k])/6
     end
 
-    dest
+    SymTridiagonal(dv, ev)
 end
 
 
-@simplify function *(Ac::QuasiAdjoint{<:Any,<:HeavisideSpline}, B::HeavisideSpline)
-    A = parent(Ac)
-    A.points == B.points || throw(ArgumentError("Cannot multiply incompatible splines"))
-    Diagonal(diff(A.points))
-end
+grammatrix(A::HeavisideSpline) = Diagonal(diff(A.points))
 
 
 ## Differentiation

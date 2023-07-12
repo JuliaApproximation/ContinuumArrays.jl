@@ -607,6 +607,20 @@ end
 
 diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(), A, dims...)
 
+
+####
+# Gram matrix
+####
+
+simplifiable(::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout}) = Val(true)
+copy(M::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout}) = grammatrix(M.A', M.B)
+
+function grammatrix(A, B)
+    A == B && return grammatrix(A)
+    error("Not implemented")
+end
+
+
 include("basisconcat.jl")
 include("basiskron.jl")
 include("splines.jl")
