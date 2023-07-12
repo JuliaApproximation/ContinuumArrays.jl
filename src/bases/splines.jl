@@ -96,7 +96,7 @@ end
 
 ## Differentiation
 function diff(L::LinearSpline{T}; dims::Integer) where T
-    @assert dims == 1
+    dims == 1 || error("not implemented")
     n = size(L,2)
     x = L.points
     D = BandedMatrix{T}(undef, (n-1,n), (0,1))
@@ -112,7 +112,7 @@ end
 ##
 
 function _sum(A::HeavisideSpline, dims)
-    @assert dims == 1
+    dims == 1 || error("not implemented")
     permutedims(diff(A.points))
 end
 

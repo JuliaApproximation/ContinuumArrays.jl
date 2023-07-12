@@ -511,24 +511,6 @@ _sub_getindex(A, ::Slice, ::Slice) = A
 end
 
 
-# Differentiation of sub-arrays
-
-# need to customise simplifiable so can't use @simplify
-function diff(B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}; dims::Integer)
-    @assert dims == 1
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
-    P = parent(B)
-    diff(P, dims)[parentindices(B)...]
-end
-
-function diff(B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}; dims::Integer)
-    @assert dims == 1
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
-    P = parent(B)
-    kr,jr = parentindices(B)
-    (diff(P, dims)*kr.A)[kr,jr]
-end
-
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractVector}}) = MappedBasisLayout()
@@ -592,7 +574,7 @@ end
 # sum
 ####
 function sum_layout(::SubBasisLayout, Vm, dims)
-    @assert dims == 1
+    dims == 1 || error("not implemented")
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
 
@@ -607,6 +589,32 @@ end
 
 sum_layout(::ExpansionLayout, A, dims) = sum_layout(ApplyLayout{typeof(*)}(), A, dims)
 cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}(), A, dims)
+
+####
+# diff
+####
+
+@inline diff(a::AbstractQuasiArray; dims::Integer=1) = diff_layout(MemoryLayout(a), a, dims)
+
+function diff_layout(::SubBasisLayout, Vm, dims::Integer)
+    dims == 1 || error("not implemented")
+    diff(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
+end
+
+function diff_layout(::MappedBasisLayouts, V, dims)
+    kr = basismap(V)
+    @assert kr isa AbstractAffineQuasiVector
+    view(diff(demap(V); dims=dims)*kr.A, kr, :)
+end
+
+diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(), A, dims...)
+function diff_layout(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVector, dims...)
+    a = arguments(LAY, V)
+    *(diff(a[1]), tail(a)...)
+end
+
+diff_layout(::MemoryLayout, A, dims...) = diff_size(size(A), A, dims...)
+diff_size(sz, a; dims...) = error("diff not implemented for $(typeof(a))")
 
 include("basisconcat.jl")
 include("basiskron.jl")

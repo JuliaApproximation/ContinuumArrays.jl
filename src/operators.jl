@@ -123,16 +123,17 @@ axes(D::Derivative) = (D.axis, D.axis)
 copy(D::Derivative) = Derivative(copy(D.axis))
 
 @simplify function *(D::Derivative, B::AbstractQuasiMatrix)
-    T = promote_type(eltype(D), eltype(B))
+    T = typeof(zero(eltype(D)) * zero(eltype(B)))
     diff(convert(AbstractQuasiMatrix{T}, B); dims=1)
 end
 
 @simplify function *(D::Derivative, B::AbstractQuasiVector)
-    T = promote_type(eltype(D), eltype(B))
+    T = typeof(zero(eltype(D)) * zero(eltype(B)))
     diff(convert(AbstractQuasiVector{T}, B))
 end
 
-@inline diff(a::AbstractQuasiArray; dims::Integer) = error("diff not implemented for $(typeof(a))")
+
+
 
 ^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
 
