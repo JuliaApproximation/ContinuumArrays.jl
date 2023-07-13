@@ -39,6 +39,7 @@ unweighted(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,A
 unweighted(V::SubQuasiArray) = view(unweighted(parent(V)), parentindices(V)...)
 weight(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = first(P.args)
 weight(V::SubQuasiArray) = weight(parent(V))[parentindices(V)[1]]
+weight(V::SubQuasiArray{<:Any,2,<:Any, <:Tuple{Inclusion,Any}}) = weight(parent(V))
 
 unweighted(a::AbstractQuasiArray) = unweighted(MemoryLayout(a), a)
 # Default is lazy
@@ -599,6 +600,13 @@ function diff_layout(::SubBasisLayout, Vm, dims::Integer)
     diff(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
 
+function diff_layout(::WeightedBasisLayout{<:SubBasisLayout}, Vm, dims::Integer)
+    dims == 1 || error("not implemented")
+    w = weight(Vm)
+    V = unweighted(Vm)
+    view(diff(w .* parent(V)), parentindices(V)...)
+end
+
 function diff_layout(::MappedBasisLayouts, V, dims)
     kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
@@ -613,12 +621,22 @@ diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(
 ####
 
 simplifiable(::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout}) = Val(true)
-copy(M::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout}) = grammatrix(M.A', M.B)
-
-function grammatrix(A, B)
-    A == B && return grammatrix(A)
+function copy(M::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout})
+    A = (M.A)'
+    A == M.B && return grammatrix(A)
     error("Not implemented")
 end
+
+grammatrix(A) = grammatrix_layout(MemoryLayout(A), A)
+grammatrix_layout(_, A) = error("Not implemented")
+
+function grammatrix_layout(::MappedBasisLayout, A)
+    Q = demap(P)
+    kr,jr = parentindices(P)
+    @assert kr isa AbstractAffineQuasiVector
+    grammatrix(Q)/kr.A
+end
+
 
 
 include("basisconcat.jl")

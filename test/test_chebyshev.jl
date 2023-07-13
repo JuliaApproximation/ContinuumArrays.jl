@@ -151,11 +151,12 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
     end
 
-    @testset "sum/dot" begin
+    @testset "sum/dot/diff" begin
         @test sum(x) ≡ 2.0
         @test sum(exp.(x)) ≈ ℯ - 1/ℯ
         @test dot(x, x) ≈ 2/3
         @test dot(exp.(x), x) ≈ 2/ℯ
+        @test diff(exp.(x))[0.1] ≈ exp(0.1)
     end
 
     @testset "Expansion * Lazy" begin
