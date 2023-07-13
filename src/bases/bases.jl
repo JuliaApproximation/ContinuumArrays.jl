@@ -2,7 +2,9 @@ abstract type Basis{T} <: LazyQuasiMatrix{T} end
 abstract type Weight{T} <: LazyQuasiVector{T} end
 
 
-struct WeightLayout <: AbstractQuasiLazyLayout end
+abstract type AbstractWeightLayout <: AbstractQuasiLazyLayout end
+struct WeightLayout <: AbstractWeightLayout end
+struct MappedWeightLayout <: AbstractWeightLayout end
 abstract type AbstractBasisLayout <: AbstractQuasiLazyLayout end
 abstract type AbstractWeightedBasisLayout <: AbstractBasisLayout end
 struct BasisLayout <: AbstractBasisLayout end
@@ -24,10 +26,10 @@ MemoryLayout(::Type{<:Basis}) = BasisLayout()
 MemoryLayout(::Type{<:Weight}) = WeightLayout()
 
 adjointlayout(::Type, ::Basis) where Basis<:AbstractBasisLayout = AdjointBasisLayout{Basis}()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::Basis) where Basis<:AbstractBasisLayout = WeightedBasisLayout{Basis}()
+broadcastlayout(::Type{typeof(*)}, ::AbstractWeightLayout, ::Basis) where Basis<:AbstractBasisLayout = WeightedBasisLayout{Basis}()
 
-# A sub of a weight is still a weight
-sublayout(::WeightLayout, _) = WeightLayout()
+sublayout(::AbstractWeightLayout, _) = WeightLayout()
+sublayout(::AbstractWeightLayout, ::Type{<:Tuple{Map}}) = MappedWeightLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Map,AbstractVector}}) = MappedBasisLayout()
 
 # copy with an Inclusion can not be materialized
@@ -110,7 +112,7 @@ copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVe
 end
 
 # default to transform for expanding weights
-copy(L::Ldiv{<:AbstractBasisLayout,WeightLayout}) = transform_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractWeightLayout}) = transform_ldiv(L.A, L.B)
 
 # multiplication operators, reexpand in basis A
 @inline function _broadcast_mul_ldiv(::Tuple{Any,AbstractBasisLayout}, A, B)
