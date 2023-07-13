@@ -342,6 +342,8 @@ gives a basis for expanding given quasi-vector.
 basis(v) = basis_layout(MemoryLayout(v), v)
 
 basis_layout(::ExpansionLayout, v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+basis_layout(lay::ApplyLayout{typeof(*)}, v) = basis(first(arguments(lay, v)))
+basis_layout(lay::AbstractBasisLayout, v) = v
 basis_layout(lay, v) = basis_axes(axes(v,1), v) # allow choosing a basis based on axes
 basis_axes(ax, v) = error("Overload for $ax")
 
@@ -610,7 +612,8 @@ end
 function diff_layout(::MappedBasisLayouts, V, dims)
     kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
-    view(diff(demap(V); dims=dims)*kr.A, kr, :)
+    D = diff(demap(V); dims=dims)
+    view(basis(D), kr, :) * (kr.A*coefficients(D))
 end
 
 diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(), A, dims...)

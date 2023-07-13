@@ -31,14 +31,16 @@ function ContinuumArrays._sum(T::Chebyshev, dims)
     [2; 0; @. ((1/(n+1) - 1/(n-1)) - ((-1)^(n+1)/(n+1) - (-1)^(n-1)/(n-1)))/2]'
 end
 
+Base.diff(T::Chebyshev; dims=1) = T # not correct but just checks expansion works
+
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
 
-ContinuumArrays.@simplify function *(A::QuasiAdjoint{<:Any,<:Chebyshev}, B::Chebyshev)
-    m,n = size(A,1),size(B,2)
-    T = promote_type(eltype(A), eltype(B))
+function ContinuumArrays.grammatrix(A::Chebyshev)
+    m = size(A,2)
+    T = eltype(A)
     f = (k,j) -> isodd(j-k) ? zero(T) : -(((1 + (-1)^(j + k))*(-1 + j^2 + k^2))/(j^4 + (-1 + k^2)^2 - 2j^2*(1 + k^2)))
-    f.(0:m-1, (0:n-1)')
+    f.(0:m-1, (0:m-1)')
 end
 
 
