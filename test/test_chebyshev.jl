@@ -57,6 +57,12 @@ Base.getindex(d::InvQuadraticMap, x::Number) = sqrt((x+1)/2)
 ContinuumArrays.invmap(::QuadraticMap{T}) where T = InvQuadraticMap{T}()
 ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
 
+struct FooDomain end
+
+struct FooBasis  <: Basis{Float64} end
+Base.axes(::FooBasis) = (Inclusion(-1..1), Base.OneTo(5))
+Base.:(==)(::FooBasis, ::FooBasis) = true
+
 
 @testset "Chebyshev" begin
     T = Chebyshev(5)
@@ -160,6 +166,7 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test dot(exp.(x), x) ≈ 2/ℯ
         @test diff(exp.(x))[0.1] ≈ exp(0.1)
 
+        @test_throws ErrorException diff(wT[:,1:3])
         @test_throws ErrorException cumsum(x)
     end
 
@@ -167,5 +174,14 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         f = T * collect(1.0:5)
         @test (f * ones(1,4))[0.1,:] == fill(f[0.1],4)
         @test (f * BroadcastArray(exp, (1:4)'))[0.1,:] ≈ f[0.1] * exp.(1:4)
+    end
+
+    @testset "undefined domain" begin
+        @test_throws ErrorException basis(Inclusion(FooDomain()))
+    end
+
+    @testset "Adjoint*Basis not defined" begin
+        @test_throws ErrorException Chebyshev(5)'LinearSpline([-1,1])
+        @test_throws ErrorException FooBasis()'FooBasis()     
     end
 end
