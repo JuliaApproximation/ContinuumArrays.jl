@@ -1,7 +1,7 @@
 using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
-                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis
+                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis, grammatrix
 
 using IntervalSets: AbstractInterval
 """
@@ -118,7 +118,7 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test MemoryLayout(wT[y,1:3]) isa MappedWeightedBasisLayout
         @test wT[y,1:3][[0.1,0.2],1:2] == wT[y[[0.1,0.2]],1:2]
 
-        @test T[y,:]'T[y,:] ≈ (T'T)/2
+        @test T[y,:]'T[y,:] ≈ grammatrix(T[y,:]) ≈ (T'T)/2
 
         @testset "QuadraticMap" begin
             m = QuadraticMap()
