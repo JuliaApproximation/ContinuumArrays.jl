@@ -2,7 +2,9 @@ abstract type Basis{T} <: LazyQuasiMatrix{T} end
 abstract type Weight{T} <: LazyQuasiVector{T} end
 
 
-struct WeightLayout <: AbstractQuasiLazyLayout end
+abstract type AbstractWeightLayout <: AbstractQuasiLazyLayout end
+struct WeightLayout <: AbstractWeightLayout end
+struct MappedWeightLayout <: AbstractWeightLayout end
 abstract type AbstractBasisLayout <: AbstractQuasiLazyLayout end
 abstract type AbstractWeightedBasisLayout <: AbstractBasisLayout end
 struct BasisLayout <: AbstractBasisLayout end
@@ -12,22 +14,22 @@ struct WeightedBasisLayout{Basis} <: AbstractWeightedBasisLayout end
 const SubWeightedBasisLayout = WeightedBasisLayout{SubBasisLayout}
 const MappedWeightedBasisLayout = WeightedBasisLayout{MappedBasisLayout}
 
+struct AdjointBasisLayout{Basis} <: AbstractQuasiLazyLayout end
+const AdjointSubBasisLayout = AdjointBasisLayout{SubBasisLayout}
+
 SubBasisLayouts = Union{SubBasisLayout,SubWeightedBasisLayout}
 WeightedBasisLayouts = Union{WeightedBasisLayout,SubWeightedBasisLayout,MappedWeightedBasisLayout}
 MappedBasisLayouts = Union{MappedBasisLayout,MappedWeightedBasisLayout}
-
-struct AdjointBasisLayout{Basis} <: AbstractQuasiLazyLayout end
-const AdjointSubBasisLayout = AdjointBasisLayout{SubBasisLayout}
-const AdjointMappedBasisLayout = AdjointBasisLayout{MappedBasisLayout}
+AdjointMappedBasisLayouts = AdjointBasisLayout{<:MappedBasisLayouts}
 
 MemoryLayout(::Type{<:Basis}) = BasisLayout()
 MemoryLayout(::Type{<:Weight}) = WeightLayout()
 
 adjointlayout(::Type, ::Basis) where Basis<:AbstractBasisLayout = AdjointBasisLayout{Basis}()
-broadcastlayout(::Type{typeof(*)}, ::WeightLayout, ::Basis) where Basis<:AbstractBasisLayout = WeightedBasisLayout{Basis}()
+broadcastlayout(::Type{typeof(*)}, ::AbstractWeightLayout, ::Basis) where Basis<:AbstractBasisLayout = WeightedBasisLayout{Basis}()
 
-# A sub of a weight is still a weight
-sublayout(::WeightLayout, _) = WeightLayout()
+sublayout(::AbstractWeightLayout, _) = WeightLayout()
+sublayout(::AbstractWeightLayout, ::Type{<:Tuple{Map}}) = MappedWeightLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Map,AbstractVector}}) = MappedBasisLayout()
 
 # copy with an Inclusion can not be materialized
@@ -39,6 +41,7 @@ unweighted(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,A
 unweighted(V::SubQuasiArray) = view(unweighted(parent(V)), parentindices(V)...)
 weight(P::BroadcastQuasiMatrix{<:Any,typeof(*),<:Tuple{AbstractQuasiVector,AbstractQuasiMatrix}}) = first(P.args)
 weight(V::SubQuasiArray) = weight(parent(V))[parentindices(V)[1]]
+weight(V::SubQuasiArray{<:Any,2,<:Any, <:Tuple{Inclusion,Any}}) = weight(parent(V))
 
 unweighted(a::AbstractQuasiArray) = unweighted(MemoryLayout(a), a)
 # Default is lazy
@@ -109,7 +112,7 @@ copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVe
 end
 
 # default to transform for expanding weights
-copy(L::Ldiv{<:AbstractBasisLayout,WeightLayout}) = transform_ldiv(L.A, L.B)
+copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractWeightLayout}) = transform_ldiv(L.A, L.B)
 
 # multiplication operators, reexpand in basis A
 @inline function _broadcast_mul_ldiv(::Tuple{Any,AbstractBasisLayout}, A, B)
@@ -341,6 +344,8 @@ gives a basis for expanding given quasi-vector.
 basis(v) = basis_layout(MemoryLayout(v), v)
 
 basis_layout(::ExpansionLayout, v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
+basis_layout(lay::ApplyLayout{typeof(*)}, v) = basis(first(arguments(lay, v)))
+basis_layout(lay::AbstractBasisLayout, v) = v
 basis_layout(lay, v) = basis_axes(axes(v,1), v) # allow choosing a basis based on axes
 basis_axes(ax, v) = error("Overload for $ax")
 
@@ -499,43 +504,6 @@ end
 # \int_a^b f(y) g(y) dy = \int_{-1}^1 f(p(x))*g(p(x)) * p'(x) dx
 
 
-_sub_getindex(A, kr, jr) = A[kr, jr]
-_sub_getindex(A, ::Slice, ::Slice) = A
-
-@simplify function *(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
-             B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
-    A = Ac'
-    PA,PB = parent(A),parent(B)
-    kr,jr = parentindices(B)
-    _sub_getindex((PA'PB)/kr.A,parentindices(A)[2],jr)
-end
-
-
-# Differentiation of sub-arrays
-
-# avoid stack overflow from unmaterialize Derivative() * parent()
-_der_sub(DP, inds...) = DP[inds...]
-_der_sub(DP::ApplyQuasiMatrix{T,typeof(*),<:Tuple{Derivative,Any}}, kr, jr) where T = ApplyQuasiMatrix{T}(*, DP.args[1], view(DP.args[2], kr, jr))
-
-# need to customise simplifiable so can't use @simplify
-simplifiable(::typeof(*), A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})= simplifiable(*, Derivative(axes(parent(B),1)), parent(B))
-simplifiable(::typeof(*), Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = simplifiable(*, Bc', Ac')
-function mul(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}})
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
-    P = parent(B)
-    _der_sub(Derivative(axes(P,1))*P, parentindices(B)...)
-end
-mul(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:Inclusion,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = mul(Bc', Ac')'
-
-simplifiable(::typeof(*), A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) = simplifiable(*, Derivative(axes(parent(B),1)), parent(B))
-simplifiable(::typeof(*), Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = simplifiable(*, Bc', Ac')
-function mul(A::Derivative, B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
-    axes(A,2) == axes(B,1) || throw(DimensionMismatch())
-    P = parent(B)
-    kr,jr = parentindices(B)
-    (Derivative(axes(P,1))*P*kr.A)[kr,jr]
-end
-mul(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}}, Bc::QuasiAdjoint{<:Any,<:Derivative}) = mul(Bc', Ac')'
 
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = SubBasisLayout()
@@ -600,7 +568,7 @@ end
 # sum
 ####
 function sum_layout(::SubBasisLayout, Vm, dims)
-    @assert dims == 1
+    dims == 1 || error("not implemented")
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
 
@@ -615,6 +583,63 @@ end
 
 sum_layout(::ExpansionLayout, A, dims) = sum_layout(ApplyLayout{typeof(*)}(), A, dims)
 cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}(), A, dims)
+
+###
+# diff
+###
+
+function diff_layout(::SubBasisLayout, Vm, dims::Integer)
+    dims == 1 || error("not implemented")
+    diff(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
+end
+
+function diff_layout(::WeightedBasisLayout{<:SubBasisLayout}, Vm, dims::Integer)
+    dims == 1 || error("not implemented")
+    w = weight(Vm)
+    V = unweighted(Vm)
+    view(diff(w .* parent(V)), parentindices(V)...)
+end
+
+function diff_layout(::MappedBasisLayouts, V, dims)
+    kr = basismap(V)
+    @assert kr isa AbstractAffineQuasiVector
+    D = diff(demap(V); dims=dims)
+    view(basis(D), kr, :) * (kr.A*coefficients(D))
+end
+
+diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(), A, dims...)
+
+
+####
+# Gram matrix
+####
+
+simplifiable(::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout}) = Val(true)
+function copy(M::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout})
+    A = (M.A)'
+    A == M.B && return grammatrix(A)
+    error("Not implemented")
+end
+
+grammatrix(A) = grammatrix_layout(MemoryLayout(A), A)
+grammatrix_layout(_, A) = error("Not implemented")
+
+function grammatrix_layout(::MappedBasisLayouts, P)
+    Q = demap(P)
+    kr = basismap(P)
+    @assert kr isa AbstractAffineQuasiVector
+    grammatrix(Q)/kr.A
+end
+
+function copy(M::Mul{<:AdjointMappedBasisLayouts, <:MappedBasisLayouts})
+    A = M.A'
+    kr = basismap(A)
+    @assert kr isa AbstractAffineQuasiVector
+    @assert kr == basismap(M.B)
+    demap(A)'demap(M.B) / kr.A
+end
+
+
 
 include("basisconcat.jl")
 include("basiskron.jl")

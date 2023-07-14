@@ -8,9 +8,9 @@ abstract type AbstractConcatBasis{T} <: Basis{T} end
 
 copy(S::AbstractConcatBasis) = S
 
-@simplify function *(D::Derivative, S::AbstractConcatBasis)
-    axes(D,2) == axes(S,1) || throw(DimensionMismatch())
-    args = arguments.(Ref(ApplyLayout{typeof(*)}()), Derivative.(axes.(S.args,1)) .* S.args)
+function diff(S::AbstractConcatBasis; dims::Integer)
+    dims == 1 || error("not implemented")
+    args = arguments.(Ref(ApplyLayout{typeof(*)}()), diff.(S.args; dims=dims))
     all(length.(args) .== 2) || error("Not implemented")
     concatbasis(S, map(first, args)...) * mortar(Diagonal([map(last, args)...]))
 end
@@ -112,4 +112,4 @@ function QuasiArrays._getindex(::Type{IND}, A::HvcatBasis{T}, (x,j)::IND) where 
 end
 
 
-@simplify *(D::Derivative, H::ApplyQuasiMatrix{<:Any,typeof(hcat)}) = hcat((Ref(D) .* H.args)...)
+diff(H::ApplyQuasiMatrix{<:Any,typeof(hcat)}; dims::Integer) = hcat((diff.(H.args; dims=dims))...)

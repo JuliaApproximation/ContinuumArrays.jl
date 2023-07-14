@@ -1,7 +1,7 @@
 using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
-                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis
+                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis, grammatrix
 
 using IntervalSets: AbstractInterval
 """
@@ -31,14 +31,16 @@ function ContinuumArrays._sum(T::Chebyshev, dims)
     [2; 0; @. ((1/(n+1) - 1/(n-1)) - ((-1)^(n+1)/(n+1) - (-1)^(n-1)/(n-1)))/2]'
 end
 
+Base.diff(T::Chebyshev; dims=1) = T # not correct but just checks expansion works
+
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
 
-ContinuumArrays.@simplify function *(A::QuasiAdjoint{<:Any,<:Chebyshev}, B::Chebyshev)
-    m,n = size(A,1),size(B,2)
-    T = promote_type(eltype(A), eltype(B))
+function ContinuumArrays.grammatrix(A::Chebyshev)
+    m = size(A,2)
+    T = eltype(A)
     f = (k,j) -> isodd(j-k) ? zero(T) : -(((1 + (-1)^(j + k))*(-1 + j^2 + k^2))/(j^4 + (-1 + k^2)^2 - 2j^2*(1 + k^2)))
-    f.(0:m-1, (0:n-1)')
+    f.(0:m-1, (0:m-1)')
 end
 
 
@@ -54,6 +56,12 @@ Base.axes(::InvQuadraticMap{T}) where T = (Inclusion(-1..1),)
 Base.getindex(d::InvQuadraticMap, x::Number) = sqrt((x+1)/2)
 ContinuumArrays.invmap(::QuadraticMap{T}) where T = InvQuadraticMap{T}()
 ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
+
+struct FooDomain end
+
+struct FooBasis  <: Basis{Float64} end
+Base.axes(::FooBasis) = (Inclusion(-1..1), Base.OneTo(5))
+Base.:(==)(::FooBasis, ::FooBasis) = true
 
 
 @testset "Chebyshev" begin
@@ -110,6 +118,8 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test MemoryLayout(wT[y,1:3]) isa MappedWeightedBasisLayout
         @test wT[y,1:3][[0.1,0.2],1:2] == wT[y[[0.1,0.2]],1:2]
 
+        @test T[y,:]'T[y,:] ≈ grammatrix(T[y,:]) ≈ (T'T)/2
+
         @testset "QuadraticMap" begin
             m = QuadraticMap()
             mi = InvQuadraticMap()
@@ -151,16 +161,29 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
     end
 
-    @testset "sum/dot" begin
+    @testset "sum/dot/diff" begin
         @test sum(x) ≡ 2.0
         @test sum(exp.(x)) ≈ ℯ - 1/ℯ
         @test dot(x, x) ≈ 2/3
         @test dot(exp.(x), x) ≈ 2/ℯ
+        @test diff(exp.(x))[0.1] ≈ exp(0.1)
+
+        @test_throws ErrorException diff(wT[:,1:3])
+        @test_throws ErrorException cumsum(x)
     end
 
     @testset "Expansion * Lazy" begin
         f = T * collect(1.0:5)
         @test (f * ones(1,4))[0.1,:] == fill(f[0.1],4)
         @test (f * BroadcastArray(exp, (1:4)'))[0.1,:] ≈ f[0.1] * exp.(1:4)
+    end
+
+    @testset "undefined domain" begin
+        @test_throws ErrorException basis(Inclusion(FooDomain()))
+    end
+
+    @testset "Adjoint*Basis not defined" begin
+        @test_throws ErrorException Chebyshev(5)'LinearSpline([-1,1])
+        @test_throws ErrorException FooBasis()'FooBasis()     
     end
 end
