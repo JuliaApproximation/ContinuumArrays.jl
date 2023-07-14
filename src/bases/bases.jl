@@ -504,17 +504,6 @@ end
 # \int_a^b f(y) g(y) dy = \int_{-1}^1 f(p(x))*g(p(x)) * p'(x) dx
 
 
-_sub_getindex(A, kr, jr) = A[kr, jr]
-_sub_getindex(A, ::Slice, ::Slice) = A
-
-@simplify function *(Ac::QuasiAdjoint{<:Any,<:SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}},
-             B::SubQuasiArray{<:Any,2,<:AbstractQuasiMatrix,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
-    A = Ac'
-    PA,PB = parent(A),parent(B)
-    kr,jr = parentindices(B)
-    _sub_getindex((PA'PB)/kr.A,parentindices(A)[2],jr)
-end
-
 
 # we represent as a Mul with a banded matrix
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = SubBasisLayout()
@@ -635,11 +624,19 @@ end
 grammatrix(A) = grammatrix_layout(MemoryLayout(A), A)
 grammatrix_layout(_, A) = error("Not implemented")
 
-function grammatrix_layout(::MappedBasisLayout, A)
+function grammatrix_layout(::MappedBasisLayout, P)
     Q = demap(P)
-    kr,jr = parentindices(P)
+    kr = basismap(P)
     @assert kr isa AbstractAffineQuasiVector
     grammatrix(Q)/kr.A
+end
+
+function copy(M::Mul{<:AdjointMappedBasisLayout, <:MappedBasisLayout})
+    A = M.A'
+    kr = basismap(A)
+    @assert kr isa AbstractAffineQuasiVector
+    @assert kr == basismap(M.B)
+    demap(A)'demap(M.B) / kr.A
 end
 
 
