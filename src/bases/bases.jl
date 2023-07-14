@@ -14,13 +14,13 @@ struct WeightedBasisLayout{Basis} <: AbstractWeightedBasisLayout end
 const SubWeightedBasisLayout = WeightedBasisLayout{SubBasisLayout}
 const MappedWeightedBasisLayout = WeightedBasisLayout{MappedBasisLayout}
 
+struct AdjointBasisLayout{Basis} <: AbstractQuasiLazyLayout end
+const AdjointSubBasisLayout = AdjointBasisLayout{SubBasisLayout}
+
 SubBasisLayouts = Union{SubBasisLayout,SubWeightedBasisLayout}
 WeightedBasisLayouts = Union{WeightedBasisLayout,SubWeightedBasisLayout,MappedWeightedBasisLayout}
 MappedBasisLayouts = Union{MappedBasisLayout,MappedWeightedBasisLayout}
-
-struct AdjointBasisLayout{Basis} <: AbstractQuasiLazyLayout end
-const AdjointSubBasisLayout = AdjointBasisLayout{SubBasisLayout}
-const AdjointMappedBasisLayout = AdjointBasisLayout{MappedBasisLayout}
+AdjointMappedBasisLayouts = AdjointBasisLayout{<:MappedBasisLayouts}
 
 MemoryLayout(::Type{<:Basis}) = BasisLayout()
 MemoryLayout(::Type{<:Weight}) = WeightLayout()
@@ -624,14 +624,14 @@ end
 grammatrix(A) = grammatrix_layout(MemoryLayout(A), A)
 grammatrix_layout(_, A) = error("Not implemented")
 
-function grammatrix_layout(::MappedBasisLayout, P)
+function grammatrix_layout(::MappedBasisLayouts, P)
     Q = demap(P)
     kr = basismap(P)
     @assert kr isa AbstractAffineQuasiVector
     grammatrix(Q)/kr.A
 end
 
-function copy(M::Mul{<:AdjointMappedBasisLayout, <:MappedBasisLayout})
+function copy(M::Mul{<:AdjointMappedBasisLayouts, <:MappedBasisLayouts})
     A = M.A'
     kr = basismap(A)
     @assert kr isa AbstractAffineQuasiVector

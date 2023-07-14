@@ -1,7 +1,7 @@
 using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
 import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply
-import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayout, MappedBasisLayout, plan_grid_transform
+import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayouts, MappedBasisLayout, plan_grid_transform
 
 @testset "Splines" begin
     @testset "HeavisideSpline" begin
@@ -395,7 +395,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test H\((D*L) * 2) ≈ (H\(D*L))*2 ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
 
         @test MemoryLayout(L[y,:]) isa MappedBasisLayout
-        @test MemoryLayout(L[y,:]') isa AdjointMappedBasisLayout
+        @test MemoryLayout(L[y,:]') isa AdjointMappedBasisLayouts
         a,b = arguments((D*L)[y,:])
         @test H[y,:]\a == Eye(9)
         @test H[y,:] \ (D*L)[y,:] isa BandedMatrix
