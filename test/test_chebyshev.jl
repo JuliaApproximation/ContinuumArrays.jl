@@ -159,6 +159,8 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
         @test dot(x, x) ≈ 2/3
         @test dot(exp.(x), x) ≈ 2/ℯ
         @test diff(exp.(x))[0.1] ≈ exp(0.1)
+
+        @test_throws ErrorException cumsum(x)
     end
 
     @testset "Expansion * Lazy" begin
