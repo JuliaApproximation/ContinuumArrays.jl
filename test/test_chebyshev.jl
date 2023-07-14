@@ -118,6 +118,8 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test MemoryLayout(wT[y,1:3]) isa MappedWeightedBasisLayout
         @test wT[y,1:3][[0.1,0.2],1:2] == wT[y[[0.1,0.2]],1:2]
 
+        @test T[y,:]'T[y,:] ≈ (T'T)/2
+
         @testset "QuadraticMap" begin
             m = QuadraticMap()
             mi = InvQuadraticMap()
