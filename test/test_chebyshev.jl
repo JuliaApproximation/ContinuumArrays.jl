@@ -110,8 +110,8 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
     @testset "Mapped" begin
         y = affine(0..1, x)
 
-        @test summary(T[y,:]) == "Chebyshev affine mapped to 0..1"
-        @test stringmime("text/plain", T[y,:]) == "Chebyshev(5) affine mapped to 0..1"
+        @test summary(T[y,:]) == "Chebyshev affine mapped to $(0..1)"
+        @test stringmime("text/plain", T[y,:]) == "Chebyshev(5) affine mapped to $(0..1)"
         @test MemoryLayout(wT[y,:]) isa MappedWeightedBasisLayout
         @test MemoryLayout(w[y] .* T[y,:]) isa MappedWeightedBasisLayout
         @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]
