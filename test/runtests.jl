@@ -41,7 +41,7 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
         @test D*x ≡ QuasiOnes(x)
         @test D^2 * x ≡ QuasiZeros(x)
         @test D*[x D*x] == [D*x D^2*x]
-        @test stringmime("text/plain", D) == "Derivative(Inclusion(-1..1))"
+        @test stringmime("text/plain", D) == "Derivative(Inclusion($(-1..1)))"
         @test_throws DimensionMismatch Derivative(Inclusion(0..1)) * x
     end
 end
@@ -65,9 +65,9 @@ include("test_maps.jl")
     @test δ[0.0] ≡ Inf
     @test Base.IndexStyle(δ) ≡ Base.IndexLinear()
 
-    @test stringmime("text/plain", δ) == "δ at 0.0 over Inclusion(-1..3)"
+    @test stringmime("text/plain", δ) == "δ at 0.0 over Inclusion($(-1..3))"
     x = Inclusion(-1..1)
-    @test stringmime("text/plain", δ[2x .+ 1]) == "δ at 0.0 over Inclusion(-1..3) affine mapped to -1..1"
+    @test stringmime("text/plain", δ[2x .+ 1]) == "δ at 0.0 over Inclusion($(-1..3)) affine mapped to $(-1..1)"
 end
 
 @testset "Kernels" begin
