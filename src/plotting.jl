@@ -30,9 +30,6 @@ function plotgrid_layout(lay::ExpansionLayout, P)
     _mul_plotgrid(map(MemoryLayout,args), args)
 end
 
-_split_svec(x) = (x,)
-_split_svec(x::AbstractArray{<:StaticVector{2}}) = (map(first,x), map(last,x))
-
 plotvalues(g::AbstractQuasiVector, x) = g[x]
 plotvalues(g::AbstractQuasiMatrix, x) = g[x,:]
 plotvalues(g::AbstractQuasiArray) = plotvalues(g, plotgrid(g))
