@@ -1,5 +1,5 @@
 module ContinuumArrays
-using IntervalSets, DomainSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays, RecipesBase
+using IntervalSets, DomainSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, size, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
