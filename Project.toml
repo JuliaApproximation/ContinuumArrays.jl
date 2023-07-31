@@ -1,6 +1,6 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.14.1"
+version = "0.14.2"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -11,12 +11,18 @@ DomainSets = "5b8099bc-c8ec-5219-889f-1d9e522a28bf"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
 InfiniteArrays = "4858937d-0d70-526a-a4dd-2d5cb5dd786c"
 Infinities = "e1ba4f0e-776d-440f-acd9-e1d2e9742647"
-IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
-RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[weakdeps]
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+
+[extensions]
+ContinuumArraysRecipesBaseExt = "RecipesBase"
+ContinuumArraysIntervalSetsExt = "IntervalSets"
 
 [compat]
 AbstractFFTs = "1.0"
@@ -38,7 +44,8 @@ julia = "1.9"
 [extras]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 FastTransforms = "057dd010-8810-581a-b7be-e3fc3b93f78c"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Base64", "FastTransforms", "Test"]
+test = ["Base64", "FastTransforms", "IntervalSets", "RecipesBase", "Test"]
