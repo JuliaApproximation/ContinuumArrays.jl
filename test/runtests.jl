@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, IntervalSets, DomainSets, FillArrays, LinearAlgebra, BandedMatrices, InfiniteArrays, Test, Base64, RecipesBase
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayouts, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        basis, invmap, Map, checkpoints, _plotgrid, mul, plotvalues
+                        basis, invmap, Map, checkpoints, plotgrid_layout, mul, plotvalues
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -121,7 +121,7 @@ include("test_basisconcat.jl")
         wrep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), v)
         @test wrep[1].args == (grid(wT), v[grid(wT)])
     
-        @test plotgrid(v) == plotgrid(u) == grid(T) == grid(wT) == _plotgrid(MemoryLayout(v), v) == _plotgrid(MemoryLayout(u), u)
+        @test plotgrid(v) == plotgrid(u) == grid(T) == grid(wT) == plotgrid_layout(MemoryLayout(v), v) == plotgrid_layout(MemoryLayout(u), u)
         y = affine(0..1, x)
         @test plotgrid(T[y,:]) == (plotgrid(T) .+ 1)/2
     end
