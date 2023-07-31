@@ -469,7 +469,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         H = HeavisideSpline([1,2,3,6])
         B = H[5x .+ 1,:]
         u = H * [1,2,3]
-        @test stringmime("text/plain", B) == "HeavisideSpline([1, 2, 3, 6]) affine mapped to 0..1"
+        @test stringmime("text/plain", B) == "HeavisideSpline([1, 2, 3, 6]) affine mapped to $(0..1)"
     end
 
     @testset "A \\ ( c .* B) == c .* (A\\B) #101" begin
