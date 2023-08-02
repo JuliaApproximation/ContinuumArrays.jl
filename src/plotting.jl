@@ -38,3 +38,6 @@ function plotgridvalues(g)
     x = plotgrid(g)
     x, plotvalues(g,x)
 end
+
+_split_svec(x) = (x,)
+_split_svec(x::AbstractArray{<:StaticVector{2}}) = (map(first,x), map(last,x))
