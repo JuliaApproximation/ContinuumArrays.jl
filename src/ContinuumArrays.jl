@@ -18,7 +18,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize, _cutdim,
-                    AbstractQuasiFill, UnionDomain, sum_size, sum_layout, _cumsum, cumsum_layout, applylayout, _equals, layout_broadcasted, PolynomialLayout, dot_size,
+                    AbstractQuasiFill, UnionDomain, sum_size, sum_layout, _cumsum, cumsum_layout, applylayout, equals_layout, layout_broadcasted, PolynomialLayout, dot_size,
                     diff_layout, diff_size
 import InfiniteArrays: Infinity, InfAxes
 import AbstractFFTs: Plan

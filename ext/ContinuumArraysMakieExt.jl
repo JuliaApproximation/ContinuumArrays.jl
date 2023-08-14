@@ -10,11 +10,13 @@ function Makie.convert_arguments(p::PointBased, g::AbstractQuasiVector)
     convert_arguments(p, _split_svec(x)..., v)
 end
 
+
 @recipe(QuasiPlot, P) do scene
     Theme(
     )
 end
 
+Makie.plottype(a::AbstractQuasiVector) = Lines
 Makie.plottype(a::AbstractQuasiMatrix) = QuasiPlot
 
 function Makie.plot!(sc::QuasiPlot)
