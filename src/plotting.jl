@@ -15,7 +15,6 @@ plotgrid(P, n...) = plotgrid_layout(MemoryLayout(P), P, n...)
 plotgrid_layout(lay, P, n...) = plotgrid_size(size(P), P, n...)
 plotgrid_size(::Tuple{InfiniteCardinal{1}}, P, n...) = plotgrid(expand(P), n...)
 plotgrid_size(sz, P, n=size(P,2)) = grid(P, min(n,MAX_PLOT_POINTS))
-plotgrid_layout(::AbstractBandedLayout, P, n=size(P,2)) = grid(P, min(n,MAX_PLOT_POINTS))
 plotgrid_layout(::WeightedBasisLayouts, wP, n...) = plotgrid(unweighted(wP), n...)
 plotgrid_layout(::MappedBasisLayout, P, n...) = invmap(parentindices(P)[1])[plotgrid(demap(P), n...)]
 plotgrid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = plotgrid(parent(P), maximum(parentindices(P)[2][n]))
