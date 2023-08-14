@@ -20,20 +20,24 @@ plotgrid_layout(::MappedBasisLayout, P, n...) = invmap(parentindices(P)[1])[plot
 plotgrid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = plotgrid(parent(P), maximum(parentindices(P)[2][n]))
 plotgrid_layout(::SubBasisLayout, P::AbstractQuasiMatrix) = plotgrid(parent(P), maximum(parentindices(P)[2]))
 
-const _plotgrid = plotgrid_layout # TODO: remove
-
 
 _mul_plotgrid(_, args) = plotgrid_layout(UnknownLayout(), first(args))
-_mul_plotgrid(::Tuple{Any,PaddedLayout}, (P,c)) = plotgrid(P, maximum(colsupport(c)))
+_mul_plotgrid(::Tuple{Any,PaddedLayout}, (P,c)) = plotgrid(P, last(colsupport(c)))
 
 function plotgrid_layout(lay::ExpansionLayout, P)
     args = arguments(lay,P)
     _mul_plotgrid(map(MemoryLayout,args), args)
 end
 
-plotvalues(g::AbstractQuasiVector, x) = g[x]
-plotvalues(g::AbstractQuasiMatrix, x) = g[x,:]
-plotvalues(g::AbstractQuasiArray) = plotvalues(g, plotgrid(g))
+plotvalues_size(::Tuple{InfiniteCardinal{1}}, g, x=plotgrid(g)) = g[x]
+plotvalues_size(::Tuple{InfiniteCardinal{1},Int}, g, x=plotgrid(g)) = g[x,:]
+plotvalues_layout(lay, g, x...) = plotvalues_size(size(g), g, x...)
+# plotvalues_layout(::WeightedBasisLayouts, wP, n...) = plotvalues(unweighted(wP), n...)
+plotvalues_layout(::ExpansionLayout{MappedBasisLayout}, g, x...) = plotvalues(demap(g))
+# plotvalues_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = plotvalues(parent(P), maximum(parentindices(P)[2][n]))
+# plotvalues_layout(::SubBasisLayout, P::AbstractQuasiMatrix) = plotvalues(parent(P), maximum(parentindices(P)[2]))
+
+plotvalues(g::AbstractQuasiArray, x...) = plotvalues_layout(MemoryLayout(g), g, x...)
 
 function plotgridvalues(g)
     x = plotgrid(g)
