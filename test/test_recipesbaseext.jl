@@ -15,7 +15,6 @@ import RecipesBase
     u = L*randn(6)
     rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
     @test rep[1].args == (L.points,u[L.points])
-    @test plotvalues(u) == u[plotgrid(u)]
 
     @testset "padded" begin
         u = L * Vcat(rand(3), Zeros(3))

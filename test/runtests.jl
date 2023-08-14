@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, IntervalSets, DomainSets, FillArrays, LinearAlgebra, BandedMatrices, InfiniteArrays, Test, Base64
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayouts, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        basis, invmap, Map, checkpoints, plotgrid_layout, mul, plotvalues
+                        basis, invmap, Map, checkpoints, plotgrid, plotgrid_layout, mul, plotvalues
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -84,6 +84,17 @@ end
 include("test_splines.jl")
 include("test_chebyshev.jl")
 include("test_basisconcat.jl")
+
+@testset "Grids/values" begin
+    L = LinearSpline(1:5)
+    c = randn(5)
+    u = L*c
+    @test plotvalues(u) == u[plotgrid(u)]
+
+    a = affine(0..1, 1..5)
+    v = L[a,:] * c
+    @test plotvalues(v) == v[plotgrid(v)]
+end
 
 include("test_recipesbaseext.jl")
 include("test_makieext.jl")
