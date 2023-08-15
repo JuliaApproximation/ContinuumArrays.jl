@@ -49,14 +49,14 @@ ApplyStyle(::typeof(pinv), ::Type{<:Basis}) = LazyQuasiArrayApplyStyle()
 pinv(J::Basis) = apply(pinv,J)
 
 
-function _equals(::AbstractBasisLayout, ::AbstractBasisLayout, A, B)
+function equals_layout(::AbstractBasisLayout, ::AbstractBasisLayout, A, B)
     axes(A) == axes(B) && throw(ArgumentError("Override == to compare bases of type $(typeof(A)) and $(typeof(B))"))
     false
 end
 
-_equals(::SubBasisLayouts, ::SubBasisLayouts, A::SubQuasiArray, B::SubQuasiArray) = parentindices(A) == parentindices(B) && parent(A) == parent(B)
-_equals(::MappedBasisLayouts, ::MappedBasisLayouts, A::SubQuasiArray, B::SubQuasiArray) = parentindices(A) == parentindices(B) && demap(A) == demap(B)
-_equals(::AbstractWeightedBasisLayout, ::AbstractWeightedBasisLayout, A, B) = weight(A) == weight(B) && unweighted(A) == unweighted(B)
+equals_layout(::SubBasisLayouts, ::SubBasisLayouts, A::SubQuasiArray, B::SubQuasiArray) = parentindices(A) == parentindices(B) && parent(A) == parent(B)
+equals_layout(::MappedBasisLayouts, ::MappedBasisLayouts, A::SubQuasiArray, B::SubQuasiArray) = parentindices(A) == parentindices(B) && demap(A) == demap(B)
+equals_layout(::AbstractWeightedBasisLayout, ::AbstractWeightedBasisLayout, A, B) = weight(A) == weight(B) && unweighted(A) == unweighted(B)
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
 @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) =
@@ -154,12 +154,12 @@ copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)},<:Any,<:AbstractQua
 
 
 # expansion
-_grid(_, P, n...) = error("Overload Grid")
+grid_layout(_, P, n...) = error("Overload Grid")
 
-_grid(::MappedBasisLayout, P, n...) = invmap(parentindices(P)[1])[grid(demap(P), n...)]
-_grid(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), maximum(parentindices(P)[2][n]))
-_grid(::SubBasisLayout, P::AbstractQuasiMatrix) = grid(parent(P), maximum(parentindices(P)[2]))
-_grid(::WeightedBasisLayouts, P, n...) = grid(unweighted(P), n...)
+grid_layout(::MappedBasisLayout, P, n...) = invmap(parentindices(P)[1])[grid(demap(P), n...)]
+grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), maximum(parentindices(P)[2][n]))
+grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix) = grid(parent(P), maximum(parentindices(P)[2]))
+grid_layout(::WeightedBasisLayouts, P, n...) = grid(unweighted(P), n...)
 
 
 """
@@ -170,7 +170,7 @@ be sufficient number of points to determine `size(P,2)`
 coefficients. Otherwise its enough points to determine `n`
 coefficients.
 """
-grid(P, n...) = _grid(MemoryLayout(P), P, n...)
+grid(P, n...) = grid_layout(MemoryLayout(P), P, n...)
 
 
 # values(f) = 
@@ -363,7 +363,7 @@ copy(L::Ldiv{Bas,<:ExpansionLayout}) where Bas<:AbstractBasisLayout = copy(Ldiv{
 copy(L::Mul{<:ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Mul{<:ExpansionLayout,Lay}) where Lay<:AbstractLazyLayout = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 
-function _broadcastbasis(::typeof(+), _, _, a, b)
+function broadcastbasis_layout(::typeof(+), _, _, a, b)
     try
         a ≠ b && error("Overload broadcastbasis(::typeof(+), ::$(typeof(a)), ::$(typeof(b)))")
     catch
@@ -372,17 +372,17 @@ function _broadcastbasis(::typeof(+), _, _, a, b)
     a
 end
 
-_broadcastbasis(::typeof(+), ::MappedBasisLayouts, ::MappedBasisLayouts, a, b) = broadcastbasis(+, demap(a), demap(b))[basismap(a), :]
-function _broadcastbasis(::typeof(+), ::SubBasisLayout, ::SubBasisLayout, a, b)
+broadcastbasis_layout(::typeof(+), ::MappedBasisLayouts, ::MappedBasisLayouts, a, b) = broadcastbasis(+, demap(a), demap(b))[basismap(a), :]
+function broadcastbasis_layout(::typeof(+), ::SubBasisLayout, ::SubBasisLayout, a, b)
     kr_a,jr_a = parentindices(a)
     kr_b,jr_b = parentindices(b)
     @assert kr_a == kr_b # frist axes must match
     view(broadcastbasis(+, parent(a), parent(b)), kr_a, union(jr_a,jr_b))
 end
-_broadcastbasis(::typeof(+), ::SubBasisLayout, _, a, b) = broadcastbasis(+, parent(a), b)
-_broadcastbasis(::typeof(+), _, ::SubBasisLayout, a, b) = broadcastbasis(+, a, parent(b))
+broadcastbasis_layout(::typeof(+), ::SubBasisLayout, _, a, b) = broadcastbasis(+, parent(a), b)
+broadcastbasis_layout(::typeof(+), _, ::SubBasisLayout, a, b) = broadcastbasis(+, a, parent(b))
 
-broadcastbasis(::typeof(+), a, b) = _broadcastbasis(+, MemoryLayout(a), MemoryLayout(b), a, b)
+broadcastbasis(::typeof(+), a, b) = broadcastbasis_layout(+, MemoryLayout(a), MemoryLayout(b), a, b)
 broadcastbasis(::typeof(+), a, b, c...) = broadcastbasis(+, broadcastbasis(+, a, b), c...)
 
 broadcastbasis(::typeof(-), a, b) = broadcastbasis(+, a, b)
@@ -426,7 +426,7 @@ end
 # end
 
 
-function _equals(::ExpansionLayout, ::ExpansionLayout, f, g)
+function equals_layout(::ExpansionLayout, ::ExpansionLayout, f, g)
     S,c = arguments(f)
     T,d = arguments(g)
     ST = broadcastbasis(+, S, T)

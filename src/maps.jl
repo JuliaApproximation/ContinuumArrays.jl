@@ -117,6 +117,7 @@ end
 AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {T,V} =
     AffineMap{promote_type(T,V), typeof(domain),typeof(range)}(domain,range)
 
+union(d::AffineMap) = d.range
 measure(x::Inclusion{<:Any,<:AbstractInterval}) = last(x)-first(x)
 
 function getproperty(A::AffineMap, d::Symbol)
