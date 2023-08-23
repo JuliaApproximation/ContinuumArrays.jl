@@ -441,7 +441,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             x = Inclusion(0..1)
             y = 2x .- 1
             L = LinearSpline(range(-1,stop=1,length=10))
-            g,P = plan_grid_transform(L[y,:], (10,))
+            g,P = plan_grid_transform(L[y,:], 10)
             X = cos.(g)
             @test L[y,:][g,:] * (P * X) ≈ X
             @test P \ (P * X) ≈ P * (P \ X) ≈ X
