@@ -590,7 +590,7 @@ cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}
 # diff
 ###
 
-diff_layout(::AbstractBasisLayout, Vm, dims::Integer=1) = error("Overload diff(::$(typeof(Vm)))")
+diff_layout(::AbstractBasisLayout, Vm, dims...) = error("Overload diff(::$(typeof(Vm)))")
 
 function diff_layout(::SubBasisLayout, Vm, dims::Integer=1)
     dims == 1 || error("not implemented")
@@ -604,7 +604,7 @@ function diff_layout(::WeightedBasisLayout{SubBasisLayout}, Vm, dims::Integer=1)
     view(diff(w .* parent(V)), parentindices(V)...)
 end
 
-function diff_layout(::MappedBasisLayouts, V, dims)
+function diff_layout(::MappedBasisLayouts, V, dims::Integer=1)
     kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
     D = diff(demap(V); dims=dims)
