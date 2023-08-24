@@ -567,6 +567,8 @@ end
 ####
 # sum
 ####
+sum_layout(::AbstractBasisLayout, Vm, dims) = error("Overload _sum(::$(typeof(Vm)), ::$(typeof(dims)))")
+
 function sum_layout(::SubBasisLayout, Vm, dims)
     dims == 1 || error("not implemented")
     sum(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
@@ -588,12 +590,14 @@ cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}
 # diff
 ###
 
-function diff_layout(::SubBasisLayout, Vm, dims::Integer)
+diff_layout(::AbstractBasisLayout, Vm, dims::Integer=1) = error("Overload diff(::$(typeof(Vm)))")
+
+function diff_layout(::SubBasisLayout, Vm, dims::Integer=1)
     dims == 1 || error("not implemented")
     diff(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
 end
 
-function diff_layout(::WeightedBasisLayout{<:SubBasisLayout}, Vm, dims::Integer)
+function diff_layout(::WeightedBasisLayout{SubBasisLayout}, Vm, dims::Integer=1)
     dims == 1 || error("not implemented")
     w = weight(Vm)
     V = unweighted(Vm)

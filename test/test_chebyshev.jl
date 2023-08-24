@@ -168,7 +168,11 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test dot(exp.(x), x) ≈ 2/ℯ
         @test diff(exp.(x))[0.1] ≈ exp(0.1)
 
+        @test sum(exp.(x .* (1:2)'); dims=1) ≈ [ℯ - 1/ℯ (ℯ^2 - 1/ℯ^2)/2]
+        @test diff(exp.(x .* (1:2)'); dims=1)[0.1,:] ≈ [exp(0.1), exp(0.2)]
+
         @test_throws ErrorException diff(wT[:,1:3])
+        @test_throws ErrorException sum(wT[:,1:3]; dims=1)
         @test_throws ErrorException cumsum(x)
     end
 
