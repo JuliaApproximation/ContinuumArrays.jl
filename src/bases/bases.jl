@@ -189,8 +189,8 @@ end
 
 plan_grid_transform(L, szs::NTuple{N,Int}, dims=1:N) where N = plan_grid_transform(MemoryLayout(L), L, szs, dims)
 
-plan_grid_transform(L, arr::AbstractArray{<:Any,N}, dims=1:N) where N = 
-    plan_grid_transform(L, size(arr), dims)
+plan_grid_transform(L, arr::AbstractArray, dims...) = plan_grid_transform(L, size(arr), dims...)
+plan_grid_transform(L, lng::Union{Integer,Block{1}}, dims...) = plan_grid_transform(L, (lng,), dims...)
 
 plan_transform(P, szs, dims...) = plan_grid_transform(P, szs, dims...)[2]
 
