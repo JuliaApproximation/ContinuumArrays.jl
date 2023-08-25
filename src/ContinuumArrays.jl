@@ -104,9 +104,9 @@ include("plotting.jl")
 # sum/dot
 ###
 
-sum_size(::Tuple{InfiniteCardinal{1}}, a, dims) = _sum(expand(a), dims)
+sum_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = _sum(expand(a), dims)
 dot_size(::InfiniteCardinal{1}, a, b) = dot(expand(a), expand(b))
-diff_size(::Tuple{InfiniteCardinal{1}}, a, dims) = diff(expand(a); dims=dims)
+diff_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = diff(expand(a); dims=dims)
 function copy(d::Dot{<:ExpansionLayout,<:ExpansionLayout,<:AbstractQuasiArray,<:AbstractQuasiArray})
     a,b = d.A,d.B
     P,c = basis(a),coefficients(a)
