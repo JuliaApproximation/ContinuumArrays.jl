@@ -91,12 +91,12 @@ end
     demap(A)\demap(B)
 end
 
-function transform_ldiv_if_columns(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiVector}, ::OneTo)
+function copy(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiVector})
     A,B = P.A, P.B
     demap(A) \ B[invmap(basismap(A))]
 end
 
-function transform_ldiv_if_columns(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiMatrix}, ::OneTo)
+function copy(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiMatrix})
     A,B = P.A, P.B
     demap(A) \ B[invmap(basismap(A)),:]
 end
@@ -296,23 +296,15 @@ end
 
 
 
-copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
-# TODO: redesign to use simplifiable(\, A, B)
-copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
-copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
-# A BroadcastLayout of unknown function is only knowable pointwise
-transform_ldiv_if_columns(L, _) = ApplyQuasiArray(\, L.A, L.B)
-transform_ldiv_if_columns(L, ::OneTo) = transform_ldiv(L.A,L.B)
-transform_ldiv_if_columns(L) = transform_ldiv_if_columns(L, axes(L.B,2))
-copy(L::Ldiv{<:AbstractBasisLayout,<:BroadcastLayout}) = transform_ldiv_if_columns(L)
-# Inclusion are QuasiArrayLayout
-copy(L::Ldiv{<:AbstractBasisLayout,QuasiArrayLayout}) = transform_ldiv(L.A, L.B)
-# Otherwise keep lazy to support, e.g., U\D*T
-copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv_if_columns(L)
-copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
+@inline copy(L::Ldiv{<:AbstractBasisLayout}) = basis_ldiv_size(size(L), L.A, L.B)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = basis_ldiv_size(size(L), L.A, L.B)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = basis_ldiv_size(size(L), L.A, L.B)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
-transform_ldiv_if_columns(L::Ldiv{<:Any,<:ApplyLayout{typeof(hcat)}}, ::OneTo) = transform_ldiv(L.A, L.B)
-transform_ldiv_if_columns(L::Ldiv{<:Any,<:ApplyLayout{typeof(hcat)}}, _) = hcat((Ref(L.A) .\ arguments(hcat, L.B))...)
+@inline basis_ldiv_size(_, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
+@inline basis_ldiv_size(::Tuple{Integer}, A, B) = transform_ldiv(A, B)
+@inline basis_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
+
 
 """
     WeightedFactorization(w, F)
