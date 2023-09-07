@@ -58,21 +58,24 @@ equals_layout(::SubBasisLayouts, ::SubBasisLayouts, A::SubQuasiArray, B::SubQuas
 equals_layout(::MappedBasisLayouts, ::MappedBasisLayouts, A::SubQuasiArray, B::SubQuasiArray) = parentindices(A) == parentindices(B) && demap(A) == demap(B)
 equals_layout(::AbstractWeightedBasisLayout, ::AbstractWeightedBasisLayout, A, B) = weight(A) == weight(B) && unweighted(A) == unweighted(B)
 
-@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
-@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) =
-    transform_ldiv(L.A, L.B)
 for op in (:+, :-)
-    @eval @inline copy(L::Ldiv{Lay,BroadcastLayout{typeof($op)},<:Any,<:AbstractQuasiVector}) where Lay<:MappedBasisLayouts =
-        copy(Ldiv{Lay,LazyLayout}(L.A,L.B))
+    @eval begin
+        @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof($op)}}) = basis_broadcast_ldiv_size($op, size(L), L.A, L.B)
+        @inline copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof($op)}}) = copy(Ldiv{BasisLayout,BroadcastLayout{typeof($op)}}(L.A, L.B))
+        basis_broadcast_ldiv_size(::typeof($op), ::Tuple{Integer}, A, B) = transform_ldiv(A, B)
+    end
 end
 
-@inline function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
-    a,b = arguments(L.B)
-    (L.A\a)-(L.A\b)
+basis_broadcast_ldiv_size(::typeof(+), _, A, B) = +(broadcast(\,Ref(A),arguments(B))...)
+
+
+
+@inline function basis_broadcast_ldiv_size(::typeof(-), _, A, B)
+    a,b = arguments(B)
+    (A\a)-(A\b)
 end
 
-@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
-    transform_ldiv(L.A, L.B)
+
 
 @inline function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
     A, B = P.A, P.B
@@ -254,8 +257,8 @@ end
 plan_ldiv(A, B::AbstractQuasiVector) = factorize(A)
 plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(A, size(B,2))
 
-transform_ldiv(A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}, _) where {T,V} = plan_ldiv(A, B) \ B
-transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
+transform_ldiv_size(_, A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}) where {T,V} = plan_ldiv(A, B) \ B
+transform_ldiv(A, B) = transform_ldiv_size(size(A), A, B)
 
 
 """
@@ -336,6 +339,7 @@ tocoefficients(v) = tocoefficients_layout(MemoryLayout(v), v)
 tocoefficients_layout(::CoefficientLayouts, v) = v
 tocoefficients_layout(_, v) = tocoefficients_size(size(v), v)
 tocoefficients_size(::NTuple{N,Int}, v) where N = Array(v)
+tocoefficients_size(_, v) = v # the default is to leave it, even though we aren't technically making an ExpansionLayout
 
 """
     basis(v)
