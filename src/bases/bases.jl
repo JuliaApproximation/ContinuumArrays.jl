@@ -91,20 +91,17 @@ end
     demap(A)\demap(B)
 end
 
-function copy(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiVector})
-    A,B = P.A, P.B
-    demap(A) \ B[invmap(basismap(A))]
-end
+copy(P::Ldiv{<:MappedBasisLayouts}) = mapped_ldiv_size(size(P), P.A, P.B)
+copy(P::Ldiv{<:MappedBasisLayouts, <:AbstractLazyLayout}) = mapped_ldiv_size(size(P), P.A, P.B)
+@inline copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(hcat)}}) = mapped_ldiv_size(size(L), L.A, L.B)
+copy(P::Ldiv{<:MappedBasisLayouts, ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(P.A, P.B))
 
-function copy(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiMatrix})
-    A,B = P.A, P.B
-    demap(A) \ B[invmap(basismap(A)),:]
-end
+mapped_ldiv_size(::Tuple{Integer}, A, B) = demap(A) \ B[invmap(basismap(A))]
+mapped_ldiv_size(::Tuple{Integer,Int}, A, B) = demap(A) \ B[invmap(basismap(A)),:]
+mapped_ldiv_size(::Tuple{Integer,Any}, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
 
-copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A,L.B))
-copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
-
-@inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = apply(\, L.A, ApplyQuasiArray(L.B))
+# following allows us to use simplification
+@inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 @inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout})
     P = parent(L.A)
     kr, jr = parentindices(L.A)
@@ -291,19 +288,25 @@ in that basis.
 """
 function expand(v)
     P = basis(v)
-    ApplyQuasiArray(*, P, P \ v)
+    ApplyQuasiArray(*, P, tocoefficients(P \ v))
 end
+
+
 
 
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout}) = basis_ldiv_size(size(L), L.A, L.B)
 @inline copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = basis_ldiv_size(size(L), L.A, L.B)
-@inline copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = basis_ldiv_size(size(L), L.A, L.B)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
 @inline copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
 @inline basis_ldiv_size(_, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
 @inline basis_ldiv_size(::Tuple{Integer}, A, B) = transform_ldiv(A, B)
 @inline basis_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
+
+@inline copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(hcat)}}) = basis_hcat_ldiv_size(size(L), L.A, L.B)
+@inline basis_hcat_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
+@inline basis_hcat_ldiv_size(_, A, B) = hcat((Ref(L.A) .\ arguments(hcat, L.B))...)
 
 
 """
@@ -326,7 +329,13 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 ##
 
 struct ExpansionLayout{Lay} <: AbstractLazyLayout end
-applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout,ZerosLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
+const CoefficientLayouts = Union{PaddedLayout,AbstractStridedLayout,ZerosLayout}
+applylayout(::Type{typeof(*)}, ::Lay, ::CoefficientLayouts) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
+
+tocoefficients(v) = tocoefficients_layout(MemoryLayout(v), v)
+tocoefficients_layout(::CoefficientLayouts, v) = v
+tocoefficients_layout(_, v) = tocoefficients_size(size(v), v)
+tocoefficients_size(::NTuple{N,Int}, v) where N = Array(v)
 
 """
     basis(v)
@@ -351,9 +360,10 @@ function unweighted(lay::ExpansionLayout, a)
 end
 
 LazyArrays._mul_arguments(::ExpansionLayout, A) = LazyArrays._mul_arguments(ApplyLayout{typeof(*)}(), A)
-copy(L::Ldiv{Bas,<:ExpansionLayout}) where Bas<:AbstractBasisLayout = copy(Ldiv{Bas,ApplyLayout{typeof(*)}}(L.A, L.B))
-copy(L::Mul{<:ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
-copy(L::Mul{<:ExpansionLayout,Lay}) where Lay<:AbstractLazyLayout = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+copy(L::Ldiv{<:AbstractBasisLayout,<:ExpansionLayout}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Ldiv{<:MappedBasisLayouts,<:ExpansionLayout}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Mul{<:ExpansionLayout}) = copy(Mul{ApplyLayout{typeof(*)},UnknownLayout}(L.A, L.B))
+copy(L::Mul{<:ExpansionLayout,<:AbstractLazyLayout}) = copy(Mul{ApplyLayout{typeof(*)},UnknownLayout}(L.A, L.B))
 
 function broadcastbasis_layout(::typeof(+), _, _, a, b)
     try
