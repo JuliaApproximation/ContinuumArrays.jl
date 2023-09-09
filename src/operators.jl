@@ -55,6 +55,18 @@ macro simplify(qt)
                 Base.copy(M::ContinuumArrays.QMul3{<:$Atyp,<:$Btyp,<:$Ctyp}) = ContinuumArrays.simplify(M)
             end)
         end
+    elseif qt.args[1].args[1] == :(\)
+        mat = qt.args[2]
+        @assert qt.args[1].args[2].head == :(::)
+        Aname,Atyp = qt.args[1].args[2].args
+        Bname,Btyp = qt.args[1].args[3].args
+        esc(quote
+            ContinuumArrays.simplifiable(::typeof(\), A::$Atyp, B::$Btyp) = Val(true)
+            Base.@propagate_inbounds function ContinuumArrays.ldiv($Aname::$Atyp, $Bname::$Btyp)
+                @boundscheck ContinuumArrays.check_ldiv_axes($Aname, $Bname)
+                $mat
+            end
+        end)
     end
 end
 

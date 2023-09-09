@@ -58,27 +58,33 @@ equals_layout(::SubBasisLayouts, ::SubBasisLayouts, A::SubQuasiArray, B::SubQuas
 equals_layout(::MappedBasisLayouts, ::MappedBasisLayouts, A::SubQuasiArray, B::SubQuasiArray) = parentindices(A) == parentindices(B) && demap(A) == demap(B)
 equals_layout(::AbstractWeightedBasisLayout, ::AbstractWeightedBasisLayout, A, B) = weight(A) == weight(B) && unweighted(A) == unweighted(B)
 
-@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)}}) = +(broadcast(\,Ref(L.A),arguments(L.B))...)
-@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(+)},<:Any,<:AbstractQuasiVector}) =
-    transform_ldiv(L.A, L.B)
 for op in (:+, :-)
-    @eval @inline copy(L::Ldiv{Lay,BroadcastLayout{typeof($op)},<:Any,<:AbstractQuasiVector}) where Lay<:MappedBasisLayouts =
-        copy(Ldiv{Lay,LazyLayout}(L.A,L.B))
+    @eval begin
+        @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof($op)}}) = basis_broadcast_ldiv_size($op, size(L), L.A, L.B)
+        @inline copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof($op)}}) = copy(Ldiv{BasisLayout,BroadcastLayout{typeof($op)}}(L.A, L.B))
+        basis_broadcast_ldiv_size(::typeof($op), ::Tuple{Integer}, A, B) = transform_ldiv(A, B)
+    end
 end
 
-@inline function copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)}})
-    a,b = arguments(L.B)
-    (L.A\a)-(L.A\b)
+basis_broadcast_ldiv_size(::typeof(+), _, A, B) = +(broadcast(\,Ref(A),arguments(B))...)
+
+
+
+@inline function basis_broadcast_ldiv_size(::typeof(-), _, A, B)
+    a,b = arguments(B)
+    (A\a)-(A\b)
 end
 
-@inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(-)},<:Any,<:AbstractQuasiVector}) =
-    transform_ldiv(L.A, L.B)
 
+# TODO: remove as Not type stable
+simplifiable(L::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout}) = Val(L.A == L.B)
 @inline function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
     A, B = P.A, P.B
     A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
     SquareEye{eltype(eltype(P))}((axes(A,2),)) # use double eltype for array-valued
 end
+
+simplifiable(L::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts}) = Val(parent(L.A) == parent(L.B))
 @inline function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
     A, B = P.A, P.B
     parent(A) == parent(B) ||
@@ -91,20 +97,18 @@ end
     demap(A)\demap(B)
 end
 
-function transform_ldiv_if_columns(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiVector}, ::OneTo)
-    A,B = P.A, P.B
-    demap(A) \ B[invmap(basismap(A))]
-end
+copy(P::Ldiv{<:MappedBasisLayouts}) = mapped_ldiv_size(size(P), P.A, P.B)
+copy(P::Ldiv{<:MappedBasisLayouts, <:AbstractLazyLayout}) = mapped_ldiv_size(size(P), P.A, P.B)
+copy(P::Ldiv{<:MappedBasisLayouts, <:AbstractBasisLayout}) = mapped_ldiv_size(size(P), P.A, P.B)
+@inline copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(hcat)}}) = mapped_ldiv_size(size(L), L.A, L.B)
+copy(P::Ldiv{<:MappedBasisLayouts, ApplyLayout{typeof(*)}}) = copy(Ldiv{BasisLayout,ApplyLayout{typeof(*)}}(P.A, P.B))
 
-function transform_ldiv_if_columns(P::Ldiv{<:MappedBasisLayouts,<:Any,<:Any,<:AbstractQuasiMatrix}, ::OneTo)
-    A,B = P.A, P.B
-    demap(A) \ B[invmap(basismap(A)),:]
-end
+mapped_ldiv_size(::Tuple{Integer}, A, B) = demap(A) \ B[invmap(basismap(A))]
+mapped_ldiv_size(::Tuple{Integer,Int}, A, B) = demap(A) \ B[invmap(basismap(A)),:]
+mapped_ldiv_size(::Tuple{Integer,Any}, A, B) = copy(Ldiv{BasisLayout,typeof(MemoryLayout(B))}(A, B))
 
-copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A,L.B))
-copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
-
-@inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = apply(\, L.A, ApplyQuasiArray(L.B))
+# following allows us to use simplification
+@inline copy(L::Ldiv{Lay,<:SubBasisLayouts}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
 @inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout})
     P = parent(L.A)
     kr, jr = parentindices(L.A)
@@ -146,11 +150,7 @@ _broadcast_mul_ldiv(::Tuple{ScalarLayout,AbstractBasisLayout}, A, B) =
 _broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
-
-# ambiguity
 copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
-copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 
 
 # expansion
@@ -257,8 +257,8 @@ end
 plan_ldiv(A, B::AbstractQuasiVector) = factorize(A)
 plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(A, size(B,2))
 
-transform_ldiv(A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}, _) where {T,V} = plan_ldiv(A, B) \ B
-transform_ldiv(A, B) = transform_ldiv(A, B, size(A))
+transform_ldiv_size(_, A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}) where {T,V} = plan_ldiv(A, B) \ B
+transform_ldiv(A, B) = transform_ldiv_size(size(A), A, B)
 
 
 """
@@ -291,28 +291,29 @@ in that basis.
 """
 function expand(v)
     P = basis(v)
-    ApplyQuasiArray(*, P, P \ v)
+    ApplyQuasiArray(*, P, tocoefficients(P \ v))
 end
 
 
 
-copy(L::Ldiv{<:AbstractBasisLayout}) = transform_ldiv(L.A, L.B)
-# TODO: redesign to use simplifiable(\, A, B)
-copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = transform_ldiv(L.A, L.B)
-copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
-# A BroadcastLayout of unknown function is only knowable pointwise
-transform_ldiv_if_columns(L, _) = ApplyQuasiArray(\, L.A, L.B)
-transform_ldiv_if_columns(L, ::OneTo) = transform_ldiv(L.A,L.B)
-transform_ldiv_if_columns(L) = transform_ldiv_if_columns(L, axes(L.B,2))
-copy(L::Ldiv{<:AbstractBasisLayout,<:BroadcastLayout}) = transform_ldiv_if_columns(L)
-# Inclusion are QuasiArrayLayout
-copy(L::Ldiv{<:AbstractBasisLayout,QuasiArrayLayout}) = transform_ldiv(L.A, L.B)
-# Otherwise keep lazy to support, e.g., U\D*T
-copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = transform_ldiv_if_columns(L)
-copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
-transform_ldiv_if_columns(L::Ldiv{<:Any,<:ApplyLayout{typeof(hcat)}}, ::OneTo) = transform_ldiv(L.A, L.B)
-transform_ldiv_if_columns(L::Ldiv{<:Any,<:ApplyLayout{typeof(hcat)}}, _) = hcat((Ref(L.A) .\ arguments(hcat, L.B))...)
+
+@inline copy(L::Ldiv{<:AbstractBasisLayout}) = basis_ldiv_size(size(L), L.A, L.B)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = basis_ldiv_size(size(L), L.A, L.B)
+@inline function copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}})
+    simplifiable(\, L.A, first(arguments(*, L.B))) isa Val{true} && return copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+    basis_ldiv_size(size(L), L.A, L.B)
+end
+@inline copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
+
+@inline basis_ldiv_size(_, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
+@inline basis_ldiv_size(::Tuple{Integer}, A, B) = transform_ldiv(A, B)
+@inline basis_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
+
+@inline copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(hcat)}}) = basis_hcat_ldiv_size(size(L), L.A, L.B)
+@inline basis_hcat_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
+@inline basis_hcat_ldiv_size(_, A, B) = hcat((Ref(A) .\ arguments(hcat, B))...)
+
 
 """
     WeightedFactorization(w, F)
@@ -334,7 +335,14 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 ##
 
 struct ExpansionLayout{Lay} <: AbstractLazyLayout end
-applylayout(::Type{typeof(*)}, ::Lay, ::Union{PaddedLayout,AbstractStridedLayout,ZerosLayout}) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
+const CoefficientLayouts = Union{PaddedLayout,AbstractStridedLayout,ZerosLayout}
+applylayout(::Type{typeof(*)}, ::Lay, ::CoefficientLayouts) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
+
+tocoefficients(v) = tocoefficients_layout(MemoryLayout(v), v)
+tocoefficients_layout(::CoefficientLayouts, v) = v
+tocoefficients_layout(_, v) = tocoefficients_size(size(v), v)
+tocoefficients_size(::NTuple{N,Int}, v) where N = Array(v)
+tocoefficients_size(_, v) = v # the default is to leave it, even though we aren't technically making an ExpansionLayout
 
 """
     basis(v)
@@ -359,7 +367,8 @@ function unweighted(lay::ExpansionLayout, a)
 end
 
 LazyArrays._mul_arguments(::ExpansionLayout, A) = LazyArrays._mul_arguments(ApplyLayout{typeof(*)}(), A)
-copy(L::Ldiv{Bas,<:ExpansionLayout}) where Bas<:AbstractBasisLayout = copy(Ldiv{Bas,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Ldiv{Lay,<:ExpansionLayout}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Ldiv{Lay,<:ExpansionLayout}) where Lay<:MappedBasisLayouts = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Mul{<:ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Mul{<:ExpansionLayout,Lay}) where Lay<:AbstractLazyLayout = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 
