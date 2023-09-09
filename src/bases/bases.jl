@@ -76,12 +76,15 @@ basis_broadcast_ldiv_size(::typeof(+), _, A, B) = +(broadcast(\,Ref(A),arguments
 end
 
 
-
+# TODO: remove as Not type stable
+simplifiable(L::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout}) = Val(L.A == L.B)
 @inline function copy(P::Ldiv{<:AbstractBasisLayout,<:AbstractBasisLayout})
     A, B = P.A, P.B
     A == B || throw(ArgumentError("Override copy for $(typeof(A)) \\ $(typeof(B))"))
     SquareEye{eltype(eltype(P))}((axes(A,2),)) # use double eltype for array-valued
 end
+
+simplifiable(L::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts}) = Val(parent(L.A) == parent(L.B))
 @inline function copy(P::Ldiv{<:SubBasisLayouts,<:SubBasisLayouts})
     A, B = P.A, P.B
     parent(A) == parent(B) ||
@@ -96,15 +99,16 @@ end
 
 copy(P::Ldiv{<:MappedBasisLayouts}) = mapped_ldiv_size(size(P), P.A, P.B)
 copy(P::Ldiv{<:MappedBasisLayouts, <:AbstractLazyLayout}) = mapped_ldiv_size(size(P), P.A, P.B)
+copy(P::Ldiv{<:MappedBasisLayouts, <:AbstractBasisLayout}) = mapped_ldiv_size(size(P), P.A, P.B)
 @inline copy(L::Ldiv{<:MappedBasisLayouts,ApplyLayout{typeof(hcat)}}) = mapped_ldiv_size(size(L), L.A, L.B)
-copy(P::Ldiv{<:MappedBasisLayouts, ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(P.A, P.B))
+copy(P::Ldiv{<:MappedBasisLayouts, ApplyLayout{typeof(*)}}) = copy(Ldiv{BasisLayout,ApplyLayout{typeof(*)}}(P.A, P.B))
 
 mapped_ldiv_size(::Tuple{Integer}, A, B) = demap(A) \ B[invmap(basismap(A))]
 mapped_ldiv_size(::Tuple{Integer,Int}, A, B) = demap(A) \ B[invmap(basismap(A)),:]
-mapped_ldiv_size(::Tuple{Integer,Any}, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
+mapped_ldiv_size(::Tuple{Integer,Any}, A, B) = copy(Ldiv{BasisLayout,typeof(MemoryLayout(B))}(A, B))
 
 # following allows us to use simplification
-@inline copy(L::Ldiv{<:AbstractBasisLayout,<:SubBasisLayouts}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+@inline copy(L::Ldiv{Lay,<:SubBasisLayouts}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
 @inline function copy(L::Ldiv{<:SubBasisLayouts,<:AbstractBasisLayout})
     P = parent(L.A)
     kr, jr = parentindices(L.A)
@@ -146,11 +150,7 @@ _broadcast_mul_ldiv(::Tuple{ScalarLayout,AbstractBasisLayout}, A, B) =
 _broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
-copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
-
-# ambiguity
 copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
-copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 
 
 # expansion
@@ -300,7 +300,10 @@ end
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout}) = basis_ldiv_size(size(L), L.A, L.B)
 @inline copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = basis_ldiv_size(size(L), L.A, L.B)
-@inline copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+@inline function copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(*)}})
+    simplifiable(\, L.A, first(arguments(*, L.B))) isa Val{true} && return copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
+    basis_ldiv_size(size(L), L.A, L.B)
+end
 @inline copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
 
 @inline basis_ldiv_size(_, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
@@ -309,7 +312,7 @@ end
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(hcat)}}) = basis_hcat_ldiv_size(size(L), L.A, L.B)
 @inline basis_hcat_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
-@inline basis_hcat_ldiv_size(_, A, B) = hcat((Ref(L.A) .\ arguments(hcat, L.B))...)
+@inline basis_hcat_ldiv_size(_, A, B) = hcat((Ref(A) .\ arguments(hcat, B))...)
 
 
 """
@@ -364,10 +367,10 @@ function unweighted(lay::ExpansionLayout, a)
 end
 
 LazyArrays._mul_arguments(::ExpansionLayout, A) = LazyArrays._mul_arguments(ApplyLayout{typeof(*)}(), A)
-copy(L::Ldiv{<:AbstractBasisLayout,<:ExpansionLayout}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
-copy(L::Ldiv{<:MappedBasisLayouts,<:ExpansionLayout}) = copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
-copy(L::Mul{<:ExpansionLayout}) = copy(Mul{ApplyLayout{typeof(*)},UnknownLayout}(L.A, L.B))
-copy(L::Mul{<:ExpansionLayout,<:AbstractLazyLayout}) = copy(Mul{ApplyLayout{typeof(*)},UnknownLayout}(L.A, L.B))
+copy(L::Ldiv{Lay,<:ExpansionLayout}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Ldiv{Lay,<:ExpansionLayout}) where Lay<:MappedBasisLayouts = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Mul{<:ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+copy(L::Mul{<:ExpansionLayout,Lay}) where Lay<:AbstractLazyLayout = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 
 function broadcastbasis_layout(::typeof(+), _, _, a, b)
     try

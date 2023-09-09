@@ -13,7 +13,7 @@ import LinearAlgebra: pinv, inv, dot, norm2, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
 import FillArrays: AbstractFill, getindex_value, SquareEye
-import ArrayLayouts: mul, ZerosLayout, ScalarLayout, AbstractStridedLayout, check_mul_axes
+import ArrayLayouts: mul, ldiv, ZerosLayout, ScalarLayout, AbstractStridedLayout, check_mul_axes, check_ldiv_axes
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
