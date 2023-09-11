@@ -455,6 +455,11 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             X = randn(10,10,10)
             @test P \ (P * X) ≈ P * (P \ X) ≈ X
         end
+
+        @testset "Expansion" begin
+            f = L * collect(1:10)
+            @test L \ f ≈ 1:10
+        end
     end
 
     @testset "diff" begin
