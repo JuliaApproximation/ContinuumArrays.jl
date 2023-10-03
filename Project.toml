@@ -28,7 +28,7 @@ ContinuumArraysMakieExt = "Makie"
 [compat]
 AbstractFFTs = "1.0"
 ArrayLayouts = "1.0"
-BandedMatrices = "0.17"
+BandedMatrices = "0.17, 1"
 BlockArrays = "0.16"
 DomainSets = "0.6"
 FastTransforms = "0.15"
