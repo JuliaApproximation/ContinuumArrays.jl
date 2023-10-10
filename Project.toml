@@ -1,6 +1,6 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.16.1"
+version = "0.16.2"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -22,15 +22,15 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 
 [extensions]
-ContinuumArraysRecipesBaseExt = "RecipesBase"
 ContinuumArraysMakieExt = "Makie"
+ContinuumArraysRecipesBaseExt = "RecipesBase"
 
 [compat]
 AbstractFFTs = "1.0"
 ArrayLayouts = "1.0"
 BandedMatrices = "0.17, 1"
 BlockArrays = "0.16"
-DomainSets = "0.6"
+DomainSets = "0.6, 0.7"
 FastTransforms = "0.15"
 FillArrays = "1.0"
 InfiniteArrays = "0.12, 0.13"
