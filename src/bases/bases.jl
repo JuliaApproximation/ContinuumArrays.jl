@@ -637,12 +637,17 @@ end
 grammatrix(A) = grammatrix_layout(MemoryLayout(A), A)
 grammatrix_layout(_, A) = error("Not implemented")
 
+
 function grammatrix_layout(::MappedBasisLayouts, P)
     Q = demap(P)
     kr = basismap(P)
     @assert kr isa AbstractAffineQuasiVector
     grammatrix(Q)/kr.A
 end
+
+weaklaplacian(A) = weaklaplacian_layout(MemoryLayout(A), A)
+weaklaplacian_layout(_, A) = weaklaplacian_axis(axes(A,1), A)
+weaklaplacian_axis(::Inclusion{<:Number}, A) = -(diff(A)'diff(A))
 
 function copy(M::Mul{<:AdjointMappedBasisLayouts, <:MappedBasisLayouts})
     A = M.A'
