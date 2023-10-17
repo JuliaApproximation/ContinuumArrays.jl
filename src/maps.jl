@@ -62,8 +62,8 @@ AffineQuasiVector(A, x::AffineQuasiVector, b) = AffineQuasiVector(A*x.A, x.x, A*
 axes(A::AbstractAffineQuasiVector) = axes(A.x)
 
 affine_getindex(A, k) = A.A*A.x[k] .+ A.b
-Base.unsafe_getindex(A::AbstractAffineQuasiVector, k) = A.A*Base.unsafe_getindex(A.x,k) .+ A.b
-getindex(A::AbstractAffineQuasiVector, k::Number) = affine_getindex(A, k)
+Base.unsafe_getindex(A::AbstractAffineQuasiVector{T}, k) where T = convert(T,A.A*Base.unsafe_getindex(A.x,k) .+ A.b)::T
+getindex(A::AbstractAffineQuasiVector{T}, k::Number) where T = convert(T,affine_getindex(A, k))::T
 function getindex(A::AbstractAffineQuasiVector, k::Inclusion)
     @boundscheck A.x[k] # throws bounds error if k ≠ x
     A
@@ -120,12 +120,20 @@ AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {
 union(d::AffineMap) = d.range
 measure(x::Inclusion{<:Any,<:AbstractInterval}) = last(x)-first(x)
 
-function getproperty(A::AffineMap, d::Symbol)
-    domain, range = getfield(A, :domain), getfield(A, :range)
-    d == :x && return domain
-    d == :A && return measure(range)/measure(domain)
-    d == :b && return (last(domain)*first(range) - first(domain)*last(range))/measure(domain)
-    getfield(A, d)
+function affinemap_A(m::AffineMap{<:Number,<:Inclusion{<:Number},<:Inclusion{<:Number}})
+    domain, range = getfield(m, :domain), getfield(m, :range)
+    measure(range)/measure(domain)
+end
+function affinemap_b(m::AffineMap{<:Number,<:Inclusion{<:Number},<:Inclusion{<:Number}})
+    domain, range = getfield(m, :domain), getfield(m, :range)
+    (last(domain)*first(range) - first(domain)*last(range))/measure(domain)
+end
+
+function getproperty(m::AffineMap, d::Symbol)
+    d == :x && return getfield(m, :domain)
+    d == :A && return affinemap_A(m)
+    d == :b && return affinemap_b(m)
+    getfield(m, d)
 end
 
 function getindex(A::AffineMap{T}, k::Number)  where T
