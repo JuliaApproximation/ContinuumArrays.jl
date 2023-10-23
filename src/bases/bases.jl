@@ -178,14 +178,15 @@ grid(P, n...) = grid_layout(MemoryLayout(P), P, n...)
 
 
 function plan_grid_transform(lay, L, szs::NTuple{N,Int}, dims=1:N) where N
-    p = grid(L)
-    p, InvPlan(factorize(L[p,:]), dims)
+    p = grid(L, szs...)
+    p, InvPlan(factorize(L[p,1:length(p)]), dims)
 end
 
 function plan_grid_transform(::MappedBasisLayout, L, szs::NTuple{N,Int}, dims=1:N) where N
     x,F = plan_grid_transform(demap(L), szs, dims)
     invmap(parentindices(L)[1])[x], F
 end
+
 
 plan_grid_transform(L, szs::NTuple{N,Int}, dims=1:N) where N = plan_grid_transform(MemoryLayout(L), L, szs, dims)
 
@@ -316,19 +317,33 @@ end
 
 
 """
-    WeightedFactorization(w, F)
+    WeightedPlan(w, F)
 
-weights a factorization `F` by `w`.
+weights a plan `F` by `w`.
 """
-struct WeightedFactorization{T, WW, FAC<:Factorization{T}} <: Factorization{T}
+struct WeightedPlan{T, WW, FAC<:Plan{T}, Dims} <: Plan{T}
     w::WW
     F::FAC
+    dims::Dims
 end
 
-_factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(weight(wS), factorize(unweighted(wS), dims...; kws...))
+function *(F::WeightedPlan, b::AbstractVecOrMat)
+    ret = copy(b)
+    for d in F.dims
+        if d == 1
+            b .= b ./ F.w
+        else
+            @assert d == 2
+            b .= b ./ transpose(F.w)
+        end
+    end
+    F.F * b
+end
 
-
-\(F::WeightedFactorization, b::AbstractQuasiVector) = F.F \ (b ./ F.w)
+function plan_grid_transform(::WeightedBasisLayout, L, szs::NTuple{N,Int}, dims=1:N) where N
+    x,F = plan_grid_transform(unweighted(L), szs, dims)
+    x, WeightedPlan(weight(L)[x], F, dims)
+end
 
 ##
 # Algebra
