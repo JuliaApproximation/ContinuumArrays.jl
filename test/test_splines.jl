@@ -533,4 +533,10 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         u = ApplyQuasiArray(*, L, randn(6,5), randn(5))
         @test coefficients(u) ≈ L \ u
     end
+
+    @testset "Dirac" begin
+        H = HeavisideSpline(0:5)
+        S = Spline{-1}(0:5)
+        @test S \ diff(H) == diagm(0 => fill(-1,4), 1 => fill(1, 4))[1:end-1,:]
+    end
 end

@@ -39,15 +39,43 @@ function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
     x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)|| throw(BoundsError())
 
     p = B.points
-    n = length(p)
-
     p[k] < x < p[k+1] && return one(T)
     p[k] == x && return one(T)/2
     p[k+1] == x && return one(T)/2
     return zero(T)
 end
 
+function getindex(B::Spline{-1,T}, x::Number, k::Int) where T
+    x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)|| throw(BoundsError())
+
+    p = B.points
+    p[k+1] == x && return convert(T,Inf)
+    zero(T)
+end
+
+
+
 grid(L::HeavisideSpline, n...) = L.points[1:end-1] .+ diff(L.points)/2
+plotgrid(L::HeavisideSpline, n...) = [L.points'; L.points'][2:end-1]
+function plotgridvalues(f::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{HeavisideSpline,Any}})
+    g = plotgrid(basis(f))
+    c = coefficients(f)
+    g,vec([c'; c'])
+end
+
+function plotgrid(L::Spline{-1}, n...)
+    p = L.points[2:end-1]
+    vec([p'; p'; p'])
+end
+function plotgridvalues(f::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Spline{-1},Any}})
+    g = plotgrid(basis(f))
+    c = coefficients(f)
+    g,vec([zeros(1,length(c)); c'; fill(NaN,1,length(c))])
+end
+
+
+
+
 grid(L::LinearSpline, n...) = L.points
 
 ## Sub-bases
@@ -87,6 +115,17 @@ function diff(L::LinearSpline{T}; dims::Integer=1) where T
     ApplyQuasiMatrix(*, HeavisideSpline{T}(x), D)
 end
 
+function diff(L::HeavisideSpline{T}; dims::Integer=1) where T
+    dims == 1 || error("not implemented")
+    n = size(L,2)
+    x = L.points
+    D = BandedMatrix{T}(undef, (n-1,n), (0,1))
+    d = diff(x)
+    D[band(0)] .= -one(T)
+    D[band(1)] .= one(T)
+    ApplyQuasiMatrix(*, Spline{-1,T}(x), D)
+end
+
 
 ##
 # sum
@@ -98,6 +137,7 @@ function _sum(A::HeavisideSpline, dims)
 end
 
 function _sum(P::LinearSpline, dims)
+    dims == 1 || error("not implemented")
     d = diff(P.points)
     ret = Array{float(eltype(d))}(undef, length(d)+1)
     ret[1] = d[1]/2
@@ -108,4 +148,10 @@ function _sum(P::LinearSpline, dims)
     permutedims(ret)
 end
 
+function _sum(P::Spline{-1,T}, dims) where T
+    dims == 1 || error("not implemented")
+    Ones{T}(1, size(P,2))
+end
+
 _cumsum(H::HeavisideSpline{T}, dims) where T = LinearSpline(H.points) * tril(Ones{T}(length(H.points),length(H.points)-1) .* diff(H.points)',-1)
+_cumsum(H::Spline{-1,T}, dims) where T = HeavisideSpline(H.points) * tril(Ones{T}(length(H.points)-1,length(H.points)-2),-1)
