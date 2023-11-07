@@ -154,4 +154,4 @@ function _sum(P::Spline{-1,T}, dims) where T
 end
 
 _cumsum(H::HeavisideSpline{T}, dims) where T = LinearSpline(H.points) * tril(Ones{T}(length(H.points),length(H.points)-1) .* diff(H.points)',-1)
-_cumsum(H::Spline{-1,T}, dims) where T = HeavisideSpline(H.points) * tril(Ones{T}(length(H.points)-1,length(H.points)-2),-1)
+_cumsum(S::Spline{-1,T}, dims) where T = HeavisideSpline(S.points) * tril(ones(T,length(S.points)-1,length(S.points)-2),-1)
