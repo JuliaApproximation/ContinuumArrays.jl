@@ -47,8 +47,8 @@ function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
     return zero(T)
 end
 
-grid(L::HeavisideSpline, n...) = L.points[1:end-1] .+ diff(L.points)/2
-grid(L::LinearSpline, n...) = L.points
+grid(L::HeavisideSpline, ::NTuple{N,Any}) where N = ntuple(_ -> L.points[1:end-1] .+ diff(L.points)/2, Val(N))
+grid(L::LinearSpline, ::NTuple{N,Any}) where N = ntuple(_ -> L.points, Val(N))
 
 ## Sub-bases
 

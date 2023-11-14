@@ -153,11 +153,12 @@ copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul
 copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 
 
+
 # expansion
 grid_layout(_, P, n...) = error("Overload Grid")
 
-grid_layout(::MappedBasisLayout, P, n...) = invmap(parentindices(P)[1])[grid(demap(P), n...)]
-grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), maximum(parentindices(P)[2][n]))
+grid_layout(::MappedBasisLayout, P, n...) = getindex.(Ref(invmap(parentindices(P)[1])), grid(demap(P), n...))
+grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n...) = grid(parent(P), maximum.(getindex.(Ref(parentindices(P)[2]), n))...)
 grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix) = grid(parent(P), maximum(parentindices(P)[2]))
 grid_layout(::WeightedBasisLayouts, P, n...) = grid(unweighted(P), n...)
 
@@ -167,36 +168,48 @@ grid_layout(::WeightedBasisLayouts, P, n...) = grid(unweighted(P), n...)
 
 Creates a grid of points. if `n` is unspecified it will
 be sufficient number of points to determine `size(P,2)`
-coefficients. Otherwise its enough points to determine `n`
-coefficients.
+coefficients. If `n` is an integer or `Block` its enough points to determine `n`
+coefficients. If `n` is a tuple then it returns a tuple of grids corresponding to a
+tensor-product. That is, a 5⨱6 2D transform would be
+```julia
+(x,y) = grid(P, (5,6))
+plan_transform(P, (5,6)) * f.(x, y')
+```
+and a 5×6×7 3D transform would be
+```julia
+(x,y,z) = grid(P, (5,6,7))
+plan_transform(P, (5,6,7)) * f.(x, y', reshape(z,1,1,:))
+```
 """
 grid(P, n...) = grid_layout(MemoryLayout(P), P, n...)
 
 
 # values(f) = 
 
-
-
-function plan_grid_transform_layout(lay, L, szs::NTuple{N,Int}, dims=1:N) where N
-    p = grid(L)
-    p, InvPlan(factorize(L[p,:]), dims)
+function plan_grid_transform_layout(lay, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
+    ps = map(d -> grid(L, szs[d]), dims)
+    ps, InvPlan(map(p -> factorize(L[p,:]), ps), dims)
 end
 
-function plan_grid_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Int}, dims=1:N) where N
+
+function plan_grid_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
     x,F = plan_grid_transform(demap(L), szs, dims)
-    invmap(parentindices(L)[1])[x], F
+    getindex.(Ref(invmap(parentindices(L)[1])),x), F
 end
 
-plan_grid_transform(L, szs::NTuple{N,Int}, dims=1:N) where N = plan_grid_transform_layout(MemoryLayout(L), L, szs, dims)
+plan_grid_transform(L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = plan_grid_transform_layout(MemoryLayout(L), L, szs, dims)
 
 plan_grid_transform(L, arr::AbstractArray, dims...) = plan_grid_transform(L, size(arr), dims...)
-plan_grid_transform(L, lng::Union{Integer,Block{1}}, dims...) = plan_grid_transform(L, (lng,), dims...)
+function plan_grid_transform(L, lng::Union{Integer,Block{1}}, dims...)
+    x,T = plan_grid_transform(L, (lng,), dims...)
+    only(x),T
+end
+
+grid(L, lng::Union{Integer,Block{1}}=size(L,2)) = only(grid(L, (lng,)))
 
 plan_transform(P, szs, dims...) = plan_grid_transform(P, szs, dims...)[2]
 
-_factorize(::AbstractBasisLayout, L, dims...; kws...) =
-    TransformFactorization(plan_grid_transform(L, (size(L,2), dims...), 1)...)
-
+_factorize(::AbstractBasisLayout, L, dims...; kws...) = TransformFactorization(plan_grid_transform(L, (size(L,2), dims...), 1)...)
 
 
 """
