@@ -39,19 +39,20 @@ end
 InvPlan(fact, dims) = InvPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
 
 size(F::InvPlan) = size.(F.factorizations, 1)
+size(F::InvPlan{<:Any,<:Any,Int}) = size(F.factorizations, 1)
 
 
 function *(P::InvPlan{<:Any,<:Any,Int}, x::AbstractVector)
     @assert P.dims == 1
-    only(P.factorizations) \ x
+    P.factorizations \ x
 end
 
 function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
     if P.dims == 1
-        P.factorizations[P.dims] \ X
+        P.factorizations \ X
     else
         @assert P.dims == 2
-        permutedims(P.factorizations[P.dims] \ permutedims(X))
+        permutedims(P.factorizations \ permutedims(X))
     end
 end
 
@@ -59,16 +60,16 @@ function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
     Y = similar(X)
     if P.dims == 1
         for j in axes(X,3)
-            Y[:,:,j] = P.factorizations[P.dims] \ X[:,:,j]
+            Y[:,:,j] = P.factorizations \ X[:,:,j]
         end
     elseif P.dims == 2
         for k in axes(X,1)
-            Y[k,:,:] = P.factorizations[P.dims] \ X[k,:,:]
+            Y[k,:,:] = P.factorizations \ X[k,:,:]
         end
     else
         @assert P.dims == 3
         for k in axes(X,1), j in axes(X,2)
-            Y[k,j,:] = P.factorizations[P.dims] \ X[k,j,:]
+            Y[k,j,:] = P.factorizations \ X[k,j,:]
         end
     end
     Y
@@ -76,7 +77,7 @@ end
 
 function *(P::InvPlan, X::AbstractArray)
     for d in P.dims
-        X = InvPlan(P.factorizations, d) * X
+        X = InvPlan(P.factorizations[d], d) * X
     end
     X
 end

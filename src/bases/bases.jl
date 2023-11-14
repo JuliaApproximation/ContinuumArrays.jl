@@ -191,6 +191,12 @@ function plan_grid_transform_layout(lay, L, szs::NTuple{N,Int}, dims=ntuple(iden
     ps, InvPlan(map(p -> factorize(L[p,:]), ps), dims)
 end
 
+function plan_grid_transform_layout(lay, L, szs::NTuple{N,Int}, d::Int) where N
+    p = grid(L, szs[d])
+    p, InvPlan(factorize(L[p,:]), d)
+end
+
+
 
 function plan_grid_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
     x,F = plan_grid_transform(demap(L), szs, dims)
