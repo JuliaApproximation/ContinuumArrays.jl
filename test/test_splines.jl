@@ -1,4 +1,4 @@
-using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
+using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, BlockArrays, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
 import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply
 import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayouts, MappedBasisLayout, plan_grid_transform, weaklaplacian
@@ -532,5 +532,33 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         L = LinearSpline(0:5)
         u = ApplyQuasiArray(*, L, randn(6,5), randn(5))
         @test coefficients(u) ≈ L \ u
+    end
+
+    @testset "Block grid" begin
+        L = LinearSpline(0:5)
+        @test grid(L, Block(1)) == grid(L)
+    end
+
+    @testset "transform tests" begin
+        L = LinearSpline(0:5)
+        @testset "scalar"  begin
+            Pl = plan_transform(L)
+            @test size(Pl) == (6,)
+
+            x = randn(6)
+            @test inv(Pl)  * (Pl * x) ≈ x
+
+            A = randn(6,6)
+
+            P = A * inv(Pl)
+            @test P * x ≈ A * (Pl * x)
+        end
+
+        @testset "tensor" begin
+            Pl = plan_transform(L, (2,3))
+            @test size(Pl) == (6,6)
+            X = randn(6,6)
+            @test inv(Pl)  * (Pl * X) ≈ X
+        end
     end
 end

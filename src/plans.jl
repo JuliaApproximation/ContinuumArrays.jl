@@ -102,10 +102,10 @@ end
 
 function *(P::MulPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
     if P.dims == 1
-        P.matrices[P.dims] * X
+        P.matrices * X
     else
         @assert P.dims == 2
-        permutedims(P.matrices[P.dims] * permutedims(X))
+        permutedims(P.matrices * permutedims(X))
     end
 end
 
@@ -113,16 +113,16 @@ function *(P::MulPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
     Y = similar(X)
     if P.dims == 1
         for j in axes(X,3)
-            Y[:,:,j] = P.matrices[P.dims] * X[:,:,j]
+            Y[:,:,j] = P.matrices * X[:,:,j]
         end
     elseif P.dims == 2
         for k in axes(X,1)
-            Y[k,:,:] = P.matrices[P.dims] * X[k,:,:]
+            Y[k,:,:] = P.matrices * X[k,:,:]
         end
     else
         @assert P.dims == 3
         for k in axes(X,1), j in axes(X,2)
-            Y[k,j,:] = P.matrices[P.dims] * X[k,j,:]
+            Y[k,j,:] = P.matrices * X[k,j,:]
         end
     end
     Y
@@ -130,7 +130,7 @@ end
 
 function *(P::MulPlan, X::AbstractArray)
     for d in P.dims
-        X = MulPlan(P.matrices, d) * X
+        X = MulPlan(P.matrices[d], d) * X
     end
     X
 end

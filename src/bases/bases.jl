@@ -180,7 +180,9 @@ grid(L, B::Block) = grid(L, Block.(B.n)) # grid(L, Block(2,3)) == grid(L, (Block
 grid(L, ns::Tuple) = grid.(Ref(L), ns)
 grid(L) = grid(L, size(L,2))
 
-grid_layout(_, P, n) = error("Overload grid(::$(typeof(P)), ::Integer)")
+grid_layout(_, P, n) = grid_axis(axes(P,2), P, n)
+
+grid_axis(::OneTo, P, n::Block) = grid(P, size(P,2))
 
 grid_layout(::MappedBasisLayout, P, n) = invmap(parentindices(P)[1])[grid(demap(P), n)]
 grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), parentindices(P)[2][n])
@@ -204,6 +206,7 @@ plan_transform(L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = pl
 
 plan_transform(L, arr::AbstractArray, dims...) = plan_transform(L, size(arr), dims...)
 plan_transform(L, lng::Union{Integer,Block{1}}, dims...) = plan_transform(L, (lng,), dims...)
+plan_transform(L) = plan_transform(L, size(L,2))
     
 
 
