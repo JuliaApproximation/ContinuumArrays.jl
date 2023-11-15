@@ -17,7 +17,7 @@ struct ChebyshevWeight <: Weight{Float64} end
 Base.:(==)(::Chebyshev, ::Chebyshev) = true
 Base.:(==)(::ChebyshevWeight, ::ChebyshevWeight) = true
 Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
-ContinuumArrays.grid(T::Chebyshev, n...) = chebyshevpoints(Float64, T.n, Val(1))
+ContinuumArrays.grid(T::Chebyshev, ::Integer) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
 
 Base.getindex(::Chebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))

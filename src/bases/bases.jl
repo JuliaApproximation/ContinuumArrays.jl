@@ -154,13 +154,6 @@ copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)}}) = _broadcast_mul_
 
 
 
-# expansion
-grid_layout(_, P, n...) = error("Overload Grid")
-
-grid_layout(::MappedBasisLayout, P, n...) = getindex.(Ref(invmap(parentindices(P)[1])), grid(demap(P), n...))
-grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n...) = grid(parent(P), maximum.(getindex.(Ref(parentindices(P)[2]), n))...)
-grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix) = grid(parent(P), maximum(parentindices(P)[2]))
-grid_layout(::WeightedBasisLayouts, P, n...) = grid(unweighted(P), n...)
 
 
 """
@@ -181,39 +174,44 @@ and a 5×6×7 3D transform would be
 plan_transform(P, (5,6,7)) * f.(x, y', reshape(z,1,1,:))
 ```
 """
-grid(P, n...) = grid_layout(MemoryLayout(P), P, n...)
+grid(P, n::Block{1}) = grid_layout(MemoryLayout(P), P, n...)
+grid(P, n::Integer) = grid_layout(MemoryLayout(P), P, n...)
+grid(L, B::Block) = grid(L, Block.(B.n)) # grid(L, Block(2,3)) == grid(L, (Block(2), Block(3))
+grid(L, ns::Tuple) = grid.(Ref(L), ns)
+grid(L) = grid(L, size(L,2))
+
+grid_layout(_, P, n) = error("Overload grid(::$(typeof(P)), ::Integer)")
+
+grid_layout(::MappedBasisLayout, P, n) = invmap(parentindices(P)[1])[grid(demap(P), n)]
+grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), parentindices(P)[2][n])
+grid_layout(::WeightedBasisLayouts, P, n) = grid(unweighted(P), n)
 
 
-# values(f) = 
-
-function plan_grid_transform_layout(lay, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
-    ps = map(d -> grid(L, szs[d]), dims)
-    ps, InvPlan(map(p -> factorize(L[p,:]), ps), dims)
+# Default transform is just solve least squares on a grid
+# note this computes the grid twice.
+function plan_transform_layout(lay, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
+    ps = grid(L, getindex.(Ref(szs), dims))
+    if dims isa Integer
+        InvPlan(factorize(L[p,:]), d)
+    else
+        InvPlan(map(p -> factorize(L[p,:]), ps), dims)
+    end
 end
 
-function plan_grid_transform_layout(lay, L, szs::NTuple{N,Int}, d::Int) where N
-    p = grid(L, szs[d])
-    p, InvPlan(factorize(L[p,:]), d)
+
+plan_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = plan_transform(demap(L), szs, dims)
+plan_transform(L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = plan_transform_layout(MemoryLayout(L), L, szs, dims)
+
+plan_transform(L, arr::AbstractArray, dims...) = plan_transform(L, size(arr), dims...)
+plan_transform(L, lng::Union{Integer,Block{1}}, dims...) = plan_transform(L, (lng,), dims...)
+    
+
+
+plan_grid_transform(P, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = grid(P, getindex.(Ref(szs), dims)), plan_transform(P, szs, dims)
+function plan_grid_transform(P, lng::Union{Integer,Block{1}}, dims=1)
+    @assert dims == 1
+    grid(P, lng), plan_transform(P, lng, dims)
 end
-
-
-
-function plan_grid_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
-    x,F = plan_grid_transform(demap(L), szs, dims)
-    getindex.(Ref(invmap(parentindices(L)[1])),x), F
-end
-
-plan_grid_transform(L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = plan_grid_transform_layout(MemoryLayout(L), L, szs, dims)
-
-plan_grid_transform(L, arr::AbstractArray, dims...) = plan_grid_transform(L, size(arr), dims...)
-function plan_grid_transform(L, lng::Union{Integer,Block{1}}, dims...)
-    x,T = plan_grid_transform(L, (lng,), dims...)
-    only(x),T
-end
-
-grid(L, lng::Union{Integer,Block{1}}=size(L,2)) = only(grid(L, (lng,)))
-
-plan_transform(P, szs, dims...) = plan_grid_transform(P, szs, dims...)[2]
 
 _factorize(::AbstractBasisLayout, L, dims...; kws...) = TransformFactorization(plan_grid_transform(L, (size(L,2), dims...), 1)...)
 
