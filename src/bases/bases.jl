@@ -192,11 +192,14 @@ grid_layout(::WeightedBasisLayouts, P, n) = grid(unweighted(P), n)
 # Default transform is just solve least squares on a grid
 # note this computes the grid twice.
 function plan_transform_layout(lay, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
-    ps = grid(L, getindex.(Ref(szs), dims))
     if dims isa Integer
-        InvPlan(factorize(L[ps,:]), dims)
+        n = szs[dims]
+        p = grid(L, n)
+        InvPlan(factorize(L[p,OneTo(n)]), dims)
     else
-        InvPlan(map(p -> factorize(L[p,:]), ps), dims)
+        dimsz = getindex.(Ref(szs), dims)
+        ps = grid(L, dimsz)
+        InvPlan(map((p,n) -> factorize(L[p,OneTo(n)]), ps, dimsz), dims)
     end
 end
 
