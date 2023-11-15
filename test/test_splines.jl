@@ -537,6 +537,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
     @testset "Block grid" begin
         L = LinearSpline(0:5)
         @test grid(L, Block(1)) == grid(L)
+        @test grid(L, Block(1,1)) == grid(L, (6,6))
     end
 
     @testset "transform tests" begin
@@ -547,6 +548,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
 
             x = randn(6)
             @test inv(Pl)  * (Pl * x) ≈ x
+            @test inv(inv(Pl)) == Pl
 
             A = randn(6,6)
 
