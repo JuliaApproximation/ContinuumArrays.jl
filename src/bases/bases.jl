@@ -192,7 +192,7 @@ grid_layout(::WeightedBasisLayouts, P, n) = grid(unweighted(P), n)
 function plan_transform_layout(lay, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
     ps = grid(L, getindex.(Ref(szs), dims))
     if dims isa Integer
-        InvPlan(factorize(L[p,:]), d)
+        InvPlan(factorize(L[ps,:]), dims)
     else
         InvPlan(map(p -> factorize(L[p,:]), ps), dims)
     end

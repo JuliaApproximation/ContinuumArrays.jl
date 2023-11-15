@@ -44,12 +44,12 @@ size(F::InvPlan{<:Any,<:Any,Int}) = size(F.factorizations, 1)
 
 function *(P::InvPlan{<:Any,<:Any,Int}, x::AbstractVector)
     @assert P.dims == 1
-    P.factorizations \ x
+    P.factorizations \ x # Only a single factorization when dims isa Int
 end
 
 function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
     if P.dims == 1
-        P.factorizations \ X
+        P.factorizations \ X  # Only a single factorization when dims isa Int
     else
         @assert P.dims == 2
         permutedims(P.factorizations \ permutedims(X))
@@ -97,7 +97,7 @@ MulPlan(mats, dims) = MulPlan{eltype(mats), typeof(mats), typeof(dims)}(mats, di
 
 function *(P::MulPlan{<:Any,<:Any,Int}, x::AbstractVector)
     @assert P.dims == 1
-    only(P.matrices) * x
+    P.matrices * x
 end
 
 function *(P::MulPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
