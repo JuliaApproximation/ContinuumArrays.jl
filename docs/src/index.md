@@ -55,7 +55,7 @@ ContinuumArrays.PiecewiseBasis
 ContinuumArrays.MappedFactorization
 ```
 ```@docs
-ContinuumArrays.basis :: Tuple{Any}
+ContinuumArrays.basis
 ```
 ```@docs
 ContinuumArrays.InvPlan
