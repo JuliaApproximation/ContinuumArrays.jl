@@ -193,7 +193,7 @@ grid_layout(::WeightedBasisLayouts, P, n) = grid(unweighted(P), n)
 # note this computes the grid an extra time.
 
 blockoroneto(n::Int) = OneTo(n)
-blockoroneto(n::Block{1}) = Block.(OneTo(n))
+blockoroneto(n::Block{1}) = Block.(OneTo(Int(n)))
 function plan_transform_layout(lay, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N
     dimsz = getindex.(Ref(szs), dims) # get the sizes of transformed dimensions
     InvPlan(map(n -> factorize(L[grid(L,n),blockoroneto(n)]), dimsz), dims)

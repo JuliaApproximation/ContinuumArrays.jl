@@ -550,6 +550,8 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test inv(Pl)  * (Pl * x) ≈ x
             @test inv(inv(Pl))*x ≈ Pl*x
 
+            @test plan_transform(L, Block(1))*x == Pl*x
+
             A = randn(6,6)
 
             P = A * inv(Pl)
