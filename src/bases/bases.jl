@@ -190,22 +190,16 @@ grid_layout(::WeightedBasisLayouts, P, n) = grid(unweighted(P), n)
 
 
 # Default transform is just solve least squares on a grid
-# note this computes the grid twice.
-function plan_transform_layout(lay, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N
-    if dims isa Integer
-        n = szs[dims]
-        p = grid(L, n)
-        InvPlan(factorize(L[p,OneTo(n)]), dims)
-    else
-        dimsz = getindex.(Ref(szs), dims)
-        ps = grid(L, dimsz)
-        InvPlan(map((p,n) -> factorize(L[p,OneTo(n)]), ps, dimsz), dims)
-    end
+# note this computes the grid an extra time.
+
+blockoroneto(n::Int) = OneTo(n)
+blockoroneto(n::Block{1}) = Block.(OneTo(n))
+function plan_transform_layout(lay, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N
+    dimsz = getindex.(Ref(szs), dims) # get the sizes of transformed dimensions
+    InvPlan(map(n -> factorize(L[grid(L,n),blockoroneto(n)]), dimsz), dims)
 end
-
-
-plan_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = plan_transform(demap(L), szs, dims)
-plan_transform(L, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = plan_transform_layout(MemoryLayout(L), L, szs, dims)
+plan_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_transform(demap(L), szs, dims)
+plan_transform(L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_transform_layout(MemoryLayout(L), L, szs, dims)
 
 plan_transform(L, arr::AbstractArray, dims...) = plan_transform(L, size(arr), dims...)
 plan_transform(L, lng::Union{Integer,Block{1}}, dims...) = plan_transform(L, (lng,), dims...)
@@ -213,7 +207,7 @@ plan_transform(L) = plan_transform(L, size(L,2))
     
 
 
-plan_grid_transform(P, szs::NTuple{N,Int}, dims=ntuple(identity,Val(N))) where N = grid(P, getindex.(Ref(szs), dims)), plan_transform(P, szs, dims)
+plan_grid_transform(P, szs::NTuple{N,Union{Integer,Block{1}}}, dims=ntuple(identity,Val(N))) where N = grid(P, getindex.(Ref(szs), dims)), plan_transform(P, szs, dims)
 function plan_grid_transform(P, lng::Union{Integer,Block{1}}, dims=1)
     @assert dims == 1
     grid(P, lng), plan_transform(P, lng, dims)
