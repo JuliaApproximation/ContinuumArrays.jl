@@ -548,7 +548,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
 
             x = randn(6)
             @test inv(Pl)  * (Pl * x) ≈ x
-            @test inv(inv(Pl)) == Pl
+            @test inv(inv(Pl))*x ≈ Pl*x
 
             A = randn(6,6)
 
@@ -557,7 +557,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         end
 
         @testset "tensor" begin
-            Pl = plan_transform(L, (2,3))
+            Pl = plan_transform(L, (6,6))
             @test size(Pl) == (6,6)
             X = randn(6,6)
             @test inv(Pl)  * (Pl * X) ≈ X

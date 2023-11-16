@@ -31,45 +31,45 @@ end
 
 Takes a factorization and supports it applied to different dimensions.
 """
-struct InvPlan{T, Facts, Dims} <: Plan{T}
+struct InvPlan{T, Facts<:Tuple, Dims} <: Plan{T}
     factorizations::Facts
     dims::Dims
 end
 
-InvPlan(fact, dims) = InvPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+InvPlan(fact::Tuple, dims) = InvPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+InvPlan(fact, dims) = InvPlan((fact,), dims)
 
 size(F::InvPlan) = size.(F.factorizations, 1)
-size(F::InvPlan{<:Any,<:Any,Int}) = size(F.factorizations, 1)
 
 
-function *(P::InvPlan{<:Any,<:Any,Int}, x::AbstractVector)
+function *(P::InvPlan{<:Any,<:Tuple,Int}, x::AbstractVector)
     @assert P.dims == 1
-    P.factorizations \ x # Only a single factorization when dims isa Int
+    only(P.factorizations) \ x # Only a single factorization when dims isa Int
 end
 
-function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
+function *(P::InvPlan{<:Any,<:Tuple,Int}, X::AbstractMatrix)
     if P.dims == 1
-        P.factorizations \ X  # Only a single factorization when dims isa Int
+        only(P.factorizations) \ X  # Only a single factorization when dims isa Int
     else
         @assert P.dims == 2
-        permutedims(P.factorizations \ permutedims(X))
+        permutedims(only(P.factorizations) \ permutedims(X))
     end
 end
 
-function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
+function *(P::InvPlan{<:Any,<:Tuple,Int}, X::AbstractArray{<:Any,3})
     Y = similar(X)
     if P.dims == 1
         for j in axes(X,3)
-            Y[:,:,j] = P.factorizations \ X[:,:,j]
+            Y[:,:,j] = only(P.factorizations) \ X[:,:,j]
         end
     elseif P.dims == 2
         for k in axes(X,1)
-            Y[k,:,:] = P.factorizations \ X[k,:,:]
+            Y[k,:,:] = only(P.factorizations) \ X[k,:,:]
         end
     else
         @assert P.dims == 3
         for k in axes(X,1), j in axes(X,2)
-            Y[k,j,:] = P.factorizations \ X[k,j,:]
+            Y[k,j,:] = only(P.factorizations) \ X[k,j,:]
         end
     end
     Y
@@ -88,41 +88,42 @@ end
 
 Takes a matrix and supports it applied to different dimensions.
 """
-struct MulPlan{T, Fact, Dims} <: Plan{T}
+struct MulPlan{T, Fact<:Tuple, Dims} <: Plan{T}
     matrices::Fact
     dims::Dims
 end
 
-MulPlan(mats, dims) = MulPlan{eltype(mats), typeof(mats), typeof(dims)}(mats, dims)
+MulPlan(mats::Tuple, dims) = MulPlan{eltype(mats), typeof(mats), typeof(dims)}(mats, dims)
+MulPlan(mats::AbstractMatrix, dims) = MulPlan((mats,), dims)
 
-function *(P::MulPlan{<:Any,<:Any,Int}, x::AbstractVector)
+function *(P::MulPlan{<:Any,<:Tuple,Int}, x::AbstractVector)
     @assert P.dims == 1
-    P.matrices * x
+    only(P.matrices) * x
 end
 
-function *(P::MulPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
+function *(P::MulPlan{<:Any,<:Tuple,Int}, X::AbstractMatrix)
     if P.dims == 1
-        P.matrices * X
+        only(P.matrices) * X
     else
         @assert P.dims == 2
-        permutedims(P.matrices * permutedims(X))
+        permutedims(only(P.matrices) * permutedims(X))
     end
 end
 
-function *(P::MulPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
+function *(P::MulPlan{<:Any,<:Tuple,Int}, X::AbstractArray{<:Any,3})
     Y = similar(X)
     if P.dims == 1
         for j in axes(X,3)
-            Y[:,:,j] = P.matrices * X[:,:,j]
+            Y[:,:,j] = only(P.matrices) * X[:,:,j]
         end
     elseif P.dims == 2
         for k in axes(X,1)
-            Y[k,:,:] = P.matrices * X[k,:,:]
+            Y[k,:,:] = only(P.matrices) * X[k,:,:]
         end
     else
         @assert P.dims == 3
         for k in axes(X,1), j in axes(X,2)
-            Y[k,j,:] = P.matrices * X[k,j,:]
+            Y[k,j,:] = only(P.matrices) * X[k,j,:]
         end
     end
     Y
@@ -138,4 +139,4 @@ end
 *(A::AbstractMatrix, P::MulPlan) = MulPlan(Ref(A) .* P.matrices, P.dims)
 
 inv(P::MulPlan) = InvPlan(map(factorize,P.matrices), P.dims)
-inv(P::InvPlan) = MulPlan(P.factorizations, P.dims)
+inv(P::InvPlan) = MulPlan(convert.(Matrix,P.factorizations), P.dims)
