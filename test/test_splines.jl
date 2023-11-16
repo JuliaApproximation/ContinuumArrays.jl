@@ -1,4 +1,4 @@
-using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, Test
+using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, BlockArrays, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
 import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply
 import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayouts, MappedBasisLayout, plan_grid_transform, weaklaplacian
@@ -37,7 +37,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test f[2.1] ≈ 2
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
-        @test summary(f) == stringmime("text/plain", f) == "HeavisideSpline([1, 2, 3]) * [1, 2]" 
+        @test summary(f) == stringmime("text/plain", f) == "HeavisideSpline([1, 2, 3]) * [1, 2]"
 
         @testset "sum/cumsum" begin
             H = HeavisideSpline(range(0,1;length=1000));
@@ -220,7 +220,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test M == M
             @test M == M̃
             @test M̃ == M
-            
+
             @test (x .* M)[0.25,:] ≈ (x .* M̃)[0.25,:] ≈ 0.25 * M[0.25,:]
             @test (exp.(x) .* M)[0.25,:] ≈ exp(0.25) * M[0.25,:]
 
@@ -448,13 +448,13 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test L[y,:][g,:] * (P * X) ≈ X
             @test P \ (P * X) ≈ P * (P \ X) ≈ X
 
-            g,P = plan_grid_transform(L[y,:], (10,10))
-            X = cos.(g .+ g')
-            @test L[y,:][g,:]*(P * X)*L[y,:][g,:]' ≈ X
+            (s,t),P = plan_grid_transform(L[y,:], (10,10))
+            X = cos.(s .* sin.(t'))
+            @test L[y,:][s,:]*(P * X)*L[y,:][t,:]' ≈ X
             @test P \ (P * X) ≈ P * (P \ X) ≈ X
 
-            g,P = plan_grid_transform(L[y,:], (10,10,10))
-            X = randn(10,10,10)
+            (s,t,v),P = plan_grid_transform(L[y,:], (10,10,10))
+            X = cos.(s .* sin.(t') .+ exp.(reshape(v,1,1,:)))
             @test P \ (P * X) ≈ P * (P \ X) ≈ X
         end
 
@@ -532,5 +532,41 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         L = LinearSpline(0:5)
         u = ApplyQuasiArray(*, L, randn(6,5), randn(5))
         @test coefficients(u) ≈ L \ u
+    end
+
+    @testset "Block grid" begin
+        L = LinearSpline(0:5)
+        @test grid(L, Block(1)) == grid(L)
+        @test grid(L, Block(1,1)) == grid(L, (6,6))
+    end
+
+    @testset "transform tests" begin
+        L = LinearSpline(0:5)
+        @testset "scalar"  begin
+            Pl = plan_transform(L)
+            @test size(Pl) == (6,)
+
+            x = randn(6)
+            @test inv(Pl)  * (Pl * x) ≈ x
+            @test inv(inv(Pl))*x ≈ Pl*x
+
+            @test plan_transform(L, Block(1))*x == Pl*x
+
+            A = randn(6,6)
+
+            P = A * inv(Pl)
+            @test P * x ≈ A * (Pl * x)
+        end
+
+        @testset "tensor" begin
+            Pl = plan_transform(L, (6,6))
+            @test size(Pl) == (6,6)
+            X = randn(6,6)
+            @test inv(Pl)  * (Pl * X) ≈ X
+            @test plan_transform(L, Block(1,1)) * X ≈ Pl*X
+
+            (x,y),Pl = plan_grid_transform(L, Block(1,1))
+            @test Pl*(exp.(x .+ y')) ≈ plan_transform(L, Block(1,1), 2) * (plan_transform(L, Block(1,1), 1) * exp.(x .+ y'))
+        end
     end
 end

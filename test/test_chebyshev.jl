@@ -17,14 +17,14 @@ struct ChebyshevWeight <: Weight{Float64} end
 Base.:(==)(::Chebyshev, ::Chebyshev) = true
 Base.:(==)(::ChebyshevWeight, ::ChebyshevWeight) = true
 Base.axes(T::Chebyshev) = (Inclusion(-1..1), Base.OneTo(T.n))
-ContinuumArrays.grid(T::Chebyshev, n...) = chebyshevpoints(Float64, T.n, Val(1))
+ContinuumArrays.grid(T::Chebyshev, ::Integer) = chebyshevpoints(Float64, T.n, Val(1))
 Base.axes(T::ChebyshevWeight) = (Inclusion(-1..1),)
 
 Base.getindex(::Chebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
 Base.getindex(::ChebyshevWeight, x::Float64) = 1/sqrt(1-x^2)
 Base.getindex(w::ChebyshevWeight, ::Inclusion) = w # TODO: make automatic
 
-ContinuumArrays.plan_grid_transform(L::Chebyshev, szs::NTuple{N,Int}, dims=1:N) where N = grid(L), plan_chebyshevtransform(Array{eltype(L)}(undef, szs...), dims)
+ContinuumArrays.plan_transform(L::Chebyshev, szs::NTuple{N,Int}, dims=1:N) where N = plan_chebyshevtransform(Array{eltype(L)}(undef, szs...), dims)
 ContinuumArrays.basis_axes(::Inclusion{<:Any,<:AbstractInterval}, v) = Chebyshev(100)
 function ContinuumArrays._sum(T::Chebyshev, dims)
     n = 2:size(T,2)-1
