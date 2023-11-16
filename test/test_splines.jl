@@ -37,7 +37,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test f[2.1] ≈ 2
 
         @test @inferred(H'H) == @inferred(materialize(applied(*,H',H))) == Eye(2)
-        @test summary(f) == stringmime("text/plain", f) == "HeavisideSpline([1, 2, 3]) * [1, 2]" 
+        @test summary(f) == stringmime("text/plain", f) == "HeavisideSpline([1, 2, 3]) * [1, 2]"
 
         @testset "sum/cumsum" begin
             H = HeavisideSpline(range(0,1;length=1000));
@@ -220,7 +220,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test M == M
             @test M == M̃
             @test M̃ == M
-            
+
             @test (x .* M)[0.25,:] ≈ (x .* M̃)[0.25,:] ≈ 0.25 * M[0.25,:]
             @test (exp.(x) .* M)[0.25,:] ≈ exp(0.25) * M[0.25,:]
 
@@ -564,6 +564,9 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             X = randn(6,6)
             @test inv(Pl)  * (Pl * X) ≈ X
             @test plan_transform(L, Block(1,1)) * X ≈ Pl*X
+
+            (x,y),Pl = plan_grid_transform(L, Block(1,1))
+            @test Pl*(exp.(x .+ y')) ≈ plan_transform(L, Block(1,1), 2) * (plan_transform(L, Block(1,1), 1) * exp.(x .+ y'))
         end
     end
 end

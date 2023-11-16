@@ -192,11 +192,15 @@ grid_layout(::WeightedBasisLayouts, P, n) = grid(unweighted(P), n)
 # Default transform is just solve least squares on a grid
 # note this computes the grid an extra time.
 
-blockoroneto(n::Int) = OneTo(n)
 blockoroneto(n::Block{1}) = Block.(OneTo(Int(n)))
+
+mapfactorize(L, n::Integer) = factorize(L[grid(L,n),OneTo(n)])
+mapfactorize(L, n::Block{1}) = factorize(L[grid(L,n),Block.(OneTo(Int(n)))])
+
+mapfactorize(L, ns) = map(n -> mapfactorize(L,n), ns)
 function plan_transform_layout(lay, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N
     dimsz = getindex.(Ref(szs), dims) # get the sizes of transformed dimensions
-    InvPlan(map(n -> factorize(L[grid(L,n),blockoroneto(n)]), dimsz), dims)
+    InvPlan(mapfactorize(L, dimsz), dims)
 end
 plan_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_transform(demap(L), szs, dims)
 plan_transform(L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_transform_layout(MemoryLayout(L), L, szs, dims)
@@ -210,10 +214,8 @@ plan_transform(L, B::Block, dims...) = plan_transform(L, Block.(B.n), dims...) #
 
 
 plan_grid_transform(P, szs::NTuple{N,Union{Integer,Block{1}}}, dims=ntuple(identity,Val(N))) where N = grid(P, getindex.(Ref(szs), dims)), plan_transform(P, szs, dims)
-function plan_grid_transform(P, lng::Union{Integer,Block{1}}, dims=1)
-    @assert dims == 1
-    grid(P, lng), plan_transform(P, lng, dims)
-end
+plan_grid_transform(P, lng::Union{Integer,Block{1}}, dims=1) = plan_grid_transform(P, (lng,), dims)
+plan_grid_transform(P, B::Block{N}, dims=ntuple(identity,Val(N))) where N = plan_grid_transform(P, Block.(B.n), dims)
 
 _factorize(::AbstractBasisLayout, L, dims...; kws...) = TransformFactorization(plan_grid_transform(L, (size(L,2), dims...), 1)...)
 
