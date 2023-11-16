@@ -191,9 +191,6 @@ grid_layout(::WeightedBasisLayouts, P, n) = grid(unweighted(P), n)
 
 # Default transform is just solve least squares on a grid
 # note this computes the grid an extra time.
-
-blockoroneto(n::Block{1}) = Block.(OneTo(Int(n)))
-
 mapfactorize(L, n::Integer) = factorize(L[grid(L,n),OneTo(n)])
 mapfactorize(L, n::Block{1}) = factorize(L[grid(L,n),Block.(OneTo(Int(n)))])
 
