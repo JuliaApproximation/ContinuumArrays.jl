@@ -204,6 +204,8 @@ plan_transform(L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N
 plan_transform(L, arr::AbstractArray, dims...) = plan_transform(L, size(arr), dims...)
 plan_transform(L, lng::Union{Integer,Block{1}}, dims...) = plan_transform(L, (lng,), dims...)
 plan_transform(L) = plan_transform(L, size(L,2))
+
+plan_transform(L, B::Block, dims...) = plan_transform(L, Block.(B.n), dims...) # grid(L, Block(2,3)) == grid(L, (Block(2), Block(3))
     
 
 
