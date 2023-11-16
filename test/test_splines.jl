@@ -448,12 +448,12 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test L[y,:][g,:] * (P * X) ≈ X
             @test P \ (P * X) ≈ P * (P \ X) ≈ X
 
-            (s,t),P = plan_grid_transform(L[y,:], (10,11))
+            (s,t),P = plan_grid_transform(L[y,:], (10,10))
             X = cos.(s .* sin.(t'))
             @test L[y,:][s,:]*(P * X)*L[y,:][t,:]' ≈ X
             @test P \ (P * X) ≈ P * (P \ X) ≈ X
 
-            (s,t,v),P = plan_grid_transform(L[y,:], (10,11,12))
+            (s,t,v),P = plan_grid_transform(L[y,:], (10,10,10))
             X = cos.(s .* sin.(t') .+ exp.(reshape(v,1,1,:)))
             @test P \ (P * X) ≈ P * (P \ X) ≈ X
         end
