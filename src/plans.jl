@@ -31,44 +31,45 @@ end
 
 Takes a factorization and supports it applied to different dimensions.
 """
-struct InvPlan{T, Fact, Dims} <: Plan{T}
-    factorization::Fact
+struct InvPlan{T, Facts<:Tuple, Dims} <: Plan{T}
+    factorizations::Facts
     dims::Dims
 end
 
-InvPlan(fact, dims) = InvPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+InvPlan(fact::Tuple, dims) = InvPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+InvPlan(fact, dims) = InvPlan((fact,), dims)
 
-size(F::InvPlan, k...) = size(F.factorization, k...)
+size(F::InvPlan) = size.(F.factorizations, 1)
 
 
-function *(P::InvPlan{<:Any,<:Any,Int}, x::AbstractVector)
+function *(P::InvPlan{<:Any,<:Tuple,Int}, x::AbstractVector)
     @assert P.dims == 1
-    P.factorization \ x
+    only(P.factorizations) \ x # Only a single factorization when dims isa Int
 end
 
-function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
+function *(P::InvPlan{<:Any,<:Tuple,Int}, X::AbstractMatrix)
     if P.dims == 1
-        P.factorization \ X
+        only(P.factorizations) \ X  # Only a single factorization when dims isa Int
     else
         @assert P.dims == 2
-        permutedims(P.factorization \ permutedims(X))
+        permutedims(only(P.factorizations) \ permutedims(X))
     end
 end
 
-function *(P::InvPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
+function *(P::InvPlan{<:Any,<:Tuple,Int}, X::AbstractArray{<:Any,3})
     Y = similar(X)
     if P.dims == 1
         for j in axes(X,3)
-            Y[:,:,j] = P.factorization \ X[:,:,j]
+            Y[:,:,j] = only(P.factorizations) \ X[:,:,j]
         end
     elseif P.dims == 2
         for k in axes(X,1)
-            Y[k,:,:] = P.factorization \ X[k,:,:]
+            Y[k,:,:] = only(P.factorizations) \ X[k,:,:]
         end
     else
         @assert P.dims == 3
         for k in axes(X,1), j in axes(X,2)
-            Y[k,j,:] = P.factorization \ X[k,j,:]
+            Y[k,j,:] = only(P.factorizations) \ X[k,j,:]
         end
     end
     Y
@@ -76,7 +77,7 @@ end
 
 function *(P::InvPlan, X::AbstractArray)
     for d in P.dims
-        X = InvPlan(P.factorization, d) * X
+        X = InvPlan(P.factorizations[d], d) * X
     end
     X
 end
@@ -87,41 +88,42 @@ end
 
 Takes a matrix and supports it applied to different dimensions.
 """
-struct MulPlan{T, Fact, Dims} <: Plan{T}
-    matrix::Fact
+struct MulPlan{T, Fact<:Tuple, Dims} <: Plan{T}
+    matrices::Fact
     dims::Dims
 end
 
-MulPlan(fact, dims) = MulPlan{eltype(fact), typeof(fact), typeof(dims)}(fact, dims)
+MulPlan(mats::Tuple, dims) = MulPlan{eltype(mats), typeof(mats), typeof(dims)}(mats, dims)
+MulPlan(mats::AbstractMatrix, dims) = MulPlan((mats,), dims)
 
-function *(P::MulPlan{<:Any,<:Any,Int}, x::AbstractVector)
+function *(P::MulPlan{<:Any,<:Tuple,Int}, x::AbstractVector)
     @assert P.dims == 1
-    P.matrix * x
+    only(P.matrices) * x
 end
 
-function *(P::MulPlan{<:Any,<:Any,Int}, X::AbstractMatrix)
+function *(P::MulPlan{<:Any,<:Tuple,Int}, X::AbstractMatrix)
     if P.dims == 1
-        P.matrix * X
+        only(P.matrices) * X
     else
         @assert P.dims == 2
-        permutedims(P.matrix * permutedims(X))
+        permutedims(only(P.matrices) * permutedims(X))
     end
 end
 
-function *(P::MulPlan{<:Any,<:Any,Int}, X::AbstractArray{<:Any,3})
+function *(P::MulPlan{<:Any,<:Tuple,Int}, X::AbstractArray{<:Any,3})
     Y = similar(X)
     if P.dims == 1
         for j in axes(X,3)
-            Y[:,:,j] = P.matrix * X[:,:,j]
+            Y[:,:,j] = only(P.matrices) * X[:,:,j]
         end
     elseif P.dims == 2
         for k in axes(X,1)
-            Y[k,:,:] = P.matrix * X[k,:,:]
+            Y[k,:,:] = only(P.matrices) * X[k,:,:]
         end
     else
         @assert P.dims == 3
         for k in axes(X,1), j in axes(X,2)
-            Y[k,j,:] = P.matrix * X[k,j,:]
+            Y[k,j,:] = only(P.matrices) * X[k,j,:]
         end
     end
     Y
@@ -129,12 +131,12 @@ end
 
 function *(P::MulPlan, X::AbstractArray)
     for d in P.dims
-        X = MulPlan(P.matrix, d) * X
+        X = MulPlan(P.matrices[d], d) * X
     end
     X
 end
 
-*(A::AbstractMatrix, P::MulPlan) = MulPlan(A*P.matrix, P.dims)
+*(A::AbstractMatrix, P::MulPlan) = MulPlan(Ref(A) .* P.matrices, P.dims)
 
-inv(P::MulPlan) = InvPlan(factorize(P.matrix), P.dims)
-inv(P::InvPlan) = MulPlan(P.factorization, P.dims)
+inv(P::MulPlan) = InvPlan(map(factorize,P.matrices), P.dims)
+inv(P::InvPlan) = MulPlan(convert.(Matrix,P.factorizations), P.dims)

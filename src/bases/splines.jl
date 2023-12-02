@@ -74,9 +74,9 @@ function plotgridvalues(f::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Spline{-1},A
 end
 
 
-
-
-grid(L::LinearSpline, n...) = L.points
+# Splines sample same number of points regardless of length.
+grid(L::HeavisideSpline, ::Integer) = L.points[1:end-1] .+ diff(L.points)/2
+grid(L::LinearSpline, ::Integer) = L.points
 
 ## Sub-bases
 

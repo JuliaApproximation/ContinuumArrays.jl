@@ -3,6 +3,7 @@ A package for representing quasi arrays with continuous dimensions
 
 [![Build Status](https://github.com/JuliaApproximation/ContinuumArrays.jl/workflows/CI/badge.svg)](https://github.com/JuliaApproximation/ContinuumArrays.jl/actions)
 [![codecov](https://codecov.io/gh/JuliaApproximation/ContinuumArrays.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaApproximation/ContinuumArrays.jl)
+[![docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaApproximation.github.io/ContinuumArrays.jl/dev)
 
 
 A quasi array as implemented in [QuasiArrays.jl](https://github.com/JuliaApproximation/QuasiArrays.jl) is a 
