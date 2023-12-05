@@ -1,7 +1,7 @@
 using ContinuumArrays, QuasiArrays, IntervalSets, DomainSets, FillArrays, LinearAlgebra, BandedMatrices, InfiniteArrays, Test, Base64
 import ContinuumArrays: ℵ₁, materialize, AffineQuasiVector, BasisLayout, AdjointBasisLayout, SubBasisLayout, ℵ₁,
                         MappedBasisLayout, AdjointMappedBasisLayouts, MappedWeightedBasisLayout, TransformFactorization, Weight, WeightedBasisLayout, SubWeightedBasisLayout, WeightLayout,
-                        basis, invmap, Map, checkpoints, plotgrid, plotgrid_layout, mul, plotvalues
+                        basis, invmap, Map, checkpoints, plotgrid, plotgrid_layout, mul, plotvalues, plotgridvalues
 import QuasiArrays: SubQuasiArray, MulQuasiMatrix, Vec, Inclusion, QuasiDiagonal, LazyQuasiArrayApplyStyle, LazyQuasiArrayStyle
 import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, ApplyLayout, LdivStyle, MulStyle
 
@@ -94,6 +94,14 @@ include("test_basisconcat.jl")
     a = affine(0..1, 1..5)
     v = L[a,:] * c
     @test plotvalues(v) == v[plotgrid(v)]
+
+    H = HeavisideSpline(1:5)
+    u = H * (2:5)
+    x,v = plotgridvalues(u)
+    @test u[[1+4eps(),2-4eps(),2+4eps(),3-4eps(),3+4eps(),4-4eps(),4+4eps(),5-4eps()]] ≈ v
+
+    x,v = plotgridvalues(diff(u))
+    @test x == [2,2,2,3,3,3,4,4,4]
 end
 
 include("test_recipesbaseext.jl")

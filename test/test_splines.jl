@@ -569,4 +569,22 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test Pl*(exp.(x .+ y')) ≈ plan_transform(L, Block(1,1), 2) * (plan_transform(L, Block(1,1), 1) * exp.(x .+ y'))
         end
     end
+
+    @testset "Dirac" begin
+        H = HeavisideSpline(0:5)
+        S = Spline{-1}(0:5)
+        @test iszero(S[0.1,1])
+        @test iszero(S[0.1,1:4])
+        @test isinf(S[1,1])
+        @test iszero(S[1,2])
+        @test iszero(S[0,:])
+        @test_throws BoundsError S[0.1,0]
+        @test_throws BoundsError S[-1,1]
+
+        @test S \ diff(H) == diagm(0 => fill(-1,4), 1 => fill(1, 4))[1:end-1,:]
+
+        u = S * (1:4)
+        @test sum(u) == 10
+        @test cumsum(u)[5-4eps()] == 10
+    end
 end
