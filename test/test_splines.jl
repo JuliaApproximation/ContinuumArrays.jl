@@ -527,7 +527,6 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         end
         @test PX ≈ X
 
-
         n = size(L,2)
         X = randn(n, n, n, n)
         P = plan_transform(L, X)
@@ -545,6 +544,10 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             X[k, j, l, :] = L[g,:] \ X[k, j, l, :]
         end
         @test PX ≈ X
+
+        X = randn(n, n, n, n, n)
+        P = plan_transform(L, X)
+        @test_throws ErrorException P * X
     end
 
     @testset "Mul coefficients" begin
