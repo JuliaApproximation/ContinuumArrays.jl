@@ -526,6 +526,28 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             X[k, j, :] = L[g,:] \ X[k, j, :]
         end
         @test PX ≈ X
+
+        n = size(L,2)
+        X = randn(n, n, n, n)
+        P = plan_transform(L, X)
+        PX = P * X
+        for k = 1:n, j = 1:n, l = 1:n
+            X[:, k, j, l] = L[g,:] \ X[:, k, j, l]
+        end
+        for k = 1:n, j = 1:n, l = 1:n
+            X[k, :, j, l] = L[g,:] \ X[k, :, j, l]
+        end
+        for k = 1:n, j = 1:n, l = 1:n
+            X[k, j, :, l] = L[g,:] \ X[k, j, :, l]
+        end
+        for k = 1:n, j = 1:n, l = 1:n
+            X[k, j, l, :] = L[g,:] \ X[k, j, l, :]
+        end
+        @test PX ≈ X
+
+        X = randn(n, n, n, n, n)
+        P = plan_transform(L, X)
+        @test_throws ErrorException P * X
     end
 
     @testset "Mul coefficients" begin
