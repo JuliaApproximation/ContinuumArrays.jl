@@ -42,47 +42,6 @@ InvPlan(fact, dims) = InvPlan((fact,), dims)
 size(F::InvPlan) = size.(F.factorizations, 1)
 
 
-function *(P::InvPlan{<:Any,<:Tuple,Int}, x::AbstractVector)
-    @assert P.dims == 1
-    only(P.factorizations) \ x # Only a single factorization when dims isa Int
-end
-
-function *(P::InvPlan{<:Any,<:Tuple,Int}, X::AbstractMatrix)
-    if P.dims == 1
-        only(P.factorizations) \ X  # Only a single factorization when dims isa Int
-    else
-        @assert P.dims == 2
-        permutedims(only(P.factorizations) \ permutedims(X))
-    end
-end
-
-function *(P::InvPlan{<:Any,<:Tuple,Int}, X::AbstractArray{<:Any,3})
-    Y = similar(X)
-    if P.dims == 1
-        for j in axes(X,3)
-            Y[:,:,j] = only(P.factorizations) \ X[:,:,j]
-        end
-    elseif P.dims == 2
-        for k in axes(X,1)
-            Y[k,:,:] = only(P.factorizations) \ X[k,:,:]
-        end
-    else
-        @assert P.dims == 3
-        for k in axes(X,1), j in axes(X,2)
-            Y[k,j,:] = only(P.factorizations) \ X[k,j,:]
-        end
-    end
-    Y
-end
-
-function *(P::InvPlan, X::AbstractArray)
-    for d in P.dims
-        X = InvPlan(P.factorizations[d], d) * X
-    end
-    X
-end
-
-
 """
     MulPlan(matrix, dims)
 
@@ -96,44 +55,74 @@ end
 MulPlan(mats::Tuple, dims) = MulPlan{eltype(mats), typeof(mats), typeof(dims)}(mats, dims)
 MulPlan(mats::AbstractMatrix, dims) = MulPlan((mats,), dims)
 
-function *(P::MulPlan{<:Any,<:Tuple,Int}, x::AbstractVector)
-    @assert P.dims == 1
-    only(P.matrices) * x
-end
-
-function *(P::MulPlan{<:Any,<:Tuple,Int}, X::AbstractMatrix)
-    if P.dims == 1
-        only(P.matrices) * X
-    else
-        @assert P.dims == 2
-        permutedims(only(P.matrices) * permutedims(X))
-    end
-end
-
-function *(P::MulPlan{<:Any,<:Tuple,Int}, X::AbstractArray{<:Any,3})
-    Y = similar(X)
-    if P.dims == 1
-        for j in axes(X,3)
-            Y[:,:,j] = only(P.matrices) * X[:,:,j]
+for (Pln,op,fld) in ((:MulPlan, :*, :(:matrices)), (:InvPlan, :\, :(:factorizations)))
+    @eval begin
+        function *(P::$Pln{<:Any,<:Tuple,Int}, x::AbstractVector)
+            @assert P.dims == 1
+            $op(only(getfield(P, $fld)), x) # Only a single factorization when dims isa Int
         end
-    elseif P.dims == 2
-        for k in axes(X,1)
-            Y[k,:,:] = only(P.matrices) * X[k,:,:]
+        
+        function *(P::$Pln{<:Any,<:Tuple,Int}, X::AbstractMatrix)
+            if P.dims == 1
+                $op(only(getfield(P, $fld)), X)  # Only a single factorization when dims isa Int
+            else
+                @assert P.dims == 2
+                permutedims($op(only(getfield(P, $fld)), permutedims(X)))
+            end
         end
-    else
-        @assert P.dims == 3
-        for k in axes(X,1), j in axes(X,2)
-            Y[k,j,:] = only(P.matrices) * X[k,j,:]
+        
+        function *(P::$Pln{<:Any,<:Tuple,Int}, X::AbstractArray{<:Any,3})
+            Y = similar(X)
+            if P.dims == 1
+                for j in axes(X,3)
+                    Y[:,:,j] = $op(only(getfield(P, $fld)), X[:,:,j])
+                end
+            elseif P.dims == 2
+                for k in axes(X,1)
+                    Y[k,:,:] = $op(only(getfield(P, $fld)), X[k,:,:])
+                end
+            else
+                @assert P.dims == 3
+                for k in axes(X,1), j in axes(X,2)
+                    Y[k,j,:] = $op(only(getfield(P, $fld)), X[k,j,:])
+                end
+            end
+            Y
+        end
+        
+        function *(P::$Pln{<:Any,<:Tuple,Int}, X::AbstractArray{<:Any,4})
+            Y = similar(X)
+            if P.dims == 1
+                for j in axes(X,3), l in axes(X,4)
+                    Y[:,:,j,l] = $op(only(getfield(P, $fld)), X[:,:,j,l])
+                end
+            elseif P.dims == 2
+                for k in axes(X,1), l in axes(X,4)
+                    Y[k,:,:,l] = $op(only(getfield(P, $fld)), X[k,:,:,l])
+                end
+            elseif P.dims == 3
+                for k in axes(X,1), j in axes(X,2)
+                    Y[k,j,:,:] = $op(only(getfield(P, $fld)), X[k,j,:,:])
+                end
+            elseif P.dims == 4
+                for k in axes(X,1), j in axes(X,2), l in axes(X,3)
+                    Y[k,j,l,:] = $op(only(getfield(P, $fld)), X[k,j,l,:])
+                end
+            end
+            Y
+        end
+        
+        
+        
+        *(P::$Pln{<:Any,<:Tuple,Int}, X::AbstractArray) = error("Overload")
+        
+        function *(P::$Pln, X::AbstractArray)
+            for (fac,dim) in zip(getfield(P, $fld), P.dims)
+                X = $Pln(fac, dim) * X
+            end
+            X
         end
     end
-    Y
-end
-
-function *(P::MulPlan, X::AbstractArray)
-    for d in P.dims
-        X = MulPlan(P.matrices[d], d) * X
-    end
-    X
 end
 
 *(A::AbstractMatrix, P::MulPlan) = MulPlan(Ref(A) .* P.matrices, P.dims)
