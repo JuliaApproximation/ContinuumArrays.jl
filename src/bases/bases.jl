@@ -248,30 +248,6 @@ _sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
 _factorize(::SubBasisLayout, L, dims...; kws...) = _sub_factorize(size(parent(L)), parentindices(L), L, dims...; kws...)
 
 
-"""
-    MappedFactorization(F, map)
-
-remaps a factorization to a different domain. That is, if `M` is a `MappedFactorization`
-then `M \\ f` is equivalent to `F \\ f[map]`
-"""
-struct MappedFactorization{T, FAC<:Factorization{T}, MAP} <: Factorization{T}
-    F::FAC
-    map::MAP
-end
-
-\(a::MappedFactorization, b::AbstractQuasiVector) = a.F \ view(b, a.map)
-\(a::MappedFactorization, b::AbstractVector) = a.F \ b
-\(a::MappedFactorization, b::AbstractQuasiMatrix) = a.F \ view(b, a.map, :)
-
-
-function invmap end
-
-function _factorize(::MappedBasisLayout, L, dims...; kws...)
-    kr, jr = parentindices(L)
-    P = parent(L)
-    MappedFactorization(factorize(view(P,:,jr), dims...; kws...), invmap(parentindices(L)[1]))
-end
-
 plan_ldiv(A, B::AbstractQuasiVector) = factorize(A)
 plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(A, size(B,2))
 
