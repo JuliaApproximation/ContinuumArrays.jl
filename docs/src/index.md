@@ -52,9 +52,6 @@ ContinuumArrays.MulPlan
 ContinuumArrays.PiecewiseBasis
 ```
 ```@docs
-ContinuumArrays.MappedFactorization
-```
-```@docs
 ContinuumArrays.basis
 ```
 ```@docs
