@@ -74,6 +74,7 @@ getindex(A::AbstractAffineQuasiVector, ::Colon) = copy(A)
 copy(A::AbstractAffineQuasiVector) = A
 
 inbounds_getindex(A::AbstractAffineQuasiVector{<:Any,<:Any,<:Inclusion}, k::Number) = A.A*k .+ A.b
+inbounds_getindex(A::AbstractAffineQuasiVector{<:Number,<:Any,<:Inclusion}, k::AbstractArray{<:Number}) = A.A .* k .+ A.b
 isempty(A::AbstractAffineQuasiVector) = isempty(A.x)
 ==(a::AbstractAffineQuasiVector, b::AbstractAffineQuasiVector) = a.A == b.A && a.x == b.x && a.b == b.b
 ==(a::AbstractAffineQuasiVector, b::Inclusion) =  a == affine(b,b)
