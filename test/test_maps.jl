@@ -49,6 +49,7 @@ import ContinuumArrays: AffineQuasiVector
         @test union(y) == Inclusion(-1..1)
         @test ContinuumArrays.inbounds_getindex(y,0.1) == y[0.1]
         @test ContinuumArrays.inbounds_getindex(y,2.1) == 2*2.1 - 1
+        @test ContinuumArrays.inbounds_getindex(y, [2.1,2.2]) == 2*[2.1,2.2] .- 1
 
         z = 1 .- x
         @test minimum(z) == 0.0
