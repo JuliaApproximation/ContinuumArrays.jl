@@ -37,8 +37,9 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
 
         @testset "Vec case" begin
             Sv = PiecewiseBasis([S1,S2])
-            @test axes(Sv,2) isa BlockedUnitRange
+            @test axes(Sv,2) isa BlockedOneTo
             @test Sv[0.5,1:4] == S[0.5,1:4]
+            @test  Sv[0.5,Block(1)] == [0.5,0.5]
         end
 
         @testset "UnionDomain with point checkpoints" begin
