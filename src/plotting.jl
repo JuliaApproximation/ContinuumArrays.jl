@@ -22,7 +22,7 @@ plotgrid_layout(::SubBasisLayout, P::AbstractQuasiMatrix) = plotgrid(parent(P), 
 
 
 _mul_plotgrid(_, args) = plotgrid_layout(UnknownLayout(), first(args))
-_mul_plotgrid(::Tuple{Any,PaddedLayout}, (P,c)) = plotgrid(P, last(colsupport(c)))
+_mul_plotgrid(::Tuple{Any,AbstractPaddedLayout}, (P,c)) = plotgrid(P, last(colsupport(c)))
 
 function plotgrid_layout(lay::ExpansionLayout, P)
     args = arguments(lay,P)

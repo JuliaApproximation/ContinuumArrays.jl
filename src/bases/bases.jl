@@ -353,7 +353,7 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 ##
 
 struct ExpansionLayout{Lay} <: AbstractLazyLayout end
-const CoefficientLayouts = Union{PaddedLayout,AbstractStridedLayout,ZerosLayout}
+const CoefficientLayouts = Union{AbstractPaddedLayout,AbstractStridedLayout,ZerosLayout}
 applylayout(::Type{typeof(*)}, ::Lay, ::CoefficientLayouts) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
 tocoefficients(v) = tocoefficients_layout(MemoryLayout(v), v)
