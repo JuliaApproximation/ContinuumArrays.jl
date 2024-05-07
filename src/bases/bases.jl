@@ -533,6 +533,7 @@ end
 
 
 # we represent as a Mul with a banded matrix
+# sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:Integer}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractVector}}) = MappedBasisLayout()
 sublayout(::WeightedBasisLayouts, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractVector}}) = MappedWeightedBasisLayout()
