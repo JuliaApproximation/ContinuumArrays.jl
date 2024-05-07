@@ -21,13 +21,15 @@ plotgrid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = plotgrid(parent(P
 plotgrid_layout(::SubBasisLayout, P::AbstractQuasiMatrix) = plotgrid(parent(P), maximum(parentindices(P)[2]))
 
 
-_mul_plotgrid(_, args) = plotgrid_layout(UnknownLayout(), first(args))
-_mul_plotgrid(::Tuple{Any,PaddedLayout}, (P,c)) = plotgrid(P, last(colsupport(c)))
+_mul_plotgrid(_, args) = plotgrid(args[1], last(colsupport(ApplyArray(*, tail(args)...))))
+_mul_plotgrid(_, (P,c)::NTuple{2,Any}) = plotgrid(P, last(colsupport(c)))
 
-function plotgrid_layout(lay::ExpansionLayout, P)
+function plotgrid_layout(lay::ApplyLayout{typeof(*)}, P)
     args = arguments(lay,P)
     _mul_plotgrid(map(MemoryLayout,args), args)
 end
+
+plotgrid_layout(::ExpansionLayout, P) = plotgrid_layout(ApplyLayout{typeof(*)}(), P)
 
 plotvalues_size(::Tuple{InfiniteCardinal{1}}, g, x=plotgrid(g)) = g[x]
 plotvalues_size(::Tuple{InfiniteCardinal{1},Int}, g, x=plotgrid(g)) = g[x,:]
