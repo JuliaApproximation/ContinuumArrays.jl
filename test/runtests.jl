@@ -102,6 +102,10 @@ include("test_basisconcat.jl")
 
     x,v = plotgridvalues(diff(u))
     @test x == [2,2,2,3,3,3,4,4,4]
+
+    @test plotgrid(diff(L)) == plotgrid(H)
+    @test size(plotvalues(diff(L))) == (8,5)
+    @test plotgrid(ApplyQuasiMatrix(*, diff(L).args..., c)) == plotgrid(H)
 end
 
 include("test_recipesbaseext.jl")
