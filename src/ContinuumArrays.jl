@@ -8,7 +8,7 @@ import Base.Broadcast: materialize, BroadcastStyle, broadcasted, Broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, combine_mul_styles, AbstractArrayApplyStyle,
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
-                        simplifiable, _simplify, AbstractLazyLayout, PaddedLayout, simplify, Dot
+                        simplifiable, _simplify, AbstractLazyLayout, AbstractPaddedLayout, simplify, Dot
 import LinearAlgebra: pinv, inv, dot, norm2, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
