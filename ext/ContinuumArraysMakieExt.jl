@@ -11,7 +11,7 @@ function Makie.convert_arguments(p::PointBased, g::AbstractQuasiVector)
 end
 
 
-function Makie.convert_arguments(p::SurfaceLike, g::AbstractQuasiVector)
+function Makie.convert_arguments(p::GridBased, g::AbstractQuasiVector)
     x,v = plotgridvalues(g)
     convert_arguments(p, _split_svec(x)..., v)
 end
