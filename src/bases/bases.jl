@@ -353,7 +353,7 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 ##
 
 struct ExpansionLayout{Lay} <: AbstractLazyLayout end
-const CoefficientLayouts = Union{PaddedLayout,AbstractStridedLayout,ZerosLayout}
+const CoefficientLayouts = Union{AbstractPaddedLayout,AbstractStridedLayout,ZerosLayout}
 applylayout(::Type{typeof(*)}, ::Lay, ::CoefficientLayouts) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
 tocoefficients(v) = tocoefficients_layout(MemoryLayout(v), v)
@@ -533,6 +533,7 @@ end
 
 
 # we represent as a Mul with a banded matrix
+# sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:Integer}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = SubBasisLayout()
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractVector}}) = MappedBasisLayout()
 sublayout(::WeightedBasisLayouts, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractVector}}) = MappedWeightedBasisLayout()
