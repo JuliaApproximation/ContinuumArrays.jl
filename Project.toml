@@ -1,6 +1,6 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.18.1"
+version = "0.18.2"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -38,7 +38,7 @@ InfiniteArrays = "0.14"
 Infinities = "0.1"
 IntervalSets = "0.7"
 LazyArrays = "2"
-Makie = "0.20"
+Makie = "0.20, 0.21"
 QuasiArrays = "0.11.5"
 RecipesBase = "1.0"
 StaticArrays = "1.0"
