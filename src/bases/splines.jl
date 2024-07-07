@@ -9,6 +9,11 @@ const HeavisideSpline = Spline{0}
 Spline{o}(pts::AbstractVector{T}) where {o,T} = Spline{o,float(T)}(pts)
 Spline{o}(S::Spline) where {o} = Spline{o}(S.points)
 
+convert(::Type{AbstractQuasiArray{T}}, S::Spline{λ,T}) where {λ,T} = S
+convert(::Type{AbstractQuasiMatrix{T}}, S::Spline{λ,T}) where {λ,T} = S
+convert(::Type{AbstractQuasiArray{T}}, S::Spline{λ}) where {λ,T} = Spline{λ,T}(S.points)
+convert(::Type{AbstractQuasiMatrix{T}}, S::Spline{λ}) where {λ,T} = convert(AbstractQuasiArray{T}, S)
+
 for Typ in (:LinearSpline, :HeavisideSpline)
     STyp = string(Typ)
     @eval function show(io::IO, L::$Typ)

@@ -609,4 +609,17 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test sum(u) == 10
         @test cumsum(u)[5-4eps()] == 10
     end
+
+    @testset "complex" begin
+        L = LinearSpline([1,2,3])
+        x = axes(L,1)
+        @test L \ exp.(im*x) == LinearSpline{ComplexF64}([1,2,3]) \ exp.(im*x) == transform(L, x -> exp(im*x))
+        @test expand(L, x -> exp(im*x))[2.0] ≈ exp(im*2.0)
+    end
+
+    @testset "convert" begin
+        L = LinearSpline([1,2,3])
+        @test L ≡ convert(AbstractQuasiArray{Float64}, L) ≡ convert(AbstractQuasiMatrix{Float64}, L)
+        @test convert(AbstractQuasiArray{ComplexF64}, L) == convert(AbstractQuasiMatrix{ComplexF64}, L) == LinearSpline{ComplexF64}([1,2,3])
+    end
 end
