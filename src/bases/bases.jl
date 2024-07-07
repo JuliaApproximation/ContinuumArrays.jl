@@ -272,8 +272,12 @@ function _factorize(::MappedBasisLayout, L, dims...; kws...)
     MappedFactorization(factorize(view(P,:,jr), dims...; kws...), invmap(parentindices(L)[1]))
 end
 
-plan_ldiv(A, B::AbstractQuasiVector) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), eltype(B))}, A))
-plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), eltype(B))}, A), size(B,2))
+
+_any_eltype(B::AbstractQuasiArray{Any}) = typeof(first(B)) # assume types are same
+_any_eltype(B) = eltype(B)
+
+plan_ldiv(A, B::AbstractQuasiVector) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), _any_eltype(B))}, A))
+plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), _any_eltype(B))}, A), size(B,2))
 
 transform_ldiv_size(_, A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}) where {T,V} = plan_ldiv(A, B) \ B
 transform_ldiv(A, B) = transform_ldiv_size(size(A), A, B)
