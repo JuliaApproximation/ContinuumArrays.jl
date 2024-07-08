@@ -622,4 +622,10 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test L ≡ convert(AbstractQuasiArray{Float64}, L) ≡ convert(AbstractQuasiMatrix{Float64}, L)
         @test convert(AbstractQuasiArray{ComplexF64}, L) == convert(AbstractQuasiMatrix{ComplexF64}, L) == LinearSpline{ComplexF64}([1,2,3])
     end
+
+    @testset "any eltype" begin
+        L = LinearSpline([-1,0,1])
+        f = x -> abs(x) ≤ 1 ? 1 : "hi"
+        @test expand(L,f)[0.1] ≈ 1
+    end
 end

@@ -55,6 +55,7 @@ include("maps.jl")
 
 const QInfAxes = Union{Inclusion,AbstractAffineQuasiVector}
 
+# TODO: the following break some tests in QuasiArrays.jl when loaded, when `QInfAxes` are finite dimensional
 
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,QInfAxes}) = V
