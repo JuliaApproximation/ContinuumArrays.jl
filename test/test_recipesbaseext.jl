@@ -34,7 +34,8 @@ import RecipesBase
         rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
         @test rep[1].args == (grid(T), u[grid(T)])
         wrep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), v)
-        @test wrep[1].args == (grid(wT), v[grid(wT)])
+        @test wrep[1].args[1] == grid(wT)
+        @test wrep[1].args[2] ≈ v[grid(wT)]
     
         @test plotgrid(v) == plotgrid(u) == grid(T) == grid(wT) == plotgrid_layout(MemoryLayout(v), v) == plotgrid_layout(MemoryLayout(u), u)
         y = affine(0..1, x)

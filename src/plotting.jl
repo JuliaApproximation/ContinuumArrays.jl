@@ -36,6 +36,12 @@ plotvalues_size(::Tuple{InfiniteCardinal{1},Int}, g, x=plotgrid(g)) = g[x,:]
 plotvalues_layout(lay, g, x...) = plotvalues_size(size(g), g, x...)
 # plotvalues_layout(::WeightedBasisLayouts, wP, n...) = plotvalues(unweighted(wP), n...)
 plotvalues_layout(::ExpansionLayout{MappedBasisLayout}, g, x...) = plotvalues(demap(g))
+function plotvalues_layout(::ExpansionLayout{<:WeightedBasisLayout}, g, x...)
+    f = unweighted(g)
+    w = weight(basis(g))
+    x = plotgrid(g)
+    w[x] .* plotvalues(f)
+end
 # plotvalues_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = plotvalues(parent(P), maximum(parentindices(P)[2][n]))
 # plotvalues_layout(::SubBasisLayout, P::AbstractQuasiMatrix) = plotvalues(parent(P), maximum(parentindices(P)[2]))
 
