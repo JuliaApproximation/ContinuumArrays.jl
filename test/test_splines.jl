@@ -10,21 +10,21 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test axes(H) ≡ (axes(H,1),axes(H,2)) ≡ (Inclusion(1..3), Base.OneTo(2))
         @test size(H) ≡ (size(H,1),size(H,2)) ≡ (ℵ₁, 2)
 
-        @test_throws BoundsError H[0.1, 1]
+        @test_throws BoundsError(H, (0.1, 1)) H[0.1, 1]
         @test H[1.1,1] ≡ H'[1,1.1] ≡ transpose(H)[1,1.1] ≡ 1.0
         @test H[2.1,1] ≡ H'[1,2.1] ≡ transpose(H)[1,2.1] ≡ 0.0
         @test H[1.1,2] ≡ 0.0
         @test H[2.1,2] ≡ 1.0
-        @test_throws BoundsError H[2.1,3]
-        @test_throws BoundsError H'[3,2.1]
-        @test_throws BoundsError transpose(H)[3,2.1]
-        @test_throws BoundsError H[3.1,2]
+        @test_throws BoundsError(H, (2.1, 3)) H[2.1,3]
+        @test_throws BoundsError(H, (2.1, 3)) H'[3,2.1]
+        @test_throws BoundsError(H, (2.1, 3)) transpose(H)[3,2.1]
+        @test_throws BoundsError(H, (3.1, 2)) H[3.1,2]
 
         @test all(H[[1.1,2.1], 1] .=== H'[1,[1.1,2.1]] .=== transpose(H)[1,[1.1,2.1]] .=== [1.0,0.0])
         @test all(H[1.1,1:2] .=== H[1.1,:] .=== [1.0,0.0])
         @test all(H[[1.1,2.1], 1:2] .=== [1.0 0.0; 0.0 1.0])
 
-        @test_throws BoundsError H[[0.1,2.1], 1]
+        @test_throws BoundsError(H, ([0.1, 2.1], 1)) H[[0.1,2.1], 1]
         @test MemoryLayout(typeof(H)) == BasisLayout()
         @test ApplyStyle(*, typeof(H), typeof([1,2])) isa MulStyle
 
@@ -52,19 +52,19 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             L = LinearSpline([1,2,3])
             @test size(L) == (ℵ₁, 3)
 
-            @test_throws BoundsError L[0.1, 1]
+            @test_throws BoundsError(L, (0.1, 1)) L[0.1, 1]
             @test L[1.1,1] == L'[1,1.1] == transpose(L)[1,1.1] ≈ 0.9
             @test L[2.1,1] === L'[1,2.1] === transpose(L)[1,2.1] === 0.0
             @test L[1.1,2] ≈ 0.1
             @test L[2.1,2] ≈ 0.9
             @test L[2.1,3] == L'[3,2.1] == transpose(L)[3,2.1] ≈ 0.1
-            @test_throws BoundsError L[3.1,2]
+            @test_throws BoundsError(L, (3.1, 2)) L[3.1,2]
 
             @test L[[1.1,2.1], 1] == L'[1,[1.1,2.1]] == transpose(L)[1,[1.1,2.1]] ≈ [0.9,0.0]
             @test L[1.1,1:2] ≈ [0.9,0.1]
             @test L[[1.1,2.1], 1:2] ≈ [0.9 0.1; 0.0 0.9]
 
-            @test_throws BoundsError L[[0.1,2.1], 1]
+            @test_throws BoundsError(L, ([0.1, 2.1], 1)) L[[0.1,2.1], 1]
         end
 
         @testset "Expansion" begin
@@ -254,7 +254,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test B1 isa SubQuasiArray{Float64,1}
         @test size(B1) == (ℵ₁,)
         @test B1[0.1] == L[0.1,1]
-        @test_throws BoundsError B1[2.2]
+        @test_throws BoundsError(B1, (2.2,)) B1[2.2]
 
         B = view(L,:,1:2)
         @test B isa SubQuasiArray{Float64,2}
@@ -267,8 +267,8 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test L[:,2:3] isa SubQuasiArray
         @test axes(L[:,2:3]) ≡ (Inclusion(1..4), Base.OneTo(2))
         @test L[:,2:3][1.1,1] == L[1.1,2]
-        @test_throws BoundsError L[0.1,1]
-        @test_throws BoundsError L[1.1,0]
+        @test_throws BoundsError(L, (0.1, 1)) L[0.1,1]
+        @test_throws BoundsError(L, (1.1, 0)) L[1.1,0]
 
         @test MemoryLayout(typeof(L[:,2:3])) isa SubBasisLayout
         @test L\L[:,2:3] isa BandedMatrix
@@ -600,8 +600,8 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test isinf(S[1,1])
         @test iszero(S[1,2])
         @test iszero(S[0,:])
-        @test_throws BoundsError S[0.1,0]
-        @test_throws BoundsError S[-1,1]
+        @test_throws BoundsError(S, (0.1, 0)) S[0.1,0]
+        @test_throws BoundsError(S, (-1, 1)) S[-1,1]
 
         @test S \ diff(H) == diagm(0 => fill(-1,4), 1 => fill(1, 4))[1:end-1,:]
 
