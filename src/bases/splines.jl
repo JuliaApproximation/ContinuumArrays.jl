@@ -28,7 +28,7 @@ axes(B::Spline{o}) where o =
 ==(A::Spline{o}, B::Spline{o}) where o = A.points == B.points
 
 function getindex(B::LinearSpline{T}, x::Number, k::Int) where T
-    x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)|| throw(BoundsError())
+    @boundscheck (x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)) || throw(BoundsError(B, (x, k)))
 
     p = B.points
     n = length(p)
@@ -41,7 +41,7 @@ function getindex(B::LinearSpline{T}, x::Number, k::Int) where T
 end
 
 function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
-    x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)|| throw(BoundsError())
+    @boundscheck (x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)) || throw(BoundsError(B, (x, k)))
 
     p = B.points
     p[k] < x < p[k+1] && return one(T)
@@ -51,7 +51,7 @@ function getindex(B::HeavisideSpline{T}, x::Number, k::Int) where T
 end
 
 function getindex(B::Spline{-1,T}, x::Number, k::Int) where T
-    x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)|| throw(BoundsError())
+    @boundscheck (x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)) || throw(BoundsError(B, (x, k)))
 
     p = B.points
     p[k+1] == x && return convert(T,Inf)
