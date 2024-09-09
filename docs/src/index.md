@@ -35,6 +35,9 @@ expand
 ```@docs
 grid
 ```
+```@docs 
+plotgrid
+```
 
 
 ## Interal Routines
