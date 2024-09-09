@@ -17,6 +17,7 @@ product of the specified sizes, similar to `plan_fft`.
 2. `diff(::MyBasis, dims=1)` to support differentiation and `Derivative`. 
 3. `grammatrix(::MyBasis)` to support `Q'Q`. 
 4. `ContinuumArrays._sum(::MyBasis, dims)` and `ContinuumArrays._cumsum(::MyBasis, dims)` to support definite and indefinite integeration.
+5. `plotgrid(::MyBasis, n...)`: return `n` grid points suitable for plotting the basis. The default value for `n` is 10,000. 
 
 
 ## Routines
