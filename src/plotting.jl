@@ -9,7 +9,6 @@ returns a grid of points suitable for plotting. This may include
 endpoints or singular points not included in `grid`. `n` specifies
 the number of coefficients.
 """
-
 plotgrid(P, n...) = plotgrid_layout(MemoryLayout(P), P, n...)
 
 plotgrid_layout(lay, P, n...) = plotgrid_size(size(P), P, n...)
