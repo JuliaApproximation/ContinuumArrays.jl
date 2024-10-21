@@ -1,4 +1,5 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
+using ContinuumArrays, LinearAlgebra, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
+using FastTransforms
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
                         SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis, grammatrix
@@ -159,6 +160,8 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
 
         ã = T * (T \ a)
         @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
+
+        @test T'*(a .* T) isa Matrix
     end
 
     @testset "sum/dot/diff" begin
