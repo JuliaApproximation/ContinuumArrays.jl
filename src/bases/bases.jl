@@ -122,7 +122,7 @@ copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractWeightLayout}) = transform_ldiv(L.A
 @inline function _broadcast_mul_ldiv(::Tuple{Any,AbstractBasisLayout}, A, B)
     a,b = arguments(B)
     @assert a isa AbstractQuasiVector # Only works for vec .* mat
-    ab = expand(a) .* b # broadcasted should be overloaded
+    ab = (A * (A \ a)) .* b # broadcasted should be overloaded
     MemoryLayout(ab) isa BroadcastLayout && return transform_ldiv(A, ab)
     A \ ab
 end
@@ -158,7 +158,7 @@ copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)}}) = _broadcast_mul_
     a,b = arguments(B)
     @assert a isa AbstractQuasiVector # Only works for vec .* mat
     A = Ac'
-    ab = expand(a) .* b # broadcasted should be overloaded
+    ab = (A * (A \ a)) .* b # broadcasted should be overloaded
     MemoryLayout(ab) isa BroadcastLayout && return Ac*transform_ldiv(A, ab)
     Ac*ab
 end
