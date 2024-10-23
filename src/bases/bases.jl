@@ -184,6 +184,14 @@ end
 _broadcast_mul_adj(::Tuple{ScalarLayout,AbstractBasisLayout}, A, B) = _broadcast_mul_adj((ScalarLayout(),UnknownLayout()), A, B)
 _broadcast_mul_adj(_, A, B) = copy(Mul{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
 
+_broadcast_mul_adj_simplifiable(_, ::AbstractBasisLayout) = Val(true)
+_broadcast_mul_adj_simplifiable(_, ::ApplyLayout{typeof(*)}) = Val(true)
+_broadcast_mul_adj_simplifiable(::ScalarLayout, _) = Val(true)
+_broadcast_mul_adj_simplifiable(::ScalarLayout, ::ApplyLayout{typeof(*)}) = Val(true)
+_broadcast_mul_adj_simplifiable(::ScalarLayout, ::AbstractBasisLayout) = Val(true)
+_broadcast_mul_adj_simplifiable(_, _) = Val(false)
+
+simplifiable(L::Mul{<:AdjointBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_adj_simplifiable(map(MemoryLayout,arguments(L.B))...)
 copy(L::Mul{<:AdjointBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_adj(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 
 
