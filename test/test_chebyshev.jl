@@ -166,6 +166,7 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test_broken T'f isa Vector
         @test T'ã isa Vector
         @test T'*(ã .* ã) isa Vector
+        @test (2T)'*(a .* T) isa Matrix
     end
 
     @testset "sum/dot/diff" begin
