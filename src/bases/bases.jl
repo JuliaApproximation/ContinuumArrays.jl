@@ -690,6 +690,7 @@ diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(
 ####
 
 simplifiable(::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout}) = Val(true)
+@inline simplifiable(L::Mul{<:AdjointBasisLayout,ApplyLayout{typeof(*)}}) = simplifiable(*, L.A, first(arguments(*, L.B)))
 function copy(M::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout})
     A = (M.A)'
     A == M.B && return grammatrix(A)

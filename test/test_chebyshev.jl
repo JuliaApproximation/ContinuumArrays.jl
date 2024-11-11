@@ -167,6 +167,10 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test T'ã isa Vector
         @test T'*(ã .* ã) isa Vector
         @test (2T)'*(a .* T) isa Matrix
+        @test T'*(2T) isa Matrix
+        @test T'*(2T*randn(5)) isa Vector
+        @test LazyArrays.simplifiable(*, T', T*(1:5)) == Val(true)
+        @test (2T)'*(T*(1:5)) ≈ T'*(2T*(1:5)) ≈ T'BroadcastQuasiMatrix(*, 2, T*(1:5))
     end
 
     @testset "sum/dot/diff" begin
