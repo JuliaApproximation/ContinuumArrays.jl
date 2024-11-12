@@ -178,6 +178,7 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test LazyArrays.simplifiable(*, T', a .* T) == Val(true)
         @test LazyArrays.simplifiable(*, T', 2T) == Val(true)
         @test LazyArrays.simplifiable(*, T', BroadcastQuasiMatrix(*, 2, T*(1:5))) == Val(true)
+        @test LazyArrays.simplifiable(*, T', BroadcastQuasiMatrix(*, 2, 2T)) == Val(true)
     end
 
     @testset "sum/dot/diff" begin
