@@ -10,7 +10,6 @@ is `union(m)`.
 Maps must also overload `invmap` to give the inverse of the map, which
 is equivalent to `invmap(m)[x] == findfirst(isequal(x), m)`.
 """
-
 abstract type Map{T} <: AbstractQuasiVector{T} end
 
 invmap(M::Map) = error("Overload invmap(::$(typeof(M)))")
