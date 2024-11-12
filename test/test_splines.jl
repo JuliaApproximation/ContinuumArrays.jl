@@ -362,7 +362,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test Δ == -(*(B',D',D,B))
         @test Δ == -(B'D'D*B)
         @test Δ == -((B'D')*(D*B))
-        @test_broken Δ == -B'*(D'D)*B
+        @test Δ == -B'*(D'D)*B
         @test Δ == -(B'*(D'D)*B)
 
         f = L*exp.(L.points) # project exp(x)

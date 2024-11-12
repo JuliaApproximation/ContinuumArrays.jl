@@ -145,8 +145,7 @@ function _broadcast_mul_ldiv(::Tuple{ScalarLayout,ApplyLayout{typeof(*)}}, A, B)
     a * (A \ b)
 end
 
-_broadcast_mul_ldiv(::Tuple{ScalarLayout,AbstractBasisLayout}, A, B) =
-    _broadcast_mul_ldiv((ScalarLayout(),UnknownLayout()), A, B)
+_broadcast_mul_ldiv(::Tuple{ScalarLayout,AbstractBasisLayout}, A, B) = _broadcast_mul_ldiv((ScalarLayout(),UnknownLayout()), A, B)
 _broadcast_mul_ldiv(_, A, B) = copy(Ldiv{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
 
 copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_ldiv(map(MemoryLayout,arguments(L.B)), L.A, L.B)
@@ -154,6 +153,46 @@ copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof(*)}}) = _broadcast_mul_
 
 
 
+# multiplication operators, reexpand in basis A
+@inline function _broadcast_mul_adj(::Tuple{Any,AbstractBasisLayout}, Ac, B)
+    a,b = arguments(B)
+    @assert a isa AbstractQuasiVector # Only works for vec .* mat
+    A = Ac'
+    ab = (A * (A \ a)) .* b # broadcasted should be overloaded
+    MemoryLayout(ab) isa BroadcastLayout && return Ac*transform_ldiv(A, ab)
+    Ac*ab
+end
+
+@inline function _broadcast_mul_adj(::Tuple{Any,ApplyLayout{typeof(*)}}, Ac, B)
+    a,b = arguments(B)
+    @assert a isa AbstractQuasiVector # Only works for vec .* mat
+    args = arguments(*, b)
+    *(Ac*(a .* first(args)), tail(args)...)
+end
+
+
+function _broadcast_mul_adj(::Tuple{ScalarLayout,Any}, Ac, B)
+    a,b = arguments(B)
+    a * (Ac*b)
+end
+
+function _broadcast_mul_adj(::Tuple{ScalarLayout,ApplyLayout{typeof(*)}}, Ac, B)
+    a,b = arguments(B)
+    a * (Ac*b)
+end
+
+_broadcast_mul_adj(::Tuple{ScalarLayout,AbstractBasisLayout}, A, B) = _broadcast_mul_adj((ScalarLayout(),UnknownLayout()), A, B)
+_broadcast_mul_adj(_, A, B) = copy(Mul{typeof(MemoryLayout(A)),UnknownLayout}(A,B))
+
+_broadcast_mul_adj_simplifiable(_, ::AbstractBasisLayout) = Val(true)
+_broadcast_mul_adj_simplifiable(_, ::ApplyLayout{typeof(*)}) = Val(true)
+_broadcast_mul_adj_simplifiable(::ScalarLayout, _) = Val(true)
+_broadcast_mul_adj_simplifiable(::ScalarLayout, ::ApplyLayout{typeof(*)}) = Val(true)
+_broadcast_mul_adj_simplifiable(::ScalarLayout, ::AbstractBasisLayout) = Val(true)
+_broadcast_mul_adj_simplifiable(_, _) = Val(false)
+
+simplifiable(L::Mul{<:AdjointBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_adj_simplifiable(map(MemoryLayout,arguments(L.B))...)
+copy(L::Mul{<:AdjointBasisLayout,BroadcastLayout{typeof(*)}}) = _broadcast_mul_adj(map(MemoryLayout,arguments(L.B)), L.A, L.B)
 
 
 """
@@ -651,6 +690,7 @@ diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(
 ####
 
 simplifiable(::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout}) = Val(true)
+@inline simplifiable(L::Mul{<:AdjointBasisLayout,ApplyLayout{typeof(*)}}) = simplifiable(*, L.A, first(arguments(*, L.B)))
 function copy(M::Mul{<:AdjointBasisLayout, <:AbstractBasisLayout})
     A = (M.A)'
     A == M.B && return grammatrix(A)

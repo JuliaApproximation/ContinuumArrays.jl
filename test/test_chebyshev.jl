@@ -1,4 +1,5 @@
-using ContinuumArrays, LinearAlgebra, FastTransforms, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
+using ContinuumArrays, LinearAlgebra, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
+using FastTransforms
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
                         SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis, grammatrix
@@ -159,6 +160,25 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
 
         ã = T * (T \ a)
         @test T \ (ã .* ã) ≈ [1.5,1,0.5,0,0]
+
+        @test T'*(a .* T) isa Matrix
+        @test T'*(a .* (T * (T \ a))) isa Vector
+        @test_broken T'f isa Vector
+        @test T'ã isa Vector
+        @test T'*(ã .* ã) isa Vector
+        @test (2T)'*(a .* T) isa Matrix
+        @test T'*(2T) isa Matrix
+        @test T'*(2T*randn(5)) isa Vector
+        @test (2T)'*(T*(1:5)) ≈ T'*(2T*(1:5)) ≈ T'BroadcastQuasiMatrix(*, 2, T*(1:5))
+        @test T' * (a .* (T * (1:5))) ≈ T' * ((a .* T) * (1:5))
+        @test T'BroadcastQuasiMatrix(*, 2, 2T) == 4*(T'T)
+        
+        @test LazyArrays.simplifiable(*, T', T*(1:5)) == Val(true)
+        @test LazyArrays.simplifiable(*, T', (a .* (T * (1:5)))) == Val(true)
+        @test LazyArrays.simplifiable(*, T', a .* T) == Val(true)
+        @test LazyArrays.simplifiable(*, T', 2T) == Val(true)
+        @test LazyArrays.simplifiable(*, T', BroadcastQuasiMatrix(*, 2, T*(1:5))) == Val(true)
+        @test LazyArrays.simplifiable(*, T', BroadcastQuasiMatrix(*, 2, 2T)) == Val(true)
     end
 
     @testset "sum/dot/diff" begin
