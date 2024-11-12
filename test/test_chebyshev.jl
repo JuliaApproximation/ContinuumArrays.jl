@@ -171,6 +171,7 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test T'*(2T*randn(5)) isa Vector
         @test (2T)'*(T*(1:5)) ≈ T'*(2T*(1:5)) ≈ T'BroadcastQuasiMatrix(*, 2, T*(1:5))
         @test T' * (a .* (T * (1:5))) ≈ T' * ((a .* T) * (1:5))
+        @test T'BroadcastQuasiMatrix(*, 2, 2T) == 4*(T'T)
         
         @test LazyArrays.simplifiable(*, T', T*(1:5)) == Val(true)
         @test LazyArrays.simplifiable(*, T', (a .* (T * (1:5)))) == Val(true)
