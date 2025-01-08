@@ -9,7 +9,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
                         simplifiable, _simplify, AbstractLazyLayout, AbstractPaddedLayout, simplify, Dot
-import LinearAlgebra: pinv, inv, dot, norm2, ldiv!, mul!
+import LinearAlgebra: pinv, inv, dot, norm, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
 import FillArrays: AbstractFill, getindex_value, SquareEye
@@ -38,7 +38,7 @@ Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
 first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
 last(S::Inclusion{<:Any,<:AbstractInterval}) = rightendpoint(S.domain)
 
-norm2(x::Inclusion{T,<:AbstractInterval}) where T = sqrt(dot(x,x))
+norm(x::Inclusion{T,<:AbstractInterval}) where T = sqrt(dot(x,x))
 
 function dot(x::Inclusion{T,<:AbstractInterval}, y::Inclusion{V,<:AbstractInterval}) where {T,V}
     x == y || throw(DimensionMismatch("first quasivector has axis $(x) which does not match the axis of the second, $(y)."))
