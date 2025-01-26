@@ -660,6 +660,8 @@ cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}
 ###
 # diff
 ###
+diff_layout(::AbstractBasisLayout, Vm; dims...) = error("Overload diff(::$(typeof(Vm)))")
+
 function diff_layout(::SubBasisLayout, Vm, order...; dims::Integer=1)
     dims == 1 || error("not implemented")
     diff(parent(Vm), order...)[:,parentindices(Vm)[2]]
@@ -716,7 +718,7 @@ end
 computes ``|Δ|^α * A``. 
 """
 abslaplacian(A, order...; dims...) = abslaplacian_layout(MemoryLayout(A), A, order...; dims...)
-abslaplacian_layout(_, A, order...; dims...) = abslaplacian_axis(axes(A,1), A, order...; dims...)
+abslaplacian_layout(layout, A, order...; dims...) = abslaplacian_axis(axes(A,1), A, order...; dims...)
 abslaplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = -diff(A, 2order; dims...)
 
 laplacian(A; dims...) = -abslaplacian(A; dims...)
