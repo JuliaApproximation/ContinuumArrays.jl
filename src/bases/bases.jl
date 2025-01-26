@@ -661,6 +661,11 @@ cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}
 # diff
 ###
 diff_layout(::AbstractBasisLayout, Vm; dims...) = error("Overload diff(::$(typeof(Vm)))")
+function diff_layout(::AbstractBasisLayout, a, order; dims...)
+    order < 0 && throw(ArgumentError("order must be non-negative"))
+    order == 0 && return a
+    isone(order) ? diff(a) : diff(diff(a), order-1)
+end
 
 function diff_layout(::SubBasisLayout, Vm, order...; dims::Integer=1)
     dims == 1 || error("not implemented")
