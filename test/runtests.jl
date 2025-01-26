@@ -39,7 +39,7 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
         D = Derivative(x)
         @test D == Derivative{Float64}(x) == Derivative{Float64}(-1..1)
         @test D*x ≡ QuasiOnes(x)
-        @test D^2 * x ≡ QuasiZeros(x)
+        @test D^2 * x == zeros(x)
         @test D*[x D*x] == [D*x D^2*x]
         @test stringmime("text/plain", D) == "Derivative(Inclusion($(-1..1)))"
         @test_throws DimensionMismatch Derivative(Inclusion(0..1)) * x

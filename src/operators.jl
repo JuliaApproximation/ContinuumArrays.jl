@@ -119,41 +119,47 @@ struct Derivative{T,D,Order} <: LazyQuasiMatrix{T}
     order::Order
 end
 
-Derivative{T, D}(axis::Inclusion{<:Any,D}, order=1) where {T,D} = Derivative{T,D,typeof(order)}(axis, order)
+Derivative{T, D}(axis::Inclusion{<:Any,D}, order) where {T,D} = Derivative{T,D,typeof(order)}(axis, order)
+Derivative{T, D}(axis::Inclusion{<:Any,D}) where {T,D} = Derivative{T,D,Nothing}(axis, nothing)
 Derivative{T}(axis::Inclusion{<:Any,D}, order...) where {T,D} = Derivative{T,D}(axis, order...)
 Derivative{T}(domain, order...) where T = Derivative{T}(Inclusion(domain), order...)
 
+Derivative(ax::AbstractQuasiVector{T}, order...) where T = Derivative{eltype(ax)}(ax, order...)
 Derivative(L::AbstractQuasiMatrix, order...) = Derivative(axes(L,1), order...)
 
 show(io::IO, a::Derivative) = summary(io, a)
+function summary(io::IO, D::Derivative{T,Dom,Nothing}) where {T,Dom}
+    print(io, "Derivative(")
+    summary(io, D.axis)
+    print(io,")")
+end
+
 function summary(io::IO, D::Derivative)
     print(io, "Derivative(")
     summary(io, D.axis)
-    if D.order ≠ 1
-        print(io, ", ")
-        print(io, D.order)
-    end
+    print(io, ", ")
+    print(io, D.order)
     print(io,")")
 end
 
 axes(D::Derivative) = (D.axis, D.axis)
 ==(a::Derivative, b::Derivative) = a.axis == b.axis && a.order == b.order
-copy(D::Derivative) = Derivative(copy(D.axis), copy(D.order))
+copy(D::Derivative) = D
 
-@simplify function *(D::Derivative, B::AbstractQuasiMatrix)
+
+@simplify function *(D::Derivative, B::AbstractQuasiVecOrMat)
     T = typeof(zero(eltype(D)) * zero(eltype(B)))
-    diff(convert(AbstractQuasiMatrix{T}, B), D.order; dims=1)
+    if D.order isa Nothing
+        diff(convert(AbstractQuasiArray{T}, B))
+    else
+        diff(convert(AbstractQuasiArray{T}, B), D.order)
+    end
 end
 
-@simplify function *(D::Derivative, B::AbstractQuasiVector)
-    T = typeof(zero(eltype(D)) * zero(eltype(B)))
-    diff(convert(AbstractQuasiVector{T}, B), D.order)
-end
 
 
-
-
-^(D::Derivative, k::Integer) = Derivative(D.axis, D.order .* k)
+^(D::Derivative{T,Dom,Nothing}, k::Integer) where {T,Dom} = Derivative{T}(D.axis, k)
+^(D::Derivative{T}, k::Integer) where T = Derivative{T}(D.axis, D.order .* k)
 
 
 function view(D::Derivative, kr::Inclusion, jr::Inclusion)
@@ -175,3 +181,43 @@ struct OperatorLayout <: AbstractLazyLayout end
 MemoryLayout(::Type{<:Derivative}) = OperatorLayout()
 # copy(M::Mul{OperatorLayout, <:ExpansionLayout}) = simplify(M)
 # copy(M::Mul{OperatorLayout, <:AbstractLazyLayout}) = M.A * expand(M.B)
+
+
+# Laplacian
+
+struct Laplacian{T,D} <: LazyQuasiMatrix{T}
+    axis::Inclusion{T,D}
+end
+
+Laplacian{T}(axis::Inclusion{<:Any,D}) where {T,D} = Laplacian{T,D}(axis)
+# Laplacian{T}(domain) where T = Laplacian{T}(Inclusion(domain))
+# Laplacian(axis) = Laplacian{eltype(axis)}(axis)
+
+axes(D::Laplacian) = (D.axis, D.axis)
+==(a::Laplacian, b::Laplacian) = a.axis == b.axis
+copy(D::Laplacian) = Laplacian(copy(D.axis))
+
+@simplify function *(D::Laplacian, B::AbstractQuasiVecOrMat)
+    T = typeof(zero(eltype(D)) * zero(eltype(B)))
+    laplacian(convert(AbstractQuasiArray{T}, B))
+end
+
+
+
+# Negative fractional Laplacian (-Δ)^α or equiv. abs(Δ)^α
+
+struct AbsLaplacian{T,D,A} <: LazyQuasiMatrix{T}
+    axis::Inclusion{T,D}
+    order::A
+end
+
+AbsLaplacian{T}(axis::Inclusion{<:Any,D},α=1) where {T,D} = AbsLaplacian{T,D,typeof(α)}(axis,α)
+
+axes(D:: AbsLaplacian) = (D.axis, D.axis)
+==(a:: AbsLaplacian, b:: AbsLaplacian) = a.axis == b.axis && a.α == b.α
+copy(D:: AbsLaplacian) = AbsLaplacian(copy(D.axis), D.α)
+
+abs(Δ::Laplacian) = AbsLaplacian(axes(Δ,1))
+-(Δ::Laplacian) = abs(Δ)
+
+^(D::AbsLaplacian, k) = AbsLaplacian(D.axis, D.α*k)

@@ -660,29 +660,31 @@ cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}
 ###
 # diff
 ###
-
-diff_layout(::AbstractBasisLayout, Vm, dims...) = error("Overload diff(::$(typeof(Vm)))")
-
-function diff_layout(::SubBasisLayout, Vm, dims::Integer=1)
+function diff_layout(::SubBasisLayout, Vm, order...; dims::Integer=1)
     dims == 1 || error("not implemented")
-    diff(parent(Vm); dims=dims)[:,parentindices(Vm)[2]]
+    diff(parent(Vm), order...)[:,parentindices(Vm)[2]]
 end
 
-function diff_layout(::WeightedBasisLayout{SubBasisLayout}, Vm, dims::Integer=1)
+function diff_layout(::WeightedBasisLayout{SubBasisLayout}, Vm, order...; dims::Integer=1)
     dims == 1 || error("not implemented")
     w = weight(Vm)
     V = unweighted(Vm)
-    view(diff(w .* parent(V)), parentindices(V)...)
+    view(diff(w .* parent(V), order...), parentindices(V)...)
 end
 
-function diff_layout(::MappedBasisLayouts, V, dims::Integer=1)
-    kr = basismap(V)
-    @assert kr isa AbstractAffineQuasiVector
-    D = diff(demap(V); dims=dims)
+diff_layout(::MappedBasisLayouts, V, order...; dims...) = diff_mapped(basismap(V), V, order...; dims...)
+
+function diff_mapped(kr::AbstractAffineQuasiVector, V; dims...)
+    D = diff(demap(V); dims...)
     view(basis(D), kr, :) * (kr.A*coefficients(D))
 end
 
-diff_layout(::ExpansionLayout, A, dims...) = diff_layout(ApplyLayout{typeof(*)}(), A, dims...)
+function diff_mapped(kr::AbstractAffineQuasiVector, V, order::Int; dims...)
+    D = diff(demap(V), order; dims)
+    view(basis(D), kr, :) * (kr.A^order*coefficients(D))
+end
+
+diff_layout(::ExpansionLayout, A, order...; dims...) = diff_layout(ApplyLayout{typeof(*)}(), A, order...; dims...)
 
 
 ####
@@ -707,6 +709,17 @@ function grammatrix_layout(::MappedBasisLayouts, P)
     @assert kr isa AbstractAffineQuasiVector
     grammatrix(Q)/kr.A
 end
+
+"""
+    abslaplacian(A, α=1)
+
+computes ``|Δ|^α * A``. 
+"""
+abslaplacian(A, order...; dims...) = abslaplacian_layout(MemoryLayout(A), A, order...; dims...)
+abslaplacian_layout(_, A, order...; dims...) = abslaplacian_axis(axes(A,1), A, order...; dims...)
+abslaplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = -diff(A, 2order; dims...)
+
+laplacian(A; dims...) = -abslaplacian(A; dims...)
 
 weaklaplacian(A) = weaklaplacian_layout(MemoryLayout(A), A)
 weaklaplacian_layout(_, A) = weaklaplacian_axis(axes(A,1), A)
