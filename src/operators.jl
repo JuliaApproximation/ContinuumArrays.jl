@@ -114,40 +114,46 @@ Derivative(axis)
 represents the differentiation (or finite-differences) operator on the
 specified axis.
 """
-struct Derivative{T,D} <: LazyQuasiMatrix{T}
+struct Derivative{T,D,Order} <: LazyQuasiMatrix{T}
     axis::Inclusion{T,D}
+    order::Order
 end
 
-Derivative{T}(axis::Inclusion{<:Any,D}) where {T,D} = Derivative{T,D}(axis)
-Derivative{T}(domain) where T = Derivative{T}(Inclusion(domain))
+Derivative{T, D}(axis::Inclusion{<:Any,D}, order=1) where {T,D} = Derivative{T,D,typeof(order)}(axis, order)
+Derivative{T}(axis::Inclusion{<:Any,D}, order...) where {T,D} = Derivative{T,D}(axis, order...)
+Derivative{T}(domain, order...) where T = Derivative{T}(Inclusion(domain), order...)
 
-Derivative(L::AbstractQuasiMatrix) = Derivative(axes(L,1))
+Derivative(L::AbstractQuasiMatrix, order...) = Derivative(axes(L,1), order...)
 
 show(io::IO, a::Derivative) = summary(io, a)
 function summary(io::IO, D::Derivative)
     print(io, "Derivative(")
-    summary(io,D.axis)
+    summary(io, D.axis)
+    if D.order ≠ 1
+        print(io, ", ")
+        print(io, D.order)
+    end
     print(io,")")
 end
 
 axes(D::Derivative) = (D.axis, D.axis)
-==(a::Derivative, b::Derivative) = a.axis == b.axis
-copy(D::Derivative) = Derivative(copy(D.axis))
+==(a::Derivative, b::Derivative) = a.axis == b.axis && a.order == b.order
+copy(D::Derivative) = Derivative(copy(D.axis), copy(D.order))
 
 @simplify function *(D::Derivative, B::AbstractQuasiMatrix)
     T = typeof(zero(eltype(D)) * zero(eltype(B)))
-    diff(convert(AbstractQuasiMatrix{T}, B); dims=1)
+    diff(convert(AbstractQuasiMatrix{T}, B), D.order; dims=1)
 end
 
 @simplify function *(D::Derivative, B::AbstractQuasiVector)
     T = typeof(zero(eltype(D)) * zero(eltype(B)))
-    diff(convert(AbstractQuasiVector{T}, B))
+    diff(convert(AbstractQuasiVector{T}, B), D.order)
 end
 
 
 
 
-^(D::Derivative, k::Integer) = ApplyQuasiArray(^, D, k)
+^(D::Derivative, k::Integer) = Derivative(D.axis, D.order .* k)
 
 
 function view(D::Derivative, kr::Inclusion, jr::Inclusion)
