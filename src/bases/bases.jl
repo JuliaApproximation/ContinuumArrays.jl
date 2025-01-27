@@ -421,6 +421,8 @@ basis_axes(ax, v) = error("Overload for $ax")
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any,Vararg{Any}}}) where N = ApplyArray(*, tail(v.args)...)
 
+coefficients(B::Basis{T}) where T = SquareEye{T}((axes(B,2),))
+
 
 function unweighted(lay::ExpansionLayout, a)
     wP,c = arguments(lay, a)
@@ -726,8 +728,28 @@ abslaplacian(A, order...; dims...) = abslaplacian_layout(MemoryLayout(A), A, ord
 abslaplacian_layout(layout, A, order...; dims...) = abslaplacian_axis(axes(A,1), A, order...; dims...)
 abslaplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = -diff(A, 2order; dims...)
 
-laplacian(A; dims...) = -abslaplacian(A; dims...)
+laplacian(A, order...; dims...) = laplacian_layout(MemoryLayout(A), A, order...; dims...)
+laplacian_layout(layout, A, order...; dims...) = laplacian_axis(axes(A,1), A, order...; dims...)
+laplacian_axis(::Inclusion{<:Number}, A, order...; dims...) = -abslaplacian(A, order...)
 
+
+
+function abslaplacian_layout(::SubBasisLayout, Vm, order...; dims::Integer=1)
+    dims == 1 || error("not implemented")
+    abslaplacian(parent(Vm), order...)[:,parentindices(Vm)[2]]
+end
+
+function laplacian_layout(::SubBasisLayout, Vm, order...; dims::Integer=1)
+    dims == 1 || error("not implemented")
+    laplacian(parent(Vm), order...)[:,parentindices(Vm)[2]]
+end
+
+
+"""
+    weaklaplacian(A)
+
+represents the weak Laplacian.
+"""
 weaklaplacian(A) = weaklaplacian_layout(MemoryLayout(A), A)
 weaklaplacian_layout(_, A) = weaklaplacian_axis(axes(A,1), A)
 weaklaplacian_axis(::Inclusion{<:Number}, A) = -(diff(A)'diff(A))

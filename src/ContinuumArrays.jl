@@ -24,7 +24,7 @@ import InfiniteArrays: Infinity, InfAxes
 import AbstractFFTs: Plan
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, basis, coefficients,
-        weaklaplacian, laplacian, Laplacian
+        weaklaplacian, laplacian, Laplacian, AbsLaplacian, abslaplacian
 
 
 

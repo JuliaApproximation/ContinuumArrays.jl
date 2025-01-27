@@ -141,6 +141,8 @@ struct AbsLaplacian{T,D<:Inclusion,Order} <: LazyQuasiMatrix{T}
     order::Order
 end
 
+_operatororder(D) = something(D.order, 1)
+
 for (Op, op) in ((:Derivative, :diff), (:Laplacian, :laplacian), (:AbsLaplacian, :abslaplacian))
     @eval begin
         $Op{T, D}(axis::D, order) where {T,D<:Inclusion} = $Op{T,D,typeof(order)}(axis, order)
@@ -167,7 +169,7 @@ for (Op, op) in ((:Derivative, :diff), (:Laplacian, :laplacian), (:AbsLaplacian,
         end
 
         axes(D::$Op) = (D.axis, D.axis)
-        ==(a::$Op, b::$Op) = a.axis == b.axis && a.order == b.order
+        ==(a::$Op, b::$Op) = a.axis == b.axis && _operatororder(a) == _operatororder(b)
         copy(D::$Op) = D
 
 
@@ -180,8 +182,9 @@ for (Op, op) in ((:Derivative, :diff), (:Laplacian, :laplacian), (:AbsLaplacian,
             end
         end
 
-        ^(D::$Op{T,<:Inclusion,Nothing}, k::Integer) where T = $Op{T}(D.axis, k)
-        ^(D::$Op{T}, k::Integer) where T = $Op{T}(D.axis, D.order .* k)
+        ^(D::$Op{T}, k::Integer) where T = $Op{T}(D.axis, _operatororder(D) .* k)
+
+        @simplify *(D1::$Op, D2::$Op) = $Op{promote_type(eltype(D1),eltype(D2))}(D1.axis, _operatororder(D1)+_operatororder(D2))
 
         function view(D::$Op, kr::Inclusion, jr::Inclusion)
             @boundscheck axes(D,1) == kr == jr || throw(BoundsError(D,(kr,jr)))
@@ -210,4 +213,6 @@ MemoryLayout(::Type{<:Derivative}) = OperatorLayout()
 
 abs(Δ::Laplacian{T}) where T = AbsLaplacian{T}(axes(Δ,1), Δ.order)
 -(Δ::Laplacian{<:Any,<:Any,Nothing}) = abs(Δ)
--(Δ::AbsLaplacian{T,<:Any,Nothing}) where T = Laplacian{T}(Δ.axis, Δ.order)
+-(Δ::AbsLaplacian{T,<:Any,Nothing}) where T = Laplacian{T}(Δ.axis)
+
+^(Δ::AbsLaplacian{T}, k::Real) where T = AbsLaplacian{T}(Δ.axis, _operatororder(Δ)*k)
