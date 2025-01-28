@@ -45,6 +45,8 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test sum(H/H \ exp.(x)) ≈ ℯ-1 atol=1E-5
             @test last(cumsum(H/H \ exp.(x))) ≈ sum(H/H\exp.(x))
         end
+
+        @test coefficients(H) ≡ Eye(2)
     end
 
     @testset "LinearSpline" begin
@@ -162,6 +164,11 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test eltype(D*L) == Float64
         @test typeof(diff(L)) == typeof(diff(L; dims=1)) == typeof(D*L)
         @test_throws ErrorException diff(L; dims=2)
+
+        @test diff(L,0) ≡ L
+        @test diff(f,0) ≡ f
+        @test diff(L,2)[1.1,:] == laplacian(L)[1.1,:] == -abslaplacian(L)[1.1,:]
+        @test diff(f,2)[1.1] == laplacian(f)[1.1] == -abslaplacian(f)[1.1]
 
         M = applied(*, (D*L).args..., [1,2,4])
         @test eltype(materialize(M)) == Float64

@@ -20,12 +20,35 @@ product of the specified sizes, similar to `plan_fft`.
 5. `plotgrid(::MyBasis, n...)`: return `n` grid points suitable for plotting the basis. The default value for `n` is 10,000. 
 
 
-## Routines
+## Differential Operators
 
 
 ```@docs
 Derivative
 ```
+
+```@docs
+Laplacian
+```
+
+```@docs
+AbsLaplacian
+```
+
+```@docs
+laplacian
+```
+
+```@docs
+abslaplacian
+```
+
+```@docs
+weaklaplacian
+```
+
+## Routines
+
 ```@docs
 transform
 ```
