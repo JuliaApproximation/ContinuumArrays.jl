@@ -46,7 +46,7 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test last(cumsum(H/H \ exp.(x))) ≈ sum(H/H\exp.(x))
         end
 
-        @test coefficients(H) ≡ Eye(2)
+        @test coefficients(H) ≡ Eye(size(H,2))
     end
 
     @testset "LinearSpline" begin
