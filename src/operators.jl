@@ -108,13 +108,15 @@ show(io::IO, ::MIME"text/plain", δ::DiracDelta) = show(io, δ)
 # Differentiation
 #########
 
+abstract type AbstractDifferentialQuasiMatrix{T} <: LazyQuasiMatrix{T} end
+
 """
 Derivative(axis)
 
 represents the differentiation (or finite-differences) operator on the
 specified axis.
 """
-struct Derivative{T,D<:Inclusion,Order} <: LazyQuasiMatrix{T}
+struct Derivative{T,D<:Inclusion,Order} <: AbstractDifferentialQuasiMatrix{T}
     axis::D
     order::Order
 end
@@ -125,7 +127,7 @@ Laplacian(axis)
 represents the laplacian operator `Δ` on the
 specified axis.
 """
-struct Laplacian{T,D<:Inclusion,Order} <: LazyQuasiMatrix{T}
+struct Laplacian{T,D<:Inclusion,Order} <: AbstractDifferentialQuasiMatrix{T}
     axis::D
     order::Order
 end
@@ -136,14 +138,42 @@ AbsLaplacian(axis)
 represents the positive-definite/negative/absolute-value laplacian operator `|Δ| ≡ -Δ` on the
 specified axis.
 """
-struct AbsLaplacian{T,D<:Inclusion,Order} <: LazyQuasiMatrix{T}
+struct AbsLaplacian{T,D<:Inclusion,Order} <: AbstractDifferentialQuasiMatrix{T}
     axis::D
     order::Order
 end
 
-_operatororder(D) = something(D.order, 1)
+operatororder(D) = something(D.order, 1)
 
-for (Op, op) in ((:Derivative, :diff), (:Laplacian, :laplacian), (:AbsLaplacian, :abslaplacian))
+show(io::IO, a::AbstractDifferentialQuasiMatrix) = summary(io, a)
+axes(D::AbstractDifferentialQuasiMatrix) = (D.axis, D.axis)
+==(a::AbstractDifferentialQuasiMatrix, b::AbstractDifferentialQuasiMatrix) = a.axis == b.axis && operatororder(a) == operatororder(b)
+copy(D::AbstractDifferentialQuasiMatrix) = D
+
+
+
+@simplify function *(D::AbstractDifferentialQuasiMatrix, B::AbstractQuasiVecOrMat)
+    T = typeof(zero(eltype(D)) * zero(eltype(B)))
+    operatorcall(D, convert(AbstractQuasiArray{T}, B), D.order)
+end
+
+^(D::AbstractDifferentialQuasiMatrix{T}, k::Integer) where T = similaroperator(D, D.axis, operatororder(D) .* k)
+
+function view(D::AbstractDifferentialQuasiMatrix, kr::Inclusion, jr::Inclusion)
+    @boundscheck axes(D,1) == kr == jr || throw(BoundsError(D,(kr,jr)))
+    D
+end
+
+operatorcall(D::AbstractDifferentialQuasiMatrix, B, order) = operatorcall(D)(B, order)
+operatorcall(D::AbstractDifferentialQuasiMatrix, B, ::Nothing) = operatorcall(D)(B)
+
+
+operatorcall(::Derivative) = diff
+operatorcall(::Laplacian) = laplacian
+operatorcall(::AbsLaplacian) = abslaplacian
+
+
+for Op in (:Derivative, :Laplacian, :AbsLaplacian)
     @eval begin
         $Op{T, D}(axis::D, order) where {T,D<:Inclusion} = $Op{T,D,typeof(order)}(axis, order)
         $Op{T, D}(axis::D) where {T,D<:Inclusion} = $Op{T,D,Nothing}(axis, nothing)
@@ -153,42 +183,20 @@ for (Op, op) in ((:Derivative, :diff), (:Laplacian, :laplacian), (:AbsLaplacian,
         $Op(ax::AbstractQuasiVector{T}, order...) where T = $Op{eltype(eltype(ax))}(ax, order...)
         $Op(L::AbstractQuasiMatrix, order...) = $Op(axes(L,1), order...)
 
-        show(io::IO, a::$Op) = summary(io, a)
-        function summary(io::IO, D::$Op{<:Any,<:Inclusion,Nothing})
-            print(io, "$($Op)(")
-            summary(io, D.axis)
-            print(io,")")
-        end
+        similaroperator(D::$Op, ax, ord) = $Op{eltype(D)}(ax, ord)
+
+        simplifiable(::typeof(*), A::$Op, B::$Op) = Val(true)
+        *(D1::$Op, D2::$Op) = similaroperator(convert(AbstractQuasiMatrix{promote_type(eltype(D1),eltype(D2))}, D1), D1.axis, operatororder(D1)+operatororder(D2))
+
 
         function summary(io::IO, D::$Op)
             print(io, "$($Op)(")
             summary(io, D.axis)
-            print(io, ", ")
-            print(io, D.order)
-            print(io,")")
-        end
-
-        axes(D::$Op) = (D.axis, D.axis)
-        ==(a::$Op, b::$Op) = a.axis == b.axis && _operatororder(a) == _operatororder(b)
-        copy(D::$Op) = D
-
-
-        @simplify function *(D::$Op, B::AbstractQuasiVecOrMat)
-            T = typeof(zero(eltype(D)) * zero(eltype(B)))
-            if D.order isa Nothing
-                $op(convert(AbstractQuasiArray{T}, B))
-            else
-                $op(convert(AbstractQuasiArray{T}, B), D.order)
+            if !isnothing(D.order)
+                print(io, ", ")
+                print(io, D.order)
             end
-        end
-
-        ^(D::$Op{T}, k::Integer) where T = $Op{T}(D.axis, _operatororder(D) .* k)
-
-        @simplify *(D1::$Op, D2::$Op) = $Op{promote_type(eltype(D1),eltype(D2))}(D1.axis, _operatororder(D1)+_operatororder(D2))
-
-        function view(D::$Op, kr::Inclusion, jr::Inclusion)
-            @boundscheck axes(D,1) == kr == jr || throw(BoundsError(D,(kr,jr)))
-            D
+            print(io,")")
         end
     end
 end
@@ -199,12 +207,8 @@ end
 # end
 
 
-const Identity{T,D} = QuasiDiagonal{T,Inclusion{T,D}}
-
-Identity(d::Inclusion) = QuasiDiagonal(d)
-
 struct OperatorLayout <: AbstractLazyLayout end
-MemoryLayout(::Type{<:Derivative}) = OperatorLayout()
+MemoryLayout(::Type{<:AbstractDifferentialQuasiMatrix}) = OperatorLayout()
 # copy(M::Mul{OperatorLayout, <:ExpansionLayout}) = simplify(M)
 # copy(M::Mul{OperatorLayout, <:AbstractLazyLayout}) = M.A * expand(M.B)
 
@@ -215,4 +219,4 @@ abs(Δ::Laplacian{T}) where T = AbsLaplacian{T}(axes(Δ,1), Δ.order)
 -(Δ::Laplacian{<:Any,<:Any,Nothing}) = abs(Δ)
 -(Δ::AbsLaplacian{T,<:Any,Nothing}) where T = Laplacian{T}(Δ.axis)
 
-^(Δ::AbsLaplacian{T}, k::Real) where T = AbsLaplacian{T}(Δ.axis, _operatororder(Δ)*k)
+^(Δ::AbsLaplacian{T}, k::Real) where T = AbsLaplacian{T}(Δ.axis, operatororder(Δ)*k)

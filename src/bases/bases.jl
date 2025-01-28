@@ -662,8 +662,8 @@ cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}
 ###
 # diff
 ###
-diff_layout(::AbstractBasisLayout, Vm; dims...) = error("Overload diff(::$(typeof(Vm)))")
-function diff_layout(::AbstractBasisLayout, a, order; dims...)
+diff_layout(::AbstractBasisLayout, Vm, order...; dims...) = error("Overload diff(::$(typeof(Vm)))")
+function diff_layout(::AbstractBasisLayout, a, order::Int; dims...)
     order < 0 && throw(ArgumentError("order must be non-negative"))
     order == 0 && return a
     isone(order) ? diff(a) : diff(diff(a), order-1)
@@ -730,9 +730,11 @@ abslaplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = -diff(A, 2order;
 
 laplacian(A, order...; dims...) = laplacian_layout(MemoryLayout(A), A, order...; dims...)
 laplacian_layout(layout, A, order...; dims...) = laplacian_axis(axes(A,1), A, order...; dims...)
-laplacian_axis(::Inclusion{<:Number}, A, order...; dims...) = -abslaplacian(A, order...)
+laplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = diff(A, 2order; dims...)
 
 
+laplacian_layout(::ExpansionLayout, A, order...; dims...) = laplacian_layout(ApplyLayout{typeof(*)}(), A, order...; dims...)
+abslaplacian_layout(::ExpansionLayout, A, order...; dims...) = abslaplacian_layout(ApplyLayout{typeof(*)}(), A, order...; dims...)
 
 function abslaplacian_layout(::SubBasisLayout, Vm, order...; dims::Integer=1)
     dims == 1 || error("not implemented")
@@ -743,6 +745,19 @@ function laplacian_layout(::SubBasisLayout, Vm, order...; dims::Integer=1)
     dims == 1 || error("not implemented")
     laplacian(parent(Vm), order...)[:,parentindices(Vm)[2]]
 end
+
+function laplacian_layout(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVecOrMat, order...; dims=1)
+    a = arguments(LAY, V)
+    dims == 1 || throw(ArgumentError("cannot take laplacian a vector along dimension $dims"))
+    *(laplacian(a[1], order...), tail(a)...)
+end
+
+function abslaplacian_layout(LAY::ApplyLayout{typeof(*)}, V::AbstractQuasiVecOrMat, order...; dims=1)
+    a = arguments(LAY, V)
+    dims == 1 || throw(ArgumentError("cannot take abslaplacian a vector along dimension $dims"))
+    *(abslaplacian(a[1], order...), tail(a)...)
+end
+
 
 
 """
