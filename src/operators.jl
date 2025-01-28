@@ -220,3 +220,4 @@ abs(Δ::Laplacian{T}) where T = AbsLaplacian{T}(axes(Δ,1), Δ.order)
 -(Δ::AbsLaplacian{T,<:Any,Nothing}) where T = Laplacian{T}(Δ.axis)
 
 ^(Δ::AbsLaplacian{T}, k::Real) where T = AbsLaplacian{T}(Δ.axis, operatororder(Δ)*k)
+^(Δ::AbsLaplacian{T}, k::Integer) where T = AbsLaplacian{T}(Δ.axis, operatororder(Δ)*k)

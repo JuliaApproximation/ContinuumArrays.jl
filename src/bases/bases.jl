@@ -669,10 +669,16 @@ function diff_layout(::AbstractBasisLayout, a, order::Int; dims...)
     isone(order) ? diff(a) : diff(diff(a), order-1)
 end
 
+function diff_layout(::SubBasisLayout, Vm, order::Int; dims::Integer=1)
+    dims == 1 || error("not implemented")
+    diff(parent(Vm), order)[:,parentindices(Vm)[2]]
+end
+
 function diff_layout(::SubBasisLayout, Vm, order...; dims::Integer=1)
     dims == 1 || error("not implemented")
     diff(parent(Vm), order...)[:,parentindices(Vm)[2]]
 end
+
 
 function diff_layout(::WeightedBasisLayout{SubBasisLayout}, Vm, order...; dims::Integer=1)
     dims == 1 || error("not implemented")
@@ -728,6 +734,11 @@ abslaplacian(A, order...; dims...) = abslaplacian_layout(MemoryLayout(A), A, ord
 abslaplacian_layout(layout, A, order...; dims...) = abslaplacian_axis(axes(A,1), A, order...; dims...)
 abslaplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = -diff(A, 2order; dims...)
 
+"""
+    abslaplacian(A, k=1)
+
+computes ``Δ^k * A``. 
+"""
 laplacian(A, order...; dims...) = laplacian_layout(MemoryLayout(A), A, order...; dims...)
 laplacian_layout(layout, A, order...; dims...) = laplacian_axis(axes(A,1), A, order...; dims...)
 laplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = diff(A, 2order; dims...)
