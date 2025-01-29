@@ -19,11 +19,12 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize, _cutdim,
                     AbstractQuasiFill, UnionDomain, sum_size, sum_layout, _cumsum, cumsum_layout, applylayout, equals_layout, layout_broadcasted, PolynomialLayout, dot_size,
-                    diff_layout, diff_size
+                    diff_layout, diff_size, AbstractQuasiVecOrMat
 import InfiniteArrays: Infinity, InfAxes
 import AbstractFFTs: Plan
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, basis, coefficients 
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, basis, coefficients,
+        weaklaplacian, laplacian, Laplacian, AbsLaplacian, abslaplacian
 
 
 
@@ -107,7 +108,7 @@ include("plotting.jl")
 
 sum_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = _sum(expand(a), dims)
 dot_size(::InfiniteCardinal{1}, a, b) = dot(expand(a), expand(b))
-diff_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = diff(expand(a); dims=dims)
+diff_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, order...; dims...) = diff(expand(a), order...; dims...)
 function copy(d::Dot{<:ExpansionLayout,<:ExpansionLayout,<:AbstractQuasiArray,<:AbstractQuasiArray})
     a,b = d.A,d.B
     P,c = basis(a),coefficients(a)

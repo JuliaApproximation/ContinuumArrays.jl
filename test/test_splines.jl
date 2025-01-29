@@ -1,6 +1,6 @@
 using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, BlockArrays, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
-import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply
+import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply, simplifiable
 import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayouts, MappedBasisLayout, plan_grid_transform, weaklaplacian
 
 @testset "Splines" begin
@@ -45,6 +45,8 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test sum(H/H \ exp.(x)) ≈ ℯ-1 atol=1E-5
             @test last(cumsum(H/H \ exp.(x))) ≈ sum(H/H\exp.(x))
         end
+
+        @test coefficients(H) ≡ Eye(size(H,2))
     end
 
     @testset "LinearSpline" begin
@@ -162,6 +164,28 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test eltype(D*L) == Float64
         @test typeof(diff(L)) == typeof(diff(L; dims=1)) == typeof(D*L)
         @test_throws ErrorException diff(L; dims=2)
+
+        @test diff(L[:,1:2])[1.1,:] == diff(L)[1.1,1:2]
+
+        @test diff(L,0) ≡ L
+        @test diff(f,0) ≡ f
+        @test diff(L,2)[1.1,:] == laplacian(L)[1.1,:] == -abslaplacian(L)[1.1,:] == laplacian(L,1)[1.1,:] == -abslaplacian(L,1)[1.1,:]
+
+        @test diff(L[:,1:2],2)[1.1,:] == diff(L,2)[1.1,1:2]
+        @test diff(f,2)[1.1] == laplacian(f)[1.1] == laplacian(f,1)[1.1] == -abslaplacian(f)[1.1] == -abslaplacian(f,1)[1.1]
+
+        @test laplacian(L[:,1:2])[1.1,:] == laplacian(L)[1.1,1:2] == -abslaplacian(L[:,1:2])[1.1,:] == -abslaplacian(L)[1.1,1:2]
+
+        Δ = Laplacian(L)
+        @test (Δ * L)[1.1,:] == -(abs(Δ) * L)[1.1,:] == laplacian(L)[1.1,:]
+        @test simplifiable(*, Δ, L) == simplifiable(*, abs(Δ), L) == Val(true)
+        @test -abs(Δ) == Δ
+        @test -Δ == abs(Δ)
+        @test Δ^2 == Δ*Δ
+        @test abs(Δ)^2 == abs(Δ^2) == abs(Δ)^2.0
+        @test simplifiable(*, Δ, Δ) == simplifiable(*, abs(Δ), abs(Δ)) == Val(true)
+        @test summary(Δ) == "Laplacian(Inclusion(1 .. 3))"
+        @test summary(Δ^2) == "Laplacian(Inclusion(1 .. 3), 2)"
 
         M = applied(*, (D*L).args..., [1,2,4])
         @test eltype(materialize(M)) == Float64
@@ -404,9 +428,11 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test @inferred(grid(L[y,:])) ≈ (grid(L) .+ 1) ./ 2
 
         D = Derivative(x)
-        @test (D*L[y,:])[0.1,1] ≈ -9
+        @test (D*L[y,:])[0.1,1] ≈ diff(L[y,:])[0.1,1] ≈ -9
         @test H[y,:] \ (D*L[y,:]) isa BandedMatrix
         @test H[y,:] \ (D*L[y,:]) ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
+
+        @test all(iszero,diff(L[y,:],2)[0.1,:])
 
         B = L[y,2:end-1]
         @test MemoryLayout(typeof(B)) isa MappedBasisLayout
