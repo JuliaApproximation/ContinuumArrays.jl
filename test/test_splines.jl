@@ -428,9 +428,11 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test @inferred(grid(L[y,:])) ≈ (grid(L) .+ 1) ./ 2
 
         D = Derivative(x)
-        @test (D*L[y,:])[0.1,1] ≈ -9
+        @test (D*L[y,:])[0.1,1] ≈ diff(L[y,:])[0.1,1] ≈ -9
         @test H[y,:] \ (D*L[y,:]) isa BandedMatrix
         @test H[y,:] \ (D*L[y,:]) ≈ diagm(0 => fill(-9,9), 1 => fill(9,9))[1:end-1,:]
+
+        @test all(iszero,diff(L[y,:],2)[0.1,:])
 
         B = L[y,2:end-1]
         @test MemoryLayout(typeof(B)) isa MappedBasisLayout

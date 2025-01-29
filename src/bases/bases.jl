@@ -687,6 +687,7 @@ function diff_layout(::WeightedBasisLayout{SubBasisLayout}, Vm, order...; dims::
     view(diff(w .* parent(V), order...), parentindices(V)...)
 end
 
+diff_layout(::MappedBasisLayouts, V, order::Int; dims...) = diff_mapped(basismap(V), V, order::Int; dims...)
 diff_layout(::MappedBasisLayouts, V, order...; dims...) = diff_mapped(basismap(V), V, order...; dims...)
 
 function diff_mapped(kr::AbstractAffineQuasiVector, V; dims...)
@@ -695,7 +696,7 @@ function diff_mapped(kr::AbstractAffineQuasiVector, V; dims...)
 end
 
 function diff_mapped(kr::AbstractAffineQuasiVector, V, order::Int; dims...)
-    D = diff(demap(V), order; dims)
+    D = diff(demap(V), order; dims...)
     view(basis(D), kr, :) * (kr.A^order*coefficients(D))
 end
 
