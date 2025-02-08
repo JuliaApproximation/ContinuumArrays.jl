@@ -87,7 +87,7 @@ end
 @inline to_indices(A::AbstractQuasiArray, I::Tuple{BlockRange, Vararg{Any}}) = to_indices(A, axes(A), I)
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractVector{Block{1,R}}, Vararg{Any}}) where R =
     (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
-@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractArray{<:BlockIndex{1}}, Vararg{Any}}) =
+@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractVector{<:BlockIndex{1}}, Vararg{Any}}) =
     (inds[1][I[1]], to_indices(A, _cutdim(inds, I[1]), tail(I))...)
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractVector{<:BlockIndexRange{1}}, Vararg{Any}}) =
     (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
