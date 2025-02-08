@@ -83,8 +83,9 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
         @test S == S
 
         @test S[0.1, 1] == [S1[0.1,1] 0; 0 0]
-        @test S[0.1,Block(1)] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]
         @test S[0.1,Block(1)[1]] == [S1[0.1,1] 0; 0 0]
+        @test S[0.1,[Block(1)[1]]] == S[0.1,Block(1)[1:1]] == S[0.1,[Block(1)[1:1]]] == [[S1[0.1,1] 0; 0 0]]
+        @test S[0.1,Block.(1:1)] == S[0.1,Block(1)] == S[0.1,[Block(1)]] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]
         @test S[0.1,getindex.(Block(1),1:2)] == [[S1[0.1,1] 0; 0 0], [S1[0.1,2] 0; 0 0]]
         D = Derivative(axes(S,1))
         @test_broken (D*S)[0.1,1] # throws error
