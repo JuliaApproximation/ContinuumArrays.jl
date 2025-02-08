@@ -11,7 +11,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         simplifiable, _simplify, AbstractLazyLayout, AbstractPaddedLayout, simplify, Dot
 import LinearAlgebra: pinv, inv, dot, norm2, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
-import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray
+import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray, BlockIndexRange
 import FillArrays: AbstractFill, getindex_value, SquareEye
 import ArrayLayouts: mul, ldiv, ZerosLayout, ScalarLayout, AbstractStridedLayout, check_mul_axes, check_ldiv_axes
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
@@ -85,9 +85,13 @@ end
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockIndex{1}, Vararg{Any}}) =
     (inds[1][I[1]], to_indices(A, _cutdim(inds, I[1]), tail(I))...)
 @inline to_indices(A::AbstractQuasiArray, I::Tuple{BlockRange, Vararg{Any}}) = to_indices(A, axes(A), I)
-
+@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractVector{Block{1,R}}, Vararg{Any}}) where R =
+    (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractArray{<:BlockIndex{1}}, Vararg{Any}}) =
-    (inds[1][I[1]], to_indices(A, _cutdim(inds, I[1]), tail(I))...)    
+    (inds[1][I[1]], to_indices(A, _cutdim(inds, I[1]), tail(I))...)
+@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{AbstractVector{<:BlockIndexRange{1}}, Vararg{Any}}) =
+    (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
+
 
 checkpoints(x::Number) = x
 checkpoints(d::AbstractInterval{T}) where T = width(d) .* SVector{3,float(T)}(0.823972,0.01,0.3273484) .+ leftendpoint(d)
