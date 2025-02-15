@@ -311,8 +311,11 @@ function _factorize(::MappedBasisLayout, L, dims...; kws...)
     MappedFactorization(factorize(view(P,:,jr), dims...; kws...), invmap(parentindices(L)[1]))
 end
 
+# Axiom of Choice: choose a point in the set
+pointchoice(x::AbstractVector) = first(x)
+pointchoice(x) = first(checkpoints(x))
 
-_any_eltype(B::AbstractQuasiArray{Any}) = typeof(first(B)) # assume types are same
+_any_eltype(B::AbstractQuasiArray{Any}) = typeof(B[pointchoice.(axes(B))...]) # assume types are same
 _any_eltype(B) = eltype(B)
 
 plan_ldiv(A, B::AbstractQuasiVector) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), _any_eltype(B))}, A))
