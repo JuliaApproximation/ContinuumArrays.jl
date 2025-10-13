@@ -84,6 +84,7 @@ end
 include("test_splines.jl")
 include("test_chebyshev.jl")
 include("test_basisconcat.jl")
+include("test_basiskron.jl")
 
 @testset "Grids/values" begin
     L = LinearSpline(1:5)

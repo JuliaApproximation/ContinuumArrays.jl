@@ -654,4 +654,10 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         f = x -> abs(x) ≤ 1 ? 1 : "hi"
         @test expand(L,f)[0.1] ≈ 1
     end
+
+    @testset "vec" begin
+        L = LinearSpline([-1,0,1])
+        F = L * randn(3,1)
+        @test vec(F)[0.1] == F[0.1,1]
+    end
 end

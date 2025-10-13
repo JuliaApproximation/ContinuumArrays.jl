@@ -793,6 +793,17 @@ function copy(M::Mul{<:AdjointMappedBasisLayouts, <:MappedBasisLayouts})
 end
 
 
+#######
+# reshape/vec
+#######
+
+function vec_layout(::ExpansionLayout, f)
+    P,c = basis(f), coefficients(f)
+    @assert isone(size(c,2))
+    P * vec(c)
+end
+
+
 
 include("basisconcat.jl")
 include("basiskron.jl")
