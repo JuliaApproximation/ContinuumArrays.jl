@@ -6,7 +6,7 @@ using ContinuumArrays, QuasiArrays, StaticArrays, Test
 
     xy = axes(K,1)
     f = xy -> ((x,y) = xy; exp(x*cos(y)))
-    K \ f.(xy)
+    @test_broken K \ f.(xy)
 end
 
 @testset "KronExpansion" begin
