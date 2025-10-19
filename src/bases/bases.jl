@@ -590,7 +590,7 @@ sublayout(::MappedWeightedBasisLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}
 sublayout(lay::ExpansionLayout, ::Type{<:Tuple{Inclusion,Integer}}) = lay
 
 
-sub_basis_layout(::ExpansionLayout, P, j) = basis(P)
+sub_basis_layout(_, P, j) = basis(P) # TODO: restrict to ExpansionLayout?
 function basis(V::SubQuasiArray{<:Any, N, <:Any, <:Tuple{Inclusion,Any}}) where N
     P = parent(V)
     _,j = parentindices(V)
@@ -598,7 +598,7 @@ function basis(V::SubQuasiArray{<:Any, N, <:Any, <:Tuple{Inclusion,Any}}) where 
 end
 
 
-sub_coefficients_layout(::ExpansionLayout, P, j) = coefficients(P)[:,j]
+sub_coefficients_layout(_, P, j) = coefficients(P)[:,j] # TODO: restrict to ExpansionLayout?
 function coefficients(V::SubQuasiArray{<:Any, N, <:Any, <:Tuple{Inclusion,Any}}) where N
      P = parent(V)
     _,j = parentindices(V)
