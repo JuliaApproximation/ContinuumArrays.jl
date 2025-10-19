@@ -1,6 +1,6 @@
 name = "ContinuumArrays"
 uuid = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
-version = "0.19.6"
+version = "0.20.0"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -38,7 +38,8 @@ Infinities = "0.1"
 IntervalSets = "0.7"
 LazyArrays = "2"
 Makie = "0.20, 0.21, 0.22, 0.24"
-QuasiArrays = "0.12.2"
+QuasiArrays = "0.13"
+Random = "1.0"
 RecipesBase = "1.0"
 StaticArrays = "1.0"
 julia = "1.10"
@@ -47,8 +48,10 @@ julia = "1.10"
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 FastTransforms = "057dd010-8810-581a-b7be-e3fc3b93f78c"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Base64", "FastTransforms", "RecipesBase", "Makie", "Test"]
+test = ["Base64", "FastTransforms", "Makie", "Random", "RecipesBase", "StatsBase", "Test"]
