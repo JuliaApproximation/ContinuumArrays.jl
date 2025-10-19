@@ -586,8 +586,9 @@ sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = Su
 sublayout(::AbstractBasisLayout, ::Type{<:Tuple{AbstractAffineQuasiVector,AbstractVector}}) = MappedBasisLayout()
 sublayout(::WeightedBasisLayouts, ::Type{<:Tuple{AbstractAffineQuasiVector,AbstractVector}}) = MappedWeightedBasisLayout()
 sublayout(::WeightedBasisLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = SubWeightedBasisLayout()
-sublayout(::MappedWeightedBasisLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = MappedWeightedBasisLayout()
+# sublayout(::MappedWeightedBasisLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = MappedWeightedBasisLayout() # not used
 sublayout(lay::ExpansionLayout, ::Type{<:Tuple{Inclusion,Integer}}) = lay
+sublayout(lay::ExpansionLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = lay
 
 
 sub_basis_layout(_, P, j) = basis(P) # TODO: restrict to ExpansionLayout?
