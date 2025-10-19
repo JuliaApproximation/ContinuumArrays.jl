@@ -117,6 +117,7 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test MemoryLayout(w[y] .* T[y,:]) isa MappedWeightedBasisLayout
         @test wT[y,:][[0.1,0.2],1:5] == (w[y] .* T[y,:])[[0.1,0.2],1:5] == (w .* T[:,1:5])[y,:][[0.1,0.2],:]
         @test MemoryLayout(wT[y,1:3]) isa MappedWeightedBasisLayout
+        @test MemoryLayout(wT[y,1:3][:,1:2]) isa MappedWeightedBasisLayout
         @test wT[y,1:3][[0.1,0.2],1:2] == wT[y[[0.1,0.2]],1:2]
 
         @test T[y,:]'T[y,:] ≈ grammatrix(T[y,:]) ≈ (T'T)/2

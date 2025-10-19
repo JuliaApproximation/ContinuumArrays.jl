@@ -655,9 +655,20 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
         @test expand(L,f)[0.1] ≈ 1
     end
 
-    @testset "vec" begin
-        L = LinearSpline([-1,0,1])
-        F = L * randn(3,1)
-        @test vec(F)[0.1] == F[0.1,1]
+    @testset "matrix coefficients" begin
+        @testset "vec" begin
+            L = LinearSpline([-1,0,1])
+            F = L * randn(3,1)
+            @test vec(F)[0.1] == F[0.1,1]
+        end
+
+        @testset "sub" begin
+            L = LinearSpline([-1,0,1])
+            F = L * randn(3,2)
+            @test MemoryLayout(F[:,1]) isa ExpansionLayout
+            @test MemoryLayout(F[:,1:2]) isa ExpansionLayout
+            @test F[:,1][0.1] ≈ F[0.1,1]
+            @test F[:,1:2][0.1,:] ≈ F[0.1,1:2]
+        end
     end
 end

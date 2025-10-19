@@ -581,15 +581,34 @@ end
 
 
 # we represent as a Mul with a banded matrix
-# sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:Integer}}) = SubBasisLayout()
-sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = SubBasisLayout()
-sublayout(::AbstractBasisLayout, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractVector}}) = MappedBasisLayout()
-sublayout(::WeightedBasisLayouts, ::Type{<:Tuple{<:AbstractAffineQuasiVector,<:AbstractVector}}) = MappedWeightedBasisLayout()
-sublayout(::WeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = SubWeightedBasisLayout()
-sublayout(::MappedWeightedBasisLayout, ::Type{<:Tuple{<:Inclusion,<:AbstractVector}}) = MappedWeightedBasisLayout()
+# sublayout(::AbstractBasisLayout, ::Type{Tuple{Inclusion,Integer}}) = SubBasisLayout()
+sublayout(::AbstractBasisLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = SubBasisLayout()
+sublayout(::AbstractBasisLayout, ::Type{<:Tuple{AbstractAffineQuasiVector,AbstractVector}}) = MappedBasisLayout()
+sublayout(::WeightedBasisLayouts, ::Type{<:Tuple{AbstractAffineQuasiVector,AbstractVector}}) = MappedWeightedBasisLayout()
+sublayout(::WeightedBasisLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = SubWeightedBasisLayout()
+# sublayout(::MappedWeightedBasisLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = MappedWeightedBasisLayout() # not used
+sublayout(lay::ExpansionLayout, ::Type{<:Tuple{Inclusion,Integer}}) = lay
+sublayout(lay::ExpansionLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = lay
+
+
+sub_basis_layout(_, P, j) = basis(P) # TODO: restrict to ExpansionLayout?
+function basis(V::SubQuasiArray{<:Any, N, <:Any, <:Tuple{Inclusion,Any}}) where N
+    P = parent(V)
+    _,j = parentindices(V)
+    sub_basis_layout(MemoryLayout(P), P, j)
+end
+
+
+sub_coefficients_layout(_, P, j) = coefficients(P)[:,j] # TODO: restrict to ExpansionLayout?
+function coefficients(V::SubQuasiArray{<:Any, N, <:Any, <:Tuple{Inclusion,Any}}) where N
+     P = parent(V)
+    _,j = parentindices(V)
+    sub_coefficients_layout(MemoryLayout(P), P, j)
+end
 
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractQuasiArray) = V
 @inline sub_materialize(::AbstractBasisLayout, V::AbstractArray) = V
+@inline sub_materialize(::ExpansionLayout, V::AbstractQuasiArray) = basis(V) * coefficients(V)
 
 demap(x) = x
 demap(x::BroadcastQuasiArray) = BroadcastQuasiArray(x.f, map(demap, arguments(x))...)
