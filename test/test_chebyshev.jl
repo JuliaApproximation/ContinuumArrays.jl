@@ -75,6 +75,20 @@ Base.getindex(m::InvInfMap, x::Number) = m.s*( 2/(1-x) - 1)
 ContinuumArrays.invmap(m::InfMap{T}) where T = InvInfMap{T}(m.s)
 ContinuumArrays.invmap(m::InvInfMap{T}) where T = InfMap{T}(m.s)
 
+struct BiInfMap{T} <: Map{T} end
+struct InvBiInfMap{T} <: Map{T} end
+
+BiInfMap() = BiInfMap{Float64}()
+InvBiInfMap() = InvBiInfMap{Float64}()
+
+Base.getindex(m::BiInfMap, y::Number) = iszero(y) ? y : (-1 + sqrt(1 + 4y^2))/(2y)
+Base.axes(m::BiInfMap{T}) where T = (Inclusion(-Inf..Inf),)
+Base.axes(::InvBiInfMap{T}) where T = (Inclusion(-1..1),)
+Base.getindex(m::InvBiInfMap, x::Number) = x/(1-x^2)
+ContinuumArrays.invmap(m::BiInfMap{T}) where T = InvBiInfMap{T}()
+ContinuumArrays.invmap(m::InvBiInfMap{T}) where T = BiInfMap{T}()
+
+
 struct FooDomain end
 
 struct FooBasis  <: Basis{Float64} end
@@ -199,6 +213,14 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
             x = axes(M,1)
             f = M/M\(exp.(x))
             @test f[-0.1] ≈ exp(-0.1) atol=1E-2
+            @test f[searchsortedfirst(f, 0.5)] ≈ 0.5
+
+            M = T[BiInfMap(),:]
+            @test axes(M,1) == Inclusion(-Inf .. Inf)
+            x = axes(M,1)
+            f = M/M\(atan.(x))
+            @test f[-0.1] ≈ atan(-0.1) atol=1E-2
+            @test f[0] ≈ 0 atol=1E-10
             @test f[searchsortedfirst(f, 0.5)] ≈ 0.5
         end
     end
