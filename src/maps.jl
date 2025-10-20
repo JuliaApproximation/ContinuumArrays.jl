@@ -22,13 +22,13 @@ Base.union(d::Map) = axes(invmap(d),1)
 for find in (:findfirst, :findlast)
     @eval function $find(f::Base.Fix2{typeof(isequal)}, d::Map)
         f.x in d || return nothing
-        $find(isequal(invmap(d)[f.x]), union(d))
+        $find(isequal(invmap(d)[f.x]), axes(d,1))
     end
 end
 
 @eval function findall(f::Base.Fix2{typeof(isequal)}, d::Map)
     f.x in d || return eltype(axes(d,1))[]
-    findall(isequal(invmap(d)[f.x]), union(d))
+    findall(isequal(invmap(d)[f.x]), axes(d,1))
 end
 
 function Base.getindex(d::Map, x::Inclusion)

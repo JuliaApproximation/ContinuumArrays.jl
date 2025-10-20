@@ -674,6 +674,12 @@ Random.seed!(24543)
         end
     end
 
+    @testset "searchsortedfirst" begin
+        L = LinearSpline(range(-1,1,1000))
+        f = expand(L, exp)
+        @test searchsortedfirst(f, 1) ≈ 0 atol=1E-6
+    end
+
     @testset "sample" begin
         H = HeavisideSpline(range(0,1,1000))
         f = expand(H, exp)
