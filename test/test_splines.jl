@@ -1,7 +1,9 @@
-using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, BlockArrays, Test
+using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, BlockArrays, StatsBase, Random, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
 import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply, simplifiable
 import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayouts, MappedBasisLayout, plan_grid_transform, weaklaplacian
+
+Random.seed!(24543)
 
 @testset "Splines" begin
     @testset "HeavisideSpline" begin
@@ -670,5 +672,17 @@ import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout,
             @test F[:,1][0.1] ≈ F[0.1,1]
             @test F[:,1:2][0.1,:] ≈ F[0.1,1:2]
         end
+    end
+
+    @testset "searchsortedfirst" begin
+        L = LinearSpline(range(-1,1,1000))
+        f = expand(L, exp)
+        @test searchsortedfirst(f, 1) ≈ 0 atol=1E-6
+    end
+
+    @testset "sample" begin
+        H = HeavisideSpline(range(0,1,1000))
+        f = expand(H, exp)
+        @test mean(sample(f, 1000)) ≈ 1/(ℯ-1) atol=1E-1
     end
 end

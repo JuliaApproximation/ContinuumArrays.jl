@@ -58,6 +58,37 @@ Base.getindex(d::InvQuadraticMap, x::Number) = sqrt((x+1)/2)
 ContinuumArrays.invmap(::QuadraticMap{T}) where T = InvQuadraticMap{T}()
 ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
 
+struct InfMap{T} <: Map{T}
+    s
+end
+struct InvInfMap{T} <: Map{T}
+    s
+end
+
+InfMap(s=1) = InfMap{Float64}(s)
+InvInfMap(s=1) = InvInfMap{Float64}(s)
+
+Base.getindex(m::InfMap, r::Number) = 1-2/(m.s * r+1)
+Base.axes(m::InfMap{T}) where T = (Inclusion(m.s * (0..Inf)),)
+Base.axes(::InvInfMap{T}) where T = (Inclusion(-1..1),)
+Base.getindex(m::InvInfMap, x::Number) = m.s*( 2/(1-x) - 1)
+ContinuumArrays.invmap(m::InfMap{T}) where T = InvInfMap{T}(m.s)
+ContinuumArrays.invmap(m::InvInfMap{T}) where T = InfMap{T}(m.s)
+
+struct BiInfMap{T} <: Map{T} end
+struct InvBiInfMap{T} <: Map{T} end
+
+BiInfMap() = BiInfMap{Float64}()
+InvBiInfMap() = InvBiInfMap{Float64}()
+
+Base.getindex(m::BiInfMap, y::Number) = iszero(y) ? y : (-1 + sqrt(1 + 4y^2))/(2y)
+Base.axes(m::BiInfMap{T}) where T = (Inclusion(-Inf..Inf),)
+Base.axes(::InvBiInfMap{T}) where T = (Inclusion(-1..1),)
+Base.getindex(m::InvBiInfMap, x::Number) = x/(1-x^2)
+ContinuumArrays.invmap(m::BiInfMap{T}) where T = InvBiInfMap{T}()
+ContinuumArrays.invmap(m::InvBiInfMap{T}) where T = BiInfMap{T}()
+
+
 struct FooDomain end
 
 struct FooBasis  <: Basis{Float64} end
@@ -146,6 +177,52 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
             @test x == Inclusion(0..1)
             @test M \ exp.(x) ≈ T \ exp.(sqrt.((axes(T,1) .+ 1)/2))
         end
+
+        @testset "InvMap" begin
+            m = InfMap()
+            mi = InvInfMap()
+            @test 0.1 ∈ m
+            @test -0.1 ∈ m
+            @test 2 ∉ m
+            @test 2 ∈ mi
+            @test 0.1 ∈ mi
+            @test -0.1 ∉ mi
+
+            @test m[findfirst(isequal(0.1), m)] ≈ 0.1
+            @test m[findlast(isequal(0.1), m)] ≈ 0.1
+            @test m[findall(isequal(0.1), m)] ≈ [0.1]
+
+            @test m[Inclusion(0..Inf)] ≡ m
+            @test_throws BoundsError m[Inclusion(-1..1)]
+            T = Chebyshev(5)
+            M = T[m,:]
+            @test MemoryLayout(M) isa MappedBasisLayout
+            @test MemoryLayout(M[:,1:3]) isa MappedBasisLayout
+            @test M[0.1,:] ≈ T[1-2/(0.1+1),:]
+            x = axes(M,1)
+            @test x == Inclusion(0..Inf)
+            @test M \ exp.(-x) ≈ T \ exp.(-(2 ./ (1 .- axes(T,1)) .- 1))
+
+            f = M/M\(1 .- exp.(-x))
+            @test f[0.1] ≈ 1 - exp(-0.1) atol=1E-2
+
+            @test f[searchsortedfirst(f, 0.5)] ≈ 0.5
+
+            M = T[InfMap(-1),:]
+            @test axes(M,1) == Inclusion(-Inf .. 0)
+            x = axes(M,1)
+            f = M/M\(exp.(x))
+            @test f[-0.1] ≈ exp(-0.1) atol=1E-2
+            @test f[searchsortedfirst(f, 0.5)] ≈ 0.5
+
+            M = T[BiInfMap(),:]
+            @test axes(M,1) == Inclusion(-Inf .. Inf)
+            x = axes(M,1)
+            f = M/M\(atan.(x))
+            @test f[-0.1] ≈ atan(-0.1) atol=1E-2
+            @test f[0] ≈ 0 atol=1E-10
+            @test f[searchsortedfirst(f, 0.5)] ≈ 0.5
+        end
     end
 
     @testset "Broadcasted" begin
@@ -173,7 +250,7 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test (2T)'*(T*(1:5)) ≈ T'*(2T*(1:5)) ≈ T'BroadcastQuasiMatrix(*, 2, T*(1:5))
         @test T' * (a .* (T * (1:5))) ≈ T' * ((a .* T) * (1:5))
         @test T'BroadcastQuasiMatrix(*, 2, 2T) == 4*(T'T)
-        
+
         @test LazyArrays.simplifiable(*, T', T*(1:5)) == Val(true)
         @test LazyArrays.simplifiable(*, T', (a .* (T * (1:5)))) == Val(true)
         @test LazyArrays.simplifiable(*, T', a .* T) == Val(true)
@@ -209,6 +286,6 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
 
     @testset "Adjoint*Basis not defined" begin
         @test_throws ErrorException Chebyshev(5)'LinearSpline([-1,1])
-        @test_throws ErrorException FooBasis()'FooBasis()     
+        @test_throws ErrorException FooBasis()'FooBasis()
     end
 end
