@@ -239,8 +239,25 @@ function plan_transform_layout(lay, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=
     InvPlan(mapfactorize(L, dimsz), dims)
 end
 plan_transform_layout(::MappedBasisLayout, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_transform(demap(L), szs, dims)
+
+"""
+    plan_transform(basis, (n₁,…,nₘ), [dims])
+
+plans a transform applying the transform to an array specified by the
+sizes `(n₁,…,nₘ)`. If `nₖ` is an integer then this gives the size in that dimension.
+If `nₖ` is a `Block` then the array in that dimension is specified by `axes(basis,1)[Block.(Base.oneto(nₖ)]`.
+The array it acts on should correspond to samples on the points specified by `grid(basis, (n₁,…,nₘ))`.
+
+If `dims` is an integer or tuple of integers then the transform is only applied to that dimension.
+If `dims` is omitted then every dimension is transformed.
+"""
 plan_transform(L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_transform_layout(MemoryLayout(L), L, szs, dims)
 
+"""
+    plan_transform(basis, A::AbstractArray, [dims])
+
+is equivalent to `plan_transform(basis, size(A), [dims])`.
+"""
 plan_transform(L, arr::AbstractArray, dims...) = plan_transform(L, size(arr), dims...)
 plan_transform(L, lng::Union{Integer,Block{1}}, dims...) = plan_transform(L, (lng,), dims...)
 plan_transform(L) = plan_transform(L, size(L,2))
