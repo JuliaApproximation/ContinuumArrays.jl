@@ -53,6 +53,9 @@ weaklaplacian
 transform
 ```
 ```@docs
+plan_transform
+```
+```@docs
 expand
 ```
 ```@docs
