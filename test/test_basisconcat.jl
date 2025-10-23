@@ -1,4 +1,4 @@
-using ContinuumArrays, BlockArrays, InfiniteArrays, Test
+using ContinuumArrays, BlockArrays, InfiniteArrays, StaticArrays, Test
 import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain
 
 @testset "ConcatBasis" begin
@@ -10,6 +10,14 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
         H∞ = [ones(x) Q]
         @test H∞[:,1:∞] isa SubQuasiArray
         @test (H∞')[1:∞,:] isa SubQuasiArray
+
+        𝐱 = Inclusion((-1.0..1)^2)
+        @test 𝐱[SVector(0.1,0.2)] == SVector(0.1,0.2)
+        H = [first.(𝐱) last.(𝐱)]
+        @test H[SVector(0.1,0.2),1] == 0.1
+        @test H[SVector(0.1,0.2),1:2] == H[SVector(0.1,0.2),:] == [0.1, 0.2]
+        @test H[[SVector(0.1,0.2),SVector(0.3,0.4)],1] == [0.1,0.3]
+        @test H[[SVector(0.1,0.2),SVector(0.3,0.4)],1:2] == H[[SVector(0.1,0.2),SVector(0.3,0.4)],:] == [0.1 0.2; 0.3 0.4]
     end
     @testset "PiecewiseBasis" begin
         S1 = LinearSpline(0:1)
