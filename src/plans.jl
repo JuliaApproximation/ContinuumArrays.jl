@@ -37,7 +37,7 @@ struct InvPlan{T, Facts<:Tuple, Pln, Dims} <: Plan{T}
     dims::Dims
 end
 
-InvPlan(fact::Tuple, plan, dims) = InvPlan{eltype(fact), typeof(fact), typeof(plan), typeof(dims)}(fact, dims)
+InvPlan(fact::Tuple, plan, dims) = InvPlan{mapreduce(eltype,promote_type,fact), typeof(fact), typeof(plan), typeof(dims)}(fact, plan, dims)
 InvPlan(fact::Tuple, dims) = InvPlan(fact, nothing, dims)
 InvPlan(fact, dims...) = InvPlan((fact,), dims...)
 
@@ -55,7 +55,7 @@ struct MulPlan{T, Fact<:Tuple, Pln, Dims} <: Plan{T}
     dims::Dims
 end
 
-MulPlan(mats::Tuple, plan, dims) = MulPlan{eltype(mats), typeof(mats), typeof(plan), typeof(dims)}(mats, plan, dims)
+MulPlan(mats::Tuple, plan, dims) = MulPlan{mapreduce(eltype,promote_type,mats), typeof(mats), typeof(plan), typeof(dims)}(mats, plan, dims)
 MulPlan(mats::Tuple, dims) = MulPlan(mats, nothing, dims)
 MulPlan(mats::AbstractMatrix, dims...) = MulPlan((mats,), dims...)
 
@@ -123,7 +123,7 @@ for (Pln,op,fld) in ((:MulPlan, :*, :(:matrices)), (:InvPlan, :\, :(:factorizati
         
         
         
-        *(P::$Pln{<:Any,<:Tuple,Int}, X::AbstractArray) = error("Overload")
+        *(P::$Pln{<:Any,<:Tuple,<:Any,Int}, X::AbstractArray) = error("Overload")
         
         function *(P::$Pln, Xin::AbstractArray)
             X = _transformifnotnothing(P.plan, Xin)
