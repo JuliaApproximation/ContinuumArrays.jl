@@ -2,7 +2,7 @@ module ContinuumArrays
 using IntervalSets, DomainSets, LinearAlgebra, LazyArrays, FillArrays, BandedMatrices, QuasiArrays, Infinities, InfiniteArrays, StaticArrays, BlockArrays
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, size, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
-                first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum,
+                first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, sum, _sum, _maximum, _minimum,
                 getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices, view, @propagate_inbounds
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted, Broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, combine_mul_styles, AbstractArrayApplyStyle,
@@ -18,7 +18,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat, QuasiArrayLayout,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle, AbstractQuasiLazyLayout,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle, _factorize, _cutdim,
-                    AbstractQuasiFill, UnionDomain, sum_size, sum_layout, _cumsum, cumsum_layout, applylayout, equals_layout, layout_broadcasted, PolynomialLayout, dot_size,
+                    AbstractQuasiFill, UnionDomain, sum_size, maximum_size, minimum_size, sum_layout, _cumsum, cumsum_layout, applylayout, equals_layout, layout_broadcasted, PolynomialLayout, dot_size,
                     diff_layout, diff_size, AbstractQuasiVecOrMat, vec_layout, searchsortedfirst_layout
 import InfiniteArrays: Infinity, InfAxes
 import AbstractFFTs: Plan
@@ -112,6 +112,8 @@ include("plotting.jl")
 # sum/dot
 ###
 
+maximum_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = _maximum(expand(a), dims)
+minimum_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = _minimum(expand(a), dims)
 sum_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = _sum(expand(a), dims)
 dot_size(::InfiniteCardinal{1}, a, b) = dot(expand(a), expand(b))
 diff_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, order...; dims...) = diff(expand(a), order...; dims...)
