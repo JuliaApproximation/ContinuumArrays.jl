@@ -695,6 +695,8 @@ function sum_layout(::MappedBasisLayouts, V, dims)
     sum(demap(V); dims=dims)/kr.A
 end
 
+maximum_layout(::ExpansionLayout, A, dims) = error("Overload")
+minimum_layout(::ExpansionLayout, A, dims) = error("Overload")
 sum_layout(::ExpansionLayout, A, dims) = sum_layout(ApplyLayout{typeof(*)}(), A, dims)
 cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}(), A, dims)
 

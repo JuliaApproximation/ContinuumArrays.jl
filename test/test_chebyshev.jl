@@ -288,4 +288,11 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test_throws ErrorException Chebyshev(5)'LinearSpline([-1,1])
         @test_throws ErrorException FooBasis()'FooBasis()
     end
+
+    @testset "maximum/minimum/norm" begin
+        T = Chebyshev(5)
+        x = axes(T,1)
+        @test_throws ErrorException maximum(exp.(x))
+        @test_throws ErrorException minimum(exp.(x))
+    end
 end
