@@ -685,4 +685,13 @@ Random.seed!(24543)
         f = expand(H, exp)
         @test mean(sample(f, 1000)) ≈ 1/(ℯ-1) atol=1E-1
     end
+
+    @testset "minimum/maximum" begin
+        for H in (HeavisideSpline(range(0,1,1000)), LinearSpline(range(0,1,1000)))
+            f = expand(H, exp)
+            @test minimum(f) ≈ exp(first(grid(H)))
+            @test maximum(f) ≈ exp(last(grid(H)))
+            extrema(f) == [minimum(f), maximum(f)]
+        end
+    end
 end

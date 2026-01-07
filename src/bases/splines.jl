@@ -160,3 +160,12 @@ end
 
 _cumsum(H::HeavisideSpline{T}, dims) where T = LinearSpline(H.points) * tril(Ones{T}(length(H.points),length(H.points)-1) .* diff(H.points)',-1)
 _cumsum(S::Spline{-1,T}, dims) where T = HeavisideSpline(S.points) * tril(ones(T,length(S.points)-1,length(S.points)-2),-1)
+
+
+for λ in (0, 1)
+    @eval begin
+        _minimum(f::ApplyQuasiVector{<:Any, typeof(*), <:Tuple{Spline{$λ}, AbstractVector}}, ::Colon) = minimum(coefficients(f))
+        _maximum(f::ApplyQuasiVector{<:Any, typeof(*), <:Tuple{Spline{$λ}, AbstractVector}}, ::Colon) = maximum(coefficients(f))
+        extrema(f::ApplyQuasiVector{<:Any, typeof(*), <:Tuple{Spline{$λ}, AbstractVector}}) = extrema(coefficients(f))
+    end
+end
