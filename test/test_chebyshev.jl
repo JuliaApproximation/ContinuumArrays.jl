@@ -295,4 +295,8 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test_throws ErrorException maximum(exp.(x))
         @test_throws ErrorException minimum(exp.(x))
     end
+
+    @testset "generator" begin
+        @test expand(exp(t) for t in (-1..1))[0.1] ≈ exp(0.1)
+    end
 end

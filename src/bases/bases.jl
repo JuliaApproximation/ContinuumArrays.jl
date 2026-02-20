@@ -376,6 +376,8 @@ function expand(v)
 end
 
 
+expand(g::Base.Generator{<:Inclusion}; kwds...) = expand(g.f.(g.iter); kwds...)
+expand(g::Base.Generator{<:Domain}; kwds...) = expand(Base.Generator(g.f, Inclusion(g.iter)); kwds...) # type piracy...
 
 
 
