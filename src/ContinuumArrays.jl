@@ -3,7 +3,7 @@ using IntervalSets, DomainSets, LinearAlgebra, LazyArrays, FillArrays, BandedMat
 import Base: @_inline_meta, @_propagate_inbounds_meta, axes, size, getindex, convert, prod, *, /, \, +, -, ==, ^,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy, diff,
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, extrema, sum, _sum, _maximum, _minimum,
-                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices, view, @propagate_inbounds
+                getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices, view, @propagate_inbounds, collect
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted, Broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, combine_mul_styles, AbstractArrayApplyStyle,
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
@@ -37,6 +37,7 @@ cardinality(::AbstractInterval) = ℵ₁
 cardinality(::Union{FullSpace{<:AbstractFloat},EuclideanDomain,DomainSets.RealNumbers,DomainSets.ComplexNumbers}) = ℵ₁
 cardinality(::Union{DomainSets.Integers,DomainSets.Rationals,DomainSets.NaturalNumbers}) = ℵ₀
 
+Inclusion(d::ProductDomain{T}) where T = Inclusion{float(T)}(d)
 Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
 first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
 last(S::Inclusion{<:Any,<:AbstractInterval}) = rightendpoint(S.domain)
@@ -102,6 +103,10 @@ checkpoints(d::AbstractInterval{T}) where T = width(d) .* SVector{3,float(T)}(0.
 checkpoints(d::UnionDomain) = mapreduce(checkpoints,union,d.domains)
 checkpoints(x::Inclusion) = checkpoints(x.domain)
 checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
+function checkpoints(P::ProductDomain)
+    x,y = map(checkpoints, components(P))
+    SVector.(x, y')
+end
 
 
 include("operators.jl")

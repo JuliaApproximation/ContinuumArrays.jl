@@ -297,6 +297,6 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
     end
 
     @testset "generator" begin
-        @test expand(exp(t) for t in (-1..1))[0.1] ≈ exp(0.1)
+        @test [exp(t) for t in -1..1][0.1] ≈ exp(0.1)
     end
 end

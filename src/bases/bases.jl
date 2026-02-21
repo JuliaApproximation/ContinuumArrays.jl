@@ -376,9 +376,9 @@ function expand(v)
 end
 
 
-expand(g::Base.Generator{<:Inclusion}; kwds...) = expand(g.f.(g.iter); kwds...)
-expand(g::Base.Generator{<:Domain}; kwds...) = expand(Base.Generator(g.f, Inclusion(g.iter)); kwds...) # type piracy...
-
+collect(g::Base.Generator{<:Inclusion}; kwds...) = expand(g.f.(g.iter); kwds...)
+collect(g::Base.Generator{<:Domain}; kwds...) = collect(Base.Generator(g.f, Inclusion(g.iter)); kwds...)
+collect(g::Base.Generator{<:Base.Iterators.ProductIterator{<:Tuple{Vararg{Domain}}}}; kwds...) = collect(Base.Generator(g.f, ×(g.iter.iterators...)); kwds...)
 
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout}) = basis_ldiv_size(size(L), L.A, L.B)
