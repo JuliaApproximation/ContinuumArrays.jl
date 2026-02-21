@@ -147,6 +147,13 @@ end
 first(A::AffineMap{T}) where T = convert(T, first(A.range))::T
 last(A::AffineMap{T}) where T = convert(T, last(A.range))::T
 
+"""
+    affine(a, b)
+
+constructs a quasivector corresponding to the affine map between two domains/quasivectors. For example:
+
+    affine(1..2, 2..3)[1.5] == 2.5
+"""
 affine(a::AbstractQuasiVector, b::AbstractQuasiVector) = AffineMap(a, b)
 affine(a, b::AbstractQuasiVector) = affine(Inclusion(a), b)
 affine(a::AbstractQuasiVector, b) = affine(a, Inclusion(b))
