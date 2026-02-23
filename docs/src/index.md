@@ -50,6 +50,9 @@ weaklaplacian
 ## Routines
 
 ```@docs
+affine
+```
+```@docs
 transform
 ```
 ```@docs

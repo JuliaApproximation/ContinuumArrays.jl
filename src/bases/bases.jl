@@ -376,7 +376,9 @@ function expand(v)
 end
 
 
-
+expand(g::Base.Generator{<:Inclusion}) = expand(g.f.(g.iter))
+expand(g::Base.Generator{<:Domain}) = expand(Base.Generator(g.f, Inclusion(g.iter)))
+expand(g::Base.Generator{<:Base.Iterators.ProductIterator{<:Tuple{Vararg{Domain}}}}) = expand(Base.Generator(g.f, ×(g.iter.iterators...)))
 
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout}) = basis_ldiv_size(size(L), L.A, L.B)

@@ -295,4 +295,9 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test_throws ErrorException maximum(exp.(x))
         @test_throws ErrorException minimum(exp.(x))
     end
+
+    @testset "generator" begin
+        @test expand(exp(t) for t in -1..1)[0.1] ≈ [exp(t) for t in -1..1][0.1] ≈ exp(0.1)
+        @test [exp(x*cos(y)) for x in Inclusion(0:0.5:1), y in Inclusion(1:0.5:2)][0.5,1.5] ≈ exp(0.5*cos(1.5))
+    end
 end
