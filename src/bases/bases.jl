@@ -273,6 +273,40 @@ plan_grid_transform(P, B::Block{N}, dims=ntuple(identity,Val(N))) where N = plan
 _factorize(::AbstractBasisLayout, L, dims...; kws...) = TransformFactorization(plan_grid_transform(L, (size(L,2), dims...), 1)...)
 
 
+
+function plan_itransform_layout(lay, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N
+    dimsz = getindex.(Ref(szs), dims) # get the sizes of transformed dimensions
+    MulPlan(mapfactorize(L, dimsz), dims)
+end
+plan_itransform_layout(::MappedBasisLayout, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_itransform(demap(L), szs, dims)
+
+"""
+    plan_itransform(basis, (n₁,…,nₘ), [dims])
+
+plans an inverse transform applying the transform to an array specified by the
+sizes `(n₁,…,nₘ)`. If `nₖ` is an integer then this gives the size in that dimension.
+If `nₖ` is a `Block` then the array in that dimension is specified by `axes(basis,1)[Block.(Base.oneto(nₖ)]`.
+The array it acts on should correspond to coefficients and give values on the points specified by `grid(basis, (n₁,…,nₘ))`.
+
+If `dims` is an integer or tuple of integers then the transform is only applied to that dimension.
+If `dims` is omitted then every dimension is transformed.
+"""
+plan_itransform(L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_itransform_layout(MemoryLayout(L), L, szs, dims)
+
+"""
+    plan_itransform(basis, A::AbstractArray, [dims])
+
+is equivalent to `plan_itransform(basis, size(A), [dims])`.
+"""
+plan_itransform(L, arr::AbstractArray, dims...) = plan_itransform(L, size(arr), dims...)
+plan_itransform(L, lng::Union{Integer,Block{1}}, dims...) = plan_itransform(L, (lng,), dims...)
+plan_itransform(L) = plan_itransform(L, size(L,2))
+
+plan_itransform(L, B::Block, dims...) = plan_itransform(L, Block.(B.n), dims...) # grid(L, Block(2,3)) == grid(L, (Block(2), Block(3))
+
+
+
+
 """
     ProjectionFactorization(F, inds)
 

@@ -25,7 +25,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: Infinity, InfAxes
 import AbstractFFTs: Plan
 
-export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, basis, coefficients,
+export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, plan_itransform, basis, coefficients,
         weaklaplacian, laplacian, Laplacian, AbsLaplacian, abslaplacian
 
 

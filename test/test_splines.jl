@@ -526,23 +526,33 @@ Random.seed!(24543)
         g = grid(L)
         v = cos.(g)
         P = plan_transform(L, v)
-        @test P * v == transform(L, cos)
+        c = P * v
+        Pi = plan_itransform(L, c)
+        @test c == transform(L, cos)
+        @test Pi*c == v
 
         X = cos.(g .+ (1:3)')
         P = plan_transform(L, X, 1)
+        Pi = plan_itransform(L, X, 1)
         @test P * X == L \ cos.(x .+ (1:3)')
+        @test Pi * (P * X) ≈ X
 
         X = cos.((1:3) .+ g')
         P = plan_transform(L, X, 2)
+        Pi = plan_itransform(L, X, 2)
         @test P * X == (L \ cos.(x .+ (1:3)'))'
+        @test Pi * (P * X) ≈ X
 
         X = cos.(g .^2 .+ g')
         P = plan_transform(L, X)
+        Pi = plan_itransform(L, X)
         @test P * X ≈ L[g,:] \ X / L[g,:]'
+        @test Pi * (P * X) ≈ X
 
         n = size(L,2)
         X = randn(n, n, n)
         P = plan_transform(L, X)
+        Pi = plan_itransform(L, X)
         PX = P * X
         for k = 1:n, j = 1:n
             X[:, k, j] = L[g,:] \ X[:, k, j]
@@ -554,10 +564,12 @@ Random.seed!(24543)
             X[k, j, :] = L[g,:] \ X[k, j, :]
         end
         @test PX ≈ X
+        @test Pi * (P * X) ≈ X
 
         n = size(L,2)
         X = randn(n, n, n, n)
         P = plan_transform(L, X)
+        Pi = plan_itransform(L, X)
         PX = P * X
         for k = 1:n, j = 1:n, l = 1:n
             X[:, k, j, l] = L[g,:] \ X[:, k, j, l]
@@ -573,9 +585,13 @@ Random.seed!(24543)
         end
         @test PX ≈ X
 
+        @test Pi * (P * X) ≈ X
+
         X = randn(n, n, n, n, n)
         P = plan_transform(L, X)
+        Pi = plan_itransform(L, X)
         @test_throws ErrorException P * X
+        @test_throws ErrorException Pi * X
     end
 
     @testset "Mul coefficients" begin
