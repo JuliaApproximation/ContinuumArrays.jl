@@ -482,8 +482,8 @@ broadcastbasis(::typeof(+), a, b, c...) = broadcastbasis(+, broadcastbasis(+, a,
 broadcastbasis(::typeof(-), a, b) = broadcastbasis(+, a, b)
 
 @eval function layout_broadcasted(::NTuple{2,ExpansionLayout}, ::typeof(-), f, g)
-    S,c = arguments(f)
-    T,d = arguments(g)
+    S,c = basis(f),coefficients(f)
+    T,d = basis(g),coefficients(g)
     ST = broadcastbasis(-, S, T)
     ST * ((ST \ S) * c - (ST \ T) * d)
 end
@@ -491,10 +491,10 @@ end
 _plus_P_ldiv_Ps_cs(P, ::Tuple{}, ::Tuple{}) = ()
 _plus_P_ldiv_Ps_cs(P, Q::Tuple, cs::Tuple) = tuple((P \ first(Q)) * first(cs), _plus_P_ldiv_Ps_cs(P, tail(Q), tail(cs))...)
 function layout_broadcasted(::Tuple{Vararg{ExpansionLayout}}, ::typeof(+), fs...)
-    Ps = first.(arguments.(fs))
-    cs = last.(arguments.(fs))
+    Ps = map(basis, fs)
+    cs = map(coefficients, fs)
     P = broadcastbasis(+, Ps...)
-    P * +(_plus_P_ldiv_Ps_cs(P, Ps, cs)...)  # +((Ref(P) .\ Ps .* cs)...)
+    P * +(_plus_P_ldiv_Ps_cs(P, Ps, cs)...)  # +((Ref(P) .\ (Ps .* cs))...)
 end
 
 function layout_broadcasted(::Tuple{Any,ExpansionLayout}, ::typeof(*), a, f)
