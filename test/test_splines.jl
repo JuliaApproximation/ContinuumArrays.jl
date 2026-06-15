@@ -694,4 +694,11 @@ Random.seed!(24543)
             extrema(f) == [minimum(f), maximum(f)]
         end
     end
+
+    @testset "mapped" begin
+        L = LinearSpline(range(0,1,10))
+        f = expand(L, exp)
+        g = expand(L[affine(0..1,0..1), :], cos)
+        @test (f + g)[1/9] ≈ exp(1/9) + cos(1/9)
+    end
 end

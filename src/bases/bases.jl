@@ -466,6 +466,16 @@ function broadcastbasis_layout(::typeof(+), _, _, a, b)
     a
 end
 
+function broadcastbasis_layout(::typeof(+), ::MappedBasisLayouts, _, a, b)
+    a == demap(a) && return broadcastbasis(+, demap(a), b)
+    broadcastbasis_layout(+, BasisLayout(), MemoryLayout(b), a, b)
+end
+
+function broadcastbasis_layout(::typeof(+), _, ::MappedBasisLayouts, a, b)
+    b == demap(b) && return broadcastbasis(+, a, demap(b))
+    broadcastbasis_layout(+, MemoryLayout(a), BasisLayout(), a, b)
+end
+
 broadcastbasis_layout(::typeof(+), ::MappedBasisLayouts, ::MappedBasisLayouts, a, b) = broadcastbasis(+, demap(a), demap(b))[basismap(a), :]
 function broadcastbasis_layout(::typeof(+), ::SubBasisLayout, ::SubBasisLayout, a, b)
     kr_a,jr_a = parentindices(a)
