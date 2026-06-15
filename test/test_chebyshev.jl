@@ -301,7 +301,7 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test [exp(x*cos(y)) for x in Inclusion(0:0.5:1), y in Inclusion(1:0.5:2)][0.5,1.5] ≈ exp(0.5*cos(1.5))
     end
 
-    @test "broadcast + with maps" begin
+    @testset "broadcast + with maps" begin
         T = Chebyshev(5)
         P = LinearSpline(range(0,1,10))[affine(-1..1,0..1),:]
         @test_throws ErrorException expand(T,exp) + expand(P,cos)
