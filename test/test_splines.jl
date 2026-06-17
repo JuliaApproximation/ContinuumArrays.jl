@@ -708,4 +708,9 @@ Random.seed!(24543)
         B = brand(11,11,1,1)
         @test F * ApplyArray(*, B, B) == F * B*B
     end
+
+    @testset "adj and rdiv" begin
+        @test L' / L' ≡ Eye(10)
+        @test simplifiable(Rdiv(L', L')) ≡ Val(true)
+    end
 end
