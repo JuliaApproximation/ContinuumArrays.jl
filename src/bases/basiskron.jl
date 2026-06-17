@@ -27,4 +27,3 @@ sum_layout(::KronExpansionLayout, F, dims...) = sum_layout(ApplyLayout{typeof(*)
 diff_layout(::KronExpansionLayout, F, order...; dims...) = diff_layout(ApplyLayout{typeof(*)}(), F, order...; dims...)
 
 copy(L::Ldiv{Lay,<:KronExpansionLayout}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
-copy(L::Rdiv{<:KronExpansionLayout,Lay}) where Lay<:AbstractBasisLayout = copy(Rdiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))

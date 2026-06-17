@@ -26,5 +26,5 @@ end
     @test diff(F)[0.1,0.2] ≈ diff(F;dims=1)[0.1,0.2]  ≈ diff(L)[0.1,:]'*C*L[0.2,:]
     @test diff(F;dims=2)[0.1,0.2]  ≈ L[0.1,:]'*C*diff(L)[0.2,:]
 
-    @test L\F/L' == C
+    @test L\F/L' == (L\F)/L' == L\(F/L') == C
 end
