@@ -1,6 +1,6 @@
 using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, BlockArrays, StatsBase, Random, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
-import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply, simplifiable
+import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply, simplifiable, ApplyArray
 import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayouts, MappedBasisLayout, plan_grid_transform, weaklaplacian
 
 Random.seed!(24543)
@@ -700,5 +700,12 @@ Random.seed!(24543)
         f = expand(L, exp)
         g = expand(L[affine(0..1,0..1), :], cos)
         @test (f + g)[1/9] ≈ exp(1/9) + cos(1/9)
+    end
+
+    @testset "expansion * lazy banded" begin
+        L = LinearSpline(range(0,1,10))
+        F = L * rand(4, 11)
+        B = brand(11,11,1,1)
+        @test F * ApplyArray(*, B, B) == F * B*B
     end
 end
