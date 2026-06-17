@@ -118,6 +118,13 @@ end
 # default to transform for expanding weights
 copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractWeightLayout}) = transform_ldiv(L.A, L.B)
 
+simplifiable(L::Rdiv{<:AbstractLazyLayout,<:AdjointBasisLayout}) = simplifiable(\, L.B', L.A')
+@inline function copy(P::Rdiv{<:AbstractLazyLayout,<:AdjointBasisLayout})
+    A, B = P.A, P.B
+    (B' \ A')'
+end
+
+
 # multiplication operators, reexpand in basis A
 @inline function _broadcast_mul_ldiv(::Tuple{Any,AbstractBasisLayout}, A, B)
     a,b = arguments(B)
@@ -455,6 +462,7 @@ LazyArrays._mul_arguments(::ExpansionLayout, A) = LazyArrays._mul_arguments(Appl
 copy(L::Ldiv{Lay,<:ExpansionLayout}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Ldiv{Lay,<:ExpansionLayout}) where Lay<:MappedBasisLayouts = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
 copy(L::Mul{<:ExpansionLayout,Lay}) where Lay = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+copy(L::Mul{<:ExpansionLayout,Lay}) where Lay<:BandedLazyLayouts = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 copy(L::Mul{<:ExpansionLayout,Lay}) where Lay<:AbstractLazyLayout = copy(Mul{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 
 function broadcastbasis_layout(::typeof(+), _, _, a, b)
