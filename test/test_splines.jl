@@ -704,7 +704,7 @@ Random.seed!(24543)
 
     @testset "expansion * lazy banded" begin
         L = LinearSpline(range(0,1,10))
-        F = L * rand(4, 11)
+        F = L * rand(10, 11)
         B = brand(11,11,1,1)
         @test F * ApplyArray(*, B, B) == F * B*B
     end
