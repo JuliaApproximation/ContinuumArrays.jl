@@ -23,3 +23,7 @@ function sub_coefficients_layout(::KronExpansionLayout, P, j)
 end
 
 sum_layout(::KronExpansionLayout, F, dims...) = sum_layout(ApplyLayout{typeof(*)}(), F, dims...)
+
+diff_layout(::KronExpansionLayout, F, order...; dims...) = diff_layout(ApplyLayout{typeof(*)}(), F, order...; dims...)
+
+copy(L::Ldiv{Lay,<:KronExpansionLayout}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
