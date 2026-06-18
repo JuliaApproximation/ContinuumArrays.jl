@@ -124,6 +124,11 @@ simplifiable(L::Rdiv{<:AbstractLazyLayout,<:AdjointBasisLayout}) = simplifiable(
     (B' \ A')'
 end
 
+@inline function copy(P::Rdiv{ApplyLayout{typeof(*)},<:AdjointBasisLayout})
+    A, B = P.A, P.B
+    (B' \ A')'
+end
+
 
 # multiplication operators, reexpand in basis A
 @inline function _broadcast_mul_ldiv(::Tuple{Any,AbstractBasisLayout}, A, B)
