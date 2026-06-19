@@ -714,4 +714,23 @@ Random.seed!(24543)
         @test L' / L' ≡ Eye(10)
         @test simplifiable(Rdiv(L', L')) ≡ Val(true)
     end
+
+    @testset "real" begin
+        L = LinearSpline(range(0,1,10))
+        L̃ = LinearSpline{ComplexF64}(range(0,1,10))
+        M = L[affine(0..2, 0..1),:]
+        M̃ = L̃[affine(0..2, 0..1),:]
+        V = L[:,1:10]
+        Ṽ = L̃[:,1:10]
+
+        for P in (L, M, L̃, M̃, V, Ṽ)
+            @test isreal(P) && all(isreal, P)
+            @test real(P) == convert(AbstractQuasiArray{real(eltype(P))}, P)
+            @test imag(P) ≡ zeros(axes(P)...)
+
+            f = P * (collect(1:10) .+ im)
+            @test real(f) == P * collect(1:10)
+            @test imag(f) == P * ones(10)
+        end
+    end
 end

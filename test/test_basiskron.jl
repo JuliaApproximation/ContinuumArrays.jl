@@ -1,4 +1,5 @@
 using ContinuumArrays, QuasiArrays, StaticArrays, Test
+using ContinuumArrays: KronExpansionLayout
 
 @testset "Basis Kron" begin
     L = LinearSpline(range(0,1; length=4))
@@ -27,4 +28,18 @@ end
     @test diff(F;dims=2)[0.1,0.2]  ≈ L[0.1,:]'*C*diff(L)[0.2,:]
 
     @test L\F/L' == (L\F)/L' == L\(F/L') == C
+
+    @testset "real/imag" begin
+        F = L * (C .+ im) * L'
+        @test real(F)[0.1,0.2] == (L * C * L')[0.1,0.2]
+        @test imag(F)[0.1,0.2] == (L * one.(C) * L')[0.1,0.2]
+        @test MemoryLayout(real(F)) isa KronExpansionLayout 
+        @test MemoryLayout(imag(F)) isa KronExpansionLayout
+    end
+
+    @testset "plot" begin
+        F = L * C * L'
+        ((x,y), Z) = ContinuumArrays.plotgridvalues(F)
+        @test F[x,y] == Z
+    end
 end
