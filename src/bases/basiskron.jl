@@ -27,3 +27,18 @@ sum_layout(::KronExpansionLayout, F, dims...) = sum_layout(ApplyLayout{typeof(*)
 diff_layout(::KronExpansionLayout, F, order...; dims...) = diff_layout(ApplyLayout{typeof(*)}(), F, order...; dims...)
 
 copy(L::Ldiv{Lay,<:KronExpansionLayout}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
+
+
+function plotgrid_layout(::KronExpansionLayout, P)
+    A,X,Bt = arguments(P)
+    plotgrid(A,size(X,1)), plotgrid(parent(Bt), size(X,2))
+end
+
+
+for op in (:real, :imag)
+    @eval function layout_broadcasted(::Tuple{KronExpansionLayout}, ::typeof($op), f)
+        A,X,Bt = arguments(f)
+        @assert isreal(A) && isreal(Bt)
+        real(A) * $op(X) * real(Bt)
+    end
+end

@@ -32,6 +32,7 @@ plotgrid_layout(::ExpansionLayout, P) = plotgrid_layout(ApplyLayout{typeof(*)}()
 
 plotvalues_size(::Tuple{InfiniteCardinal{1}}, g, x=plotgrid(g)) = g[x]
 plotvalues_size(::Tuple{InfiniteCardinal{1},Int}, g, x=plotgrid(g)) = g[x,:]
+plotvalues_size(::NTuple{2, InfiniteCardinal{1}}, g, x=plotgrid(g)) = g[x...]
 plotvalues_layout(lay, g, x...) = plotvalues_size(size(g), g, x...)
 # plotvalues_layout(::WeightedBasisLayouts, wP, n...) = plotvalues(unweighted(wP), n...)
 plotvalues_layout(::ExpansionLayout{MappedBasisLayout}, g, x...) = plotvalues(demap(g))
