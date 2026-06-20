@@ -26,6 +26,7 @@ end
 axes(B::Spline{o}) where o =
     (Inclusion(first(B.points)..last(B.points)), OneTo(length(B.points)+o-1))
 ==(A::Spline{o}, B::Spline{o}) where o = A.points == B.points
+isreal(::Spline) = true
 
 function getindex(B::LinearSpline{T}, x::Number, k::Int) where T
     @boundscheck (x ∈ axes(B,1) && 1 ≤ k ≤ size(B,2)) || throw(BoundsError(B, (x, k)))

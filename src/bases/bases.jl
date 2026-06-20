@@ -867,6 +867,48 @@ function vec_layout(::ExpansionLayout, f)
 end
 
 
+######
+# real/zero
+#####
+
+isreal(::Basis{<:Real}) = true
+isreal(P::Basis) = error("Overload isreal(::$(typeof(P)))")
+_all(::typeof(iszero), ::Basis, ::Colon) = false # basis are linearly independent
+_all(::typeof(isreal), P::Basis, ::Colon) = isreal(P)
+
+for op in (:iszero, :isreal)
+    @eval _all(::typeof($op), V::SubQuasiArray{T,N,<:Basis}, ::Colon) where {T,N} = isempty(V) || $op(parent(V))
+end
+
+layout_broadcasted(::Tuple{AbstractBasisLayout}, ::typeof(real), P) = isreal(P) ? convert(AbstractQuasiMatrix{real(eltype(P))}, P) : error("Overload real for $(typeof(P))")
+layout_broadcasted(::Tuple{AbstractBasisLayout}, ::typeof(imag), P) = isreal(P) ? zero(real(P)) : error("Overload imag for $(typeof(P))")
+
+function layout_broadcasted(::Tuple{ExpansionLayout}, ::typeof(real), f)
+    P,c = basis(f),coefficients(f)
+    if isreal(P)
+        real(P) * real(c)
+    else
+        real(P)*real(c) - imag(P)*imag(c)
+    end
+end
+
+function layout_broadcasted(::Tuple{ExpansionLayout}, ::typeof(imag), f)
+    P,c = basis(f),coefficients(f)
+    if isreal(P)
+        real(P) * imag(c)
+    else
+        real(P)*imag(c) + imag(P)*real(c)
+    end
+end
+
+for op in (:real, :imag)
+    @eval begin
+        layout_broadcasted(::Tuple{SubBasisLayout}, ::typeof($op), P) = view($op(parent(P)), parentindices(P)...)
+        layout_broadcasted(::Tuple{MappedBasisLayouts}, ::typeof($op), P) = $op(demap(P))[basismap(P),:]
+    end
+end
+
+
 
 include("basisconcat.jl")
 include("basiskron.jl")
