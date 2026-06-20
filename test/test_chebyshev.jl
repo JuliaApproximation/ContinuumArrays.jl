@@ -307,4 +307,10 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         @test_throws ErrorException expand(T,exp) + expand(P,cos)
         @test_throws ErrorException expand(P,cos) + expand(T,exp)
     end
+
+    @testset "isreal/iszero" begin
+        T = Chebyshev(5)
+        @test isreal(T)
+        @test !iszero(T)
+    end
 end

@@ -41,4 +41,10 @@ import RecipesBase
         y = affine(0..1, x)
         @test plotgrid(T[y,:]) == (plotgrid(T) .+ 1)/2
     end
+
+    @testset "basiskron" begin
+        F = L*randn(6,6)*L'     
+        rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), F)
+        @test rep[1].args == (0:5, 0:5, F.args[2])
+    end
 end

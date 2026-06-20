@@ -83,6 +83,7 @@ end
 
 include("test_splines.jl")
 include("test_chebyshev.jl")
+include("test_fourier.jl")
 include("test_basisconcat.jl")
 include("test_basiskron.jl")
 
