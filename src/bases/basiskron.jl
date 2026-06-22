@@ -13,7 +13,7 @@ applylayout(::Type{typeof(*)}, ::LayA, ::CoefficientLayouts, ::AdjointBasisLayou
 sublayout(::KronExpansionLayout, inds) = sublayout(ApplyLayout{typeof(*)}(), inds)
 sublayout(::KronExpansionLayout{LayA, LayB}, inds::Type{<:Tuple{Inclusion,AbstractVector}}) where {LayA,LayB} = ExpansionLayout{LayA}()
 
-
+expand_layout(::KronExpansionLayout, v) = v
 sub_basis_layout(::KronExpansionLayout, P, j) = first(arguments(P))
 
 
@@ -31,7 +31,7 @@ copy(L::Ldiv{Lay,<:KronExpansionLayout}) where Lay<:AbstractBasisLayout = copy(L
 
 function plotgrid_layout(::KronExpansionLayout, P)
     A,X,Bt = arguments(P)
-    plotgrid(A,size(X,1)), plotgrid(parent(Bt), size(X,2))
+    plotgrid(A,max(20, maximum(colsupport(X)))), plotgrid(parent(Bt), max(20, maximum(rowsupport(X))))
 end
 
 
@@ -42,3 +42,8 @@ for op in (:real, :imag)
         real(A) * $op(X) * real(Bt)
     end
 end
+
+
+LazyArrays._mul_arguments(lay::KronExpansionLayout, A) = arguments(lay, A)
+
+laplacian_layout(::KronExpansionLayout, F, order=1; dims...) = diff(F, 2order; dims=1) + diff(F,2order; dims=2)

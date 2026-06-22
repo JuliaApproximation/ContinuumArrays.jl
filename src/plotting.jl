@@ -47,7 +47,8 @@ end
 
 plotvalues(g::AbstractQuasiArray, x...) = plotvalues_layout(MemoryLayout(g), g, x...)
 
-function plotgridvalues(g)
+function plotgridvalues(g_in)
+    g = expand(g_in)
     x = plotgrid(g)
     x, plotvalues(g,x)
 end
