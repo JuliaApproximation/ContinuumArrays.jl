@@ -382,7 +382,9 @@ expand(A, f) = A * transform(A, f)
 finds a natural basis for a quasi-vector and expands
 in that basis.
 """
-function expand(v)
+expand(v) = expand_layout(MemoryLayout(v), v)
+
+function expand_layout(_, v)
     P = basis(v)
     ApplyQuasiArray(*, P, tocoefficients(P \ v))
 end
@@ -438,6 +440,8 @@ tocoefficients_layout(::CoefficientLayouts, v) = v
 tocoefficients_layout(_, v) = tocoefficients_size(size(v), v)
 tocoefficients_size(::NTuple{N,Int}, v) where N = Array(v)
 tocoefficients_size(_, v) = v # the default is to leave it, even though we aren't technically making an ExpansionLayout
+
+expand_layout(::ExpansionLayout, v) = v
 
 """
     basis(v)
@@ -728,8 +732,11 @@ cumsum_layout(::ExpansionLayout, A, dims) = cumsum_layout(ApplyLayout{typeof(*)}
 ###
 # diff
 ###
-diff_layout(::AbstractBasisLayout, Vm, order...; dims...) = error("Overload diff(::$(typeof(Vm)))")
-function diff_layout(::AbstractBasisLayout, a, order::Int; dims...)
+
+diff_layout(::AbstractBasisLayout, a, order...; dims...) = basis_diff(a, order...; dims...)
+
+basis_diff(Vm, order...; dims...) = error("Overload diff(::$(typeof(Vm)))")
+function basis_diff(a, order::Int; dims...)
     order < 0 && throw(ArgumentError("order must be non-negative"))
     order == 0 && return a
     isone(order) ? diff(a) : diff(diff(a), order-1)

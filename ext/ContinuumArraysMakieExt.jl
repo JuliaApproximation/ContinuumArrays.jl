@@ -1,17 +1,17 @@
 module ContinuumArraysMakieExt
 
-using ContinuumArrays, Makie
-using ContinuumArrays: plotgridvalues, AbstractQuasiArray, AbstractQuasiMatrix, AbstractQuasiVector, _split_svec
+using ContinuumArrays, Makie, ArrayLayouts
+using ContinuumArrays: plotgridvalues, AbstractQuasiArray, AbstractQuasiMatrix, AbstractQuasiVector, _split_svec, KronExpansionLayout
 import Makie: convert_arguments, plot!
 
 
-function Makie.convert_arguments(p::PointBased, g::AbstractQuasiVector)
+function Makie.convert_arguments(p::PointBased, g::AbstractQuasiArray)
     x,v = plotgridvalues(g)
     convert_arguments(p, _split_svec(x)..., v)
 end
 
 
-function Makie.convert_arguments(p::GridBased, g::AbstractQuasiVector)
+function Makie.convert_arguments(p::GridBased, g::AbstractQuasiArray)
     x,v = plotgridvalues(g)
     convert_arguments(p, _split_svec(x)..., v)
 end
@@ -24,7 +24,10 @@ end
 end
 
 Makie.plottype(a::AbstractQuasiVector) = Lines
-Makie.plottype(a::AbstractQuasiMatrix) = QuasiPlot
+Makie.plottype(a::AbstractQuasiMatrix) = _quasi_plottype(MemoryLayout(a), a)
+
+_quasi_plottype(_, a) = QuasiPlot
+_quasi_plottype(::KronExpansionLayout, a) = Contourf
 
 function Makie.plot!(sc::QuasiPlot)
     x,v = plotgridvalues(sc[:P][])

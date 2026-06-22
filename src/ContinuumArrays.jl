@@ -5,7 +5,7 @@ import Base: @_inline_meta, @_propagate_inbounds_meta, axes, size, getindex, con
                 first, last, show, isempty, findfirst, findlast, findall, Slice, union, minimum, maximum, extrema, sum, _sum, _maximum, _minimum,
                 getproperty, isone, iszero, zero, abs, <, ≤, >, ≥, string, summary, to_indices, view, @propagate_inbounds, collect, _all, isreal
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted, Broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, combine_mul_styles, AbstractArrayApplyStyle,
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, rowsupport, combine_mul_styles, AbstractArrayApplyStyle,
                         adjointlayout, arguments, _mul_arguments, call, broadcastlayout, layout_getindex, UnknownLayout,
                         sublayout, sub_materialize, ApplyLayout, BroadcastLayout, combine_mul_styles, applylayout,
                         simplifiable, _simplify, AbstractLazyLayout, AbstractPaddedLayout, simplify, Dot
