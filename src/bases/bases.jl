@@ -234,6 +234,7 @@ grid(L) = grid(L, size(L,2))
 grid_layout(_, P, n) = grid_axis(axes(P,2), P, n)
 
 grid_axis(::OneTo, P, n::Block) = grid(P, size(P,2))
+grid_axis(ax::BlockedOneTo, P, n::Block{1}) = grid(P, last(ax[n])) # fall back to integer
 
 grid_layout(::MappedBasisLayout, P, n) = invmap(parentindices(P)[1])[grid(demap(P), n)]
 grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), parentindices(P)[2][n])
@@ -314,6 +315,10 @@ _sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
     ProjectionFactorization(factorize(parent(L)[:,OneTo(maximum(jr))], dims...), jr)
 
 _factorize(::SubBasisLayout, L, dims...; kws...) = _sub_factorize(size(parent(L)), parentindices(L), L, dims...; kws...)
+
+ContinuumArrays._sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,BlockSlice{BlockRange1{OneTo{Int}}}}, L, dims...; kws...) =
+    TransformFactorization(plan_grid_transform(parent(L), (last(jr.block), dims...), 1)...)
+
 
 
 """
