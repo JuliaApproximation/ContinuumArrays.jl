@@ -348,11 +348,16 @@ end
 # Axiom of Choice: choose a point in the set
 _any_eltype(B::AbstractQuasiArray{Any}) = typeof(B[choice.(axes(B))...]) # assume types are same
 _any_eltype(B) = eltype(B)
+_plan_eltype(A,B) = promote_type(eltype(A), _any_eltype(B))
 
-plan_ldiv(A, B::AbstractQuasiVector) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), _any_eltype(B))}, A))
-plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), _any_eltype(B))}, A), size(B,2))
+plan_ldiv(A, B::AbstractQuasiVector) = factorize(convert(AbstractQuasiMatrix{_plan_eltype(A,B)}, A))
+plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(convert(AbstractQuasiMatrix{_plan_eltype(A,B)}, A), size(B,2))
 
-transform_ldiv_size(_, A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}) where {T,V} = plan_ldiv(A, B) \ B
+function transform_ldiv_size(_, A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}) where {T,V}
+    pl = plan_ldiv(A, B)
+    # try to work around case where V == Any
+    pl \ convert(AbstractQuasiArray{_plan_eltype(A,B)}, B)
+end
 transform_ldiv(A, B) = transform_ldiv_size(size(A), A, B)
 
 
