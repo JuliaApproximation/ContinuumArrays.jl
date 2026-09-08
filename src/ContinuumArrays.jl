@@ -11,7 +11,7 @@ import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupp
                         simplifiable, _simplify, AbstractLazyLayout, AbstractPaddedLayout, simplify, Dot
 import LinearAlgebra: pinv, inv, dot, norm2, ldiv!, mul!
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
-import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray, BlockIndexRange, _maybetail
+import BlockArrays: block, blockindex, unblock, blockedrange, _BlockedUnitRange, _BlockArray, BlockIndexRange, _maybetail, BlockSlice
 import FillArrays: AbstractFill, getindex_value, SquareEye
 import ArrayLayouts: mul, ldiv, ZerosLayout, ScalarLayout, AbstractStridedLayout, check_mul_axes, check_ldiv_axes, Rdiv
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
@@ -27,6 +27,12 @@ import AbstractFFTs: Plan
 
 const LazyArraysBandedMatricesExt = Base.get_extension(LazyArrays, :LazyArraysBandedMatricesExt)
 const BandedLazyLayouts = LazyArraysBandedMatricesExt.BandedLazyLayouts
+
+# also in BlockBandedMatrices.jl
+const Block1 = Block{1,Int}
+const BlockRange1{R<:AbstractUnitRange{Int}} = BlockRange{1,Tuple{R}}
+const BlockIndexRange1{R<:AbstractUnitRange{Int}} = BlockIndexRange{1,Tuple{R}}
+
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, basis, coefficients,
         weaklaplacian, laplacian, Laplacian, AbsLaplacian, abslaplacian

@@ -234,6 +234,7 @@ grid(L) = grid(L, size(L,2))
 grid_layout(_, P, n) = grid_axis(axes(P,2), P, n)
 
 grid_axis(::OneTo, P, n::Block) = grid(P, size(P,2))
+grid_axis(ax::BlockedOneTo, P, n::Block{1}) = grid(P, last(ax[n])) # fall back to integer
 
 grid_layout(::MappedBasisLayout, P, n) = invmap(parentindices(P)[1])[grid(demap(P), n)]
 grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), parentindices(P)[2][n])
@@ -315,6 +316,10 @@ _sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
 
 _factorize(::SubBasisLayout, L, dims...; kws...) = _sub_factorize(size(parent(L)), parentindices(L), L, dims...; kws...)
 
+ContinuumArrays._sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,BlockSlice{BlockRange1{OneTo{Int}}}}, L, dims...; kws...) =
+    TransformFactorization(plan_grid_transform(parent(L), (last(jr.block), dims...), 1)...)
+
+
 
 """
     MappedFactorization(F, map)
@@ -343,11 +348,16 @@ end
 # Axiom of Choice: choose a point in the set
 _any_eltype(B::AbstractQuasiArray{Any}) = typeof(B[choice.(axes(B))...]) # assume types are same
 _any_eltype(B) = eltype(B)
+_plan_eltype(A,B) = promote_type(eltype(A), _any_eltype(B))
 
-plan_ldiv(A, B::AbstractQuasiVector) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), _any_eltype(B))}, A))
-plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(convert(AbstractQuasiMatrix{promote_type(eltype(A), _any_eltype(B))}, A), size(B,2))
+plan_ldiv(A, B::AbstractQuasiVector) = factorize(convert(AbstractQuasiMatrix{_plan_eltype(A,B)}, A))
+plan_ldiv(A, B::AbstractQuasiMatrix) = factorize(convert(AbstractQuasiMatrix{_plan_eltype(A,B)}, A), size(B,2))
 
-transform_ldiv_size(_, A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}) where {T,V} = plan_ldiv(A, B) \ B
+function transform_ldiv_size(_, A::AbstractQuasiArray{T}, B::AbstractQuasiArray{V}) where {T,V}
+    pl = plan_ldiv(A, B)
+    # try to work around case where V == Any
+    pl \ convert(AbstractQuasiArray{_plan_eltype(A,B)}, B)
+end
 transform_ldiv(A, B) = transform_ldiv_size(size(A), A, B)
 
 
