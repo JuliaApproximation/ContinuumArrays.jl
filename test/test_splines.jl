@@ -579,6 +579,20 @@ Random.seed!(24543)
         @test_throws ErrorException P * X
     end
 
+    @testset "ApplyPlan" begin
+        L = LinearSpline(0:5)
+        x = axes(L, 1)
+        P = plan_transform(L)
+
+        f = x -> x .^ 2
+        A = ApplyPlan(f, P)
+        v = randn(size(L, 2))
+        @test A * v == f.(P * v)
+
+        X = randn(size(L, 2), 3)
+        @test A * X == f.(P * X)
+    end
+
     @testset "Mul coefficients" begin
         L = LinearSpline(0:5)
         u = ApplyQuasiArray(*, L, randn(6,5), randn(5))
