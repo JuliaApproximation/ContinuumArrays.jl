@@ -1,7 +1,7 @@
 using ContinuumArrays, LinearAlgebra, Base64, FillArrays, QuasiArrays, BandedMatrices, BlockArrays, StatsBase, Random, Test
 using QuasiArrays: ApplyQuasiArray, ApplyStyle, MemoryLayout, mul, MulQuasiMatrix, Vec
 import LazyArrays: MulStyle, LdivStyle, arguments, applied, apply, simplifiable, ApplyArray, Rdiv
-import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayouts, MappedBasisLayout, plan_grid_transform, weaklaplacian
+import ContinuumArrays: basis, AdjointBasisLayout, ExpansionLayout, BasisLayout, SubBasisLayout, AdjointMappedBasisLayouts, MappedBasisLayout, plan_grid_transform, weaklaplacian, ApplyPlan
 
 Random.seed!(24543)
 
@@ -344,6 +344,7 @@ Random.seed!(24543)
             x = axes(L,1)
             @test L[0.123,:]'* (L \ exp.(x)) ≈ exp(0.123) atol=1E-9
             @test L[0.123,2:end-1]'* (L[:,2:end-1] \ exp.(x)) ≈ exp(0.123) atol=1E-9
+            @test L[:,2:end-1] \ [exp.(x) cos.(x)] ≈ [L[:,2:end-1]\exp.(x) L[:,2:end-1]\cos.(x)]
 
             @test L \ zeros(x) ≡ Zeros(10_000)
 
@@ -576,6 +577,20 @@ Random.seed!(24543)
         X = randn(n, n, n, n, n)
         P = plan_transform(L, X)
         @test_throws ErrorException P * X
+    end
+
+    @testset "ApplyPlan" begin
+        L = LinearSpline(0:5)
+        x = axes(L, 1)
+        P = plan_transform(L)
+
+        f = x -> x .^ 2
+        A = ApplyPlan(f, P)
+        v = randn(size(L, 2))
+        @test A * v == f.(P * v)
+
+        X = randn(size(L, 2), 3)
+        @test A * X == f.(P * X)
     end
 
     @testset "Mul coefficients" begin

@@ -1,4 +1,4 @@
-using ContinuumArrays, LinearAlgebra, QuasiArrays, ArrayLayouts, Base64, LazyArrays, Test
+using ContinuumArrays, LinearAlgebra, QuasiArrays, ArrayLayouts, Base64, LazyArrays, InfiniteArrays, BlockArrays, Test
 using FastTransforms
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
@@ -94,6 +94,27 @@ struct FooDomain end
 struct FooBasis  <: Basis{Float64} end
 Base.axes(::FooBasis) = (Inclusion(-1..1), Base.OneTo(5))
 Base.:(==)(::FooBasis, ::FooBasis) = true
+
+"""
+Infinite-dimensional Chebyshev for testing _sub_factorize with infinite parent.
+"""
+struct InfChebyshev <: Basis{Float64} end
+Base.axes(::InfChebyshev) = (Inclusion(-1..1), Base.oneto(∞))
+Base.:(==)(::InfChebyshev, ::InfChebyshev) = true
+Base.getindex(::InfChebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
+ContinuumArrays.grid(::InfChebyshev, n::Integer) = chebyshevpoints(Float64, n, Val(1))
+ContinuumArrays.plan_transform(::InfChebyshev, szs::NTuple{N,Int}, dims=1:N) where N = plan_chebyshevtransform(Array{Float64}(undef, szs...), dims)
+
+
+"""
+Blocked Infinite-dimensional Chebyshev for testing _sub_factorize with blocks.
+"""
+struct InfBlockedChebyshev <: Basis{Float64} end
+Base.axes(::InfBlockedChebyshev) = (Inclusion(-1..1), blockedrange(Ones{Int}(∞)))
+Base.:(==)(::InfBlockedChebyshev, ::InfBlockedChebyshev) = true
+Base.getindex(::InfBlockedChebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
+ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float64, n, Val(1))
+# ContinuumArrays.plan_transform(::InfBlockedChebyshev, szs::NTuple{N,Int}, dims=1:N) where N = ApplyPlan(f -> Blockedplan_chebyshevtransform(Array{Float64}(undef, szs...), dims)
 
 
 @testset "Chebyshev" begin
@@ -312,5 +333,32 @@ Base.:(==)(::FooBasis, ::FooBasis) = true
         T = Chebyshev(5)
         @test isreal(T)
         @test !iszero(T)
+    end
+
+    @testset "sub_factorize with infinite parent" begin
+        T∞ = InfChebyshev()
+        T5 = Chebyshev(5)
+        x = axes(T∞, 1)
+        # _sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,OneTo}, ...) → TransformFactorization
+        @test factorize(T∞[:,Base.OneTo(5)]) isa ContinuumArrays.TransformFactorization
+        @test T∞[:,Base.OneTo(5)] \ exp.(x) ≈ T5 \ exp.(x)
+        # _sub_factorize(::Tuple{Any,Any}, (kr,jr), ...) → ProjectionFactorization
+        @test factorize(T∞[:,2:5]) isa ContinuumArrays.ProjectionFactorization
+        @test T∞[:,2:5] \ exp.(x) == (T∞[:,Base.OneTo(5)] \ exp.(x))[2:5]
+        # ProjectionFactorization \ AbstractQuasiMatrix
+        @test T∞[:,Base.OneTo(5)] \ [exp.(x) cos.(x)] ≈ [T5\exp.(x) T5\cos.(x)]
+    end
+
+    @testset "sub_factorize with blocks" begin
+        T = Chebyshev(5)
+        x = axes(T,1)
+        Tblock = T[:,BlockRange((Base.OneTo(1),))]
+        @test factorize(Tblock) isa ContinuumArrays.ProjectionFactorization
+        @test Tblock \ exp.(x) ≈ T \ exp.(x)
+        @test Tblock \ [exp.(x) cos.(x)] ≈ [T\exp.(x) T\cos.(x)]
+
+        T∞ = InfBlockedChebyshev()
+        T∞block = T∞[:,BlockRange((Base.OneTo(5),))]
+        @test factorize(T∞block) isa ContinuumArrays.TransformFactorization
     end
 end

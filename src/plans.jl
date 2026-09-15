@@ -139,3 +139,12 @@ end
 
 inv(P::MulPlan{<:Any,<:Any,Nothing}) = InvPlan(map(factorize,P.matrices), P.dims)
 inv(P::InvPlan{<:Any,<:Any,Nothing}) = MulPlan(convert.(Matrix,P.factorizations), P.dims)
+
+struct ApplyPlan{T, F, Pl}
+    f::F
+    plan::Pl
+end
+
+ApplyPlan(f, P) = ApplyPlan{eltype(P), typeof(f), typeof(P)}(f, P)
+
+*(A::ApplyPlan, B::AbstractArray) = A.f(A.plan*B)
