@@ -316,8 +316,12 @@ _sub_factorize(::Tuple{Any,Any}, (kr,jr), L, dims...; kws...) =
 
 _factorize(::SubBasisLayout, L, dims...; kws...) = _sub_factorize(size(parent(L)), parentindices(L), L, dims...; kws...)
 
-ContinuumArrays._sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,BlockSlice{BlockRange1{OneTo{Int}}}}, L, dims...; kws...) =
+_sub_factorize(::Tuple{Any,Any}, (kr,jr)::Tuple{Any,BlockSlice{BlockRange1{OneTo{Int}}}}, L, dims...; kws...) =
     TransformFactorization(plan_grid_transform(parent(L), (last(jr.block), dims...), 1)...)
+
+# ambiguity
+_sub_factorize(::Tuple{Any,Int}, (kr,jr)::Tuple{Any,BlockSlice{BlockRange1{OneTo{Int}}}}, L, dims...; kws...) =
+    ProjectionFactorization(factorize(parent(L), dims...; kws...), jr)
 
 
 

@@ -106,6 +106,17 @@ ContinuumArrays.grid(::InfChebyshev, n::Integer) = chebyshevpoints(Float64, n, V
 ContinuumArrays.plan_transform(::InfChebyshev, szs::NTuple{N,Int}, dims=1:N) where N = plan_chebyshevtransform(Array{Float64}(undef, szs...), dims)
 
 
+"""
+Blocked Infinite-dimensional Chebyshev for testing _sub_factorize with blocks.
+"""
+struct InfBlockedChebyshev <: Basis{Float64} end
+Base.axes(::InfBlockedChebyshev) = (Inclusion(-1..1), blockedrange(Ones{Int}(∞)))
+Base.:(==)(::InfBlockedChebyshev, ::InfBlockedChebyshev) = true
+Base.getindex(::InfBlockedChebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
+ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float64, n, Val(1))
+# ContinuumArrays.plan_transform(::InfBlockedChebyshev, szs::NTuple{N,Int}, dims=1:N) where N = ApplyPlan(f -> Blockedplan_chebyshevtransform(Array{Float64}(undef, szs...), dims)
+
+
 @testset "Chebyshev" begin
     T = Chebyshev(5)
     w = ChebyshevWeight()
@@ -336,10 +347,18 @@ ContinuumArrays.plan_transform(::InfChebyshev, szs::NTuple{N,Int}, dims=1:N) whe
         @test T∞[:,2:5] \ exp.(x) == (T∞[:,Base.OneTo(5)] \ exp.(x))[2:5]
         # ProjectionFactorization \ AbstractQuasiMatrix
         @test T∞[:,Base.OneTo(5)] \ [exp.(x) cos.(x)] ≈ [T5\exp.(x) T5\cos.(x)]
+    end
 
+    @testset "sub_factorize with blocks" begin
+        T = Chebyshev(5)
+        x = axes(T,1)
+        Tblock = T[:,BlockRange((Base.OneTo(1),))]
+        @test factorize(Tblock) isa ContinuumArrays.ProjectionFactorization
+        @test Tblock \ exp.(x) ≈ T \ exp.(x)
+        @test Tblock \ [exp.(x) cos.(x)] ≈ [T\exp.(x) T\cos.(x)]
+
+        T∞ = InfBlockedChebyshev()
         T∞block = T∞[:,BlockRange((Base.OneTo(5),))]
         @test factorize(T∞block) isa ContinuumArrays.TransformFactorization
-        @test T∞block \ exp.(x) ≈ T5 \ exp.(x)
-        @test T∞block \ [exp.(x) cos.(x)] ≈ [T5\exp.(x) T5\cos.(x)]
     end
 end
