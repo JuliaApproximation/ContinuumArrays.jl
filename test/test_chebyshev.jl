@@ -1,4 +1,4 @@
-using ContinuumArrays, LinearAlgebra, QuasiArrays, ArrayLayouts, Base64, LazyArrays, InfiniteArrays, Test
+using ContinuumArrays, LinearAlgebra, QuasiArrays, ArrayLayouts, Base64, LazyArrays, InfiniteArrays, BlockArrays, Test
 using FastTransforms
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
@@ -336,5 +336,10 @@ ContinuumArrays.plan_transform(::InfChebyshev, szs::NTuple{N,Int}, dims=1:N) whe
         @test T∞[:,2:5] \ exp.(x) == (T∞[:,Base.OneTo(5)] \ exp.(x))[2:5]
         # ProjectionFactorization \ AbstractQuasiMatrix
         @test T∞[:,Base.OneTo(5)] \ [exp.(x) cos.(x)] ≈ [T5\exp.(x) T5\cos.(x)]
+
+        T∞block = T∞[:,BlockRange((Base.OneTo(5),))]
+        @test factorize(T∞block) isa ContinuumArrays.TransformFactorization
+        @test T∞block \ exp.(x) ≈ T5 \ exp.(x)
+        @test T∞block \ [exp.(x) cos.(x)] ≈ [T5\exp.(x) T5\cos.(x)]
     end
 end
