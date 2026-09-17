@@ -49,6 +49,32 @@ function QuasiArrays._getindex(::Type{IND}, A::PiecewiseBasis{T}, (x,j)::IND) wh
 end
 
 """
+    f ⊎ g
+
+is the function equal to `f` on `axes(f,1)` and `g` on `axes(g,1)`, where the two
+domains are assumed disjoint. Expansions are combined into a single expansion in a
+`PiecewiseBasis`.
+"""
+⊎(f, g, h...) = uplus_layout(map(MemoryLayout, (f, g, h...)), f, g, h...)
+
+function uplus_layout(::Tuple{Vararg{ExpansionLayout}}, fs...)
+    Ps = map(basis, fs)
+    uplus_axes(map(P -> axes(P,2), Ps), Ps, map(coefficients, fs))
+end
+
+"""
+    uplus_axes(ax, Ps, cs)
+
+combines the expansions `Ps .* cs` into a single expansion, dispatching on the tuple
+of column axes `ax` so that, for example, infinite bases can interlace the coefficients
+instead of concatenating them.
+"""
+function uplus_axes(_, Ps::Tuple, cs::Tuple)
+    P = PiecewiseBasis(Ps...)
+    P * BlockedVector(vcat(cs...), (axes(P,2),))
+end
+
+"""
     VcatBasis
 
 is an analogue of `Basis` that vcats the values.

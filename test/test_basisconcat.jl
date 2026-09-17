@@ -1,5 +1,20 @@
-using ContinuumArrays, BlockArrays, InfiniteArrays, StaticArrays, Test
-import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain
+using ContinuumArrays, BlockArrays, InfiniteArrays, StaticArrays, FillArrays, LazyArrays, Test
+import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain,
+                        Basis, basis, coefficients, ExpansionLayout, uplus_axes
+import ArrayLayouts: MemoryLayout
+import InfiniteArrays: OneToInf
+
+struct InfPolynomial{T,D} <: Basis{T}
+    domain::D
+end
+
+InfPolynomial(d) = InfPolynomial{Float64,typeof(d)}(d)
+Base.axes(P::InfPolynomial) = (Inclusion(P.domain), Base.oneto(∞))
+Base.:(==)(P::InfPolynomial, Q::InfPolynomial) = P.domain == Q.domain
+Base.getindex(P::InfPolynomial, x::Number, k::Int) = x^(k-1)
+
+# ClassicalOrthogonalPolynomials.jl overloads this to use PiecewiseInterlace
+uplus_axes(ax::Tuple{Vararg{OneToInf}}, Ps::Tuple, cs::Tuple) = (ax, Ps, cs)
 
 @testset "ConcatBasis" begin
     @testset "hcat" begin
@@ -52,6 +67,41 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
 
         @testset "UnionDomain with point checkpoints" begin
             @test 0 ∈ checkpoints(UnionDomain(0, 1..2))
+        end
+    end
+
+    @testset "⊎" begin
+        S1 = LinearSpline(0:1)
+        S2 = LinearSpline(2:3)
+        f = S1 * [1.,2.]
+        g = S2 * [3.,4.]
+        h = f ⊎ g
+
+        @test MemoryLayout(h) isa ExpansionLayout
+        @test basis(h) == PiecewiseBasis(S1, S2)
+        @test coefficients(h) == [1,2,3,4]
+        @test blockisequal(axes(coefficients(h),1), axes(basis(h),2))
+        @test h[0.5] == f[0.5]
+        @test h[2.5] == g[2.5]
+        @test (h .+ h)[0.5] == 2f[0.5]
+        @test basis(h) \ h == coefficients(h)
+
+        S3 = LinearSpline(4:5)
+        h3 = ⊎(f, g, S3 * [5.,6.])
+        @test basis(h3) == PiecewiseBasis(S1, S2, S3)
+        @test h3[4.5] == 5.5
+
+        @testset "infinite axes" begin
+            P1 = InfPolynomial(0..1)
+            P2 = InfPolynomial(2..3)
+            u = P1 * Vcat([1.,2.], Zeros(∞))
+            v = P2 * Vcat([3.,4.], Zeros(∞))
+            @test MemoryLayout(u) isa ExpansionLayout
+
+            ax,Ps,cs = u ⊎ v
+            @test ax == (Base.oneto(∞), Base.oneto(∞))
+            @test Ps == (P1, P2)
+            @test cs === (coefficients(u), coefficients(v))
         end
     end
 

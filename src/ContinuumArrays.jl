@@ -35,7 +35,7 @@ const BlockIndexRange1{R<:AbstractUnitRange{Int}} = BlockIndexRange{1,Tuple{R}}
 
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, basis, coefficients,
-        weaklaplacian, laplacian, Laplacian, AbsLaplacian, abslaplacian
+        weaklaplacian, laplacian, Laplacian, AbsLaplacian, abslaplacian, ⊎
 
 
 
