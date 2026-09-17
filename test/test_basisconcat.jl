@@ -87,9 +87,23 @@ uplus_axes(ax::Tuple{Vararg{OneToInf}}, Ps::Tuple, cs::Tuple) = (ax, Ps, cs)
         @test basis(h) \ h == coefficients(h)
 
         S3 = LinearSpline(4:5)
-        h3 = ⊎(f, g, S3 * [5.,6.])
+        u = S3 * [5.,6.]
+        h3 = ⊎(f, g, u)
         @test basis(h3) == PiecewiseBasis(S1, S2, S3)
         @test h3[4.5] == 5.5
+
+        @testset "associativity" begin
+            @test basis((f ⊎ g) ⊎ u) == basis(f ⊎ (g ⊎ u)) == basis(h3)
+            @test coefficients((f ⊎ g) ⊎ u) == coefficients(f ⊎ (g ⊎ u)) == coefficients(h3)
+            for x in (0.5, 2.5, 4.5)
+                @test ((f ⊎ g) ⊎ u)[x] == (f ⊎ (g ⊎ u))[x] == h3[x]
+            end
+
+            # coefficients that are not blocked can still be split back into pieces
+            m = PiecewiseBasis(S1, S2) * [1.,2.,3.,4.]
+            @test basis(m ⊎ u) == basis(h3)
+            @test coefficients(m ⊎ u) == coefficients(h3)
+        end
 
         @testset "infinite axes" begin
             P1 = InfPolynomial(0..1)

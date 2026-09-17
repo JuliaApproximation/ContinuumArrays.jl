@@ -55,12 +55,32 @@ is the function equal to `f` on `axes(f,1)` and `g` on `axes(g,1)`, where the tw
 domains are assumed disjoint. Expansions are combined into a single expansion in a
 `PiecewiseBasis`.
 """
-⊎(f, g, h...) = uplus_layout(map(MemoryLayout, (f, g, h...)), f, g, h...)
+function ⊎(f, g, h...)
+    fs = uplus_flatten((f, g, h...))
+    uplus_layout(map(MemoryLayout, fs), fs)
+end
 
-function uplus_layout(::Tuple{Vararg{ExpansionLayout}}, fs...)
+function uplus_layout(::Tuple{Vararg{ExpansionLayout}}, fs::Tuple)
     Ps = map(basis, fs)
     uplus_axes(map(P -> axes(P,2), Ps), Ps, map(coefficients, fs))
 end
+
+"""
+    uplus_components(f)
+
+returns the pieces `f` is made of, so that `⊎` is associative: `(f ⊎ g) ⊎ h` and
+`f ⊎ (g ⊎ h)` both flatten to `⊎(f, g, h)`.
+"""
+uplus_components(f) = (f,)
+
+function uplus_components(f::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{<:PiecewiseBasis,<:Any}})
+    P,c = arguments(f)
+    ax = axes(P,2)
+    map(k -> P.args[k] * c[ax[Block(k)]], ntuple(identity, length(P.args)))
+end
+
+uplus_flatten(::Tuple{}) = ()
+uplus_flatten(fs::Tuple) = (uplus_components(first(fs))..., uplus_flatten(tail(fs))...)
 
 """
     uplus_axes(ax, Ps, cs)
