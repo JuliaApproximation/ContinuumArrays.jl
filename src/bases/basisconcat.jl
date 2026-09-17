@@ -71,10 +71,11 @@ end
 returns the pieces `f` is made of, so that `⊎` is associative: `(f ⊎ g) ⊎ h` and
 `f ⊎ (g ⊎ h)` both flatten to `⊎(f, g, h)`.
 """
-uplus_components(f) = (f,)
+uplus_components(f) = uplus_components_layout(MemoryLayout(f), f)
+uplus_components_layout(::ExpansionLayout, f) = uplus_components_basis(basis(f), coefficients(f))
 
-function uplus_components(f::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{<:PiecewiseBasis,<:Any}})
-    P,c = arguments(f)
+uplus_components_basis(P, c) = (P*c,)
+function uplus_components_basis(P::PiecewiseBasis, c)
     ax = axes(P,2)
     map(k -> P.args[k] * c[ax[Block(k)]], ntuple(identity, length(P.args)))
 end
