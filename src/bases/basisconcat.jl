@@ -62,7 +62,7 @@ end
 
 function uplus_layout(::Tuple{Vararg{ExpansionLayout}}, fs::Tuple)
     Ps = map(basis, fs)
-    uplus_axes(map(P -> axes(P,2), Ps), Ps, map(coefficients, fs))
+    uplus_size(map(P -> size(P,2), Ps), Ps, map(coefficients, fs))
 end
 
 """
@@ -90,7 +90,7 @@ combines the expansions `Ps .* cs` into a single expansion, dispatching on the t
 of column axes `ax` so that, for example, infinite bases can interlace the coefficients
 instead of concatenating them.
 """
-function uplus_axes(_, Ps::Tuple, cs::Tuple)
+function uplus_size(_, Ps::Tuple, cs::Tuple)
     P = PiecewiseBasis(Ps...)
     P * BlockedVector(vcat(cs...), (axes(P,2),))
 end

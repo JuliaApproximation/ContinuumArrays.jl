@@ -1,6 +1,6 @@
 using ContinuumArrays, BlockArrays, InfiniteArrays, StaticArrays, FillArrays, LazyArrays, Test
 import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain,
-                        Basis, basis, coefficients, ExpansionLayout, uplus_axes
+                        Basis, basis, coefficients, ExpansionLayout, uplus_size
 import ArrayLayouts: MemoryLayout
 import InfiniteArrays: OneToInf
 
@@ -14,7 +14,7 @@ Base.:(==)(P::InfPolynomial, Q::InfPolynomial) = P.domain == Q.domain
 Base.getindex(P::InfPolynomial, x::Number, k::Int) = x^(k-1)
 
 # ClassicalOrthogonalPolynomials.jl overloads this to use PiecewiseInterlace
-uplus_axes(ax::Tuple{Vararg{OneToInf}}, Ps::Tuple, cs::Tuple) = (ax, Ps, cs)
+uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = (ax, Ps, cs)
 
 @testset "ConcatBasis" begin
     @testset "hcat" begin
