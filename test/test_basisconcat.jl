@@ -1,5 +1,21 @@
-using ContinuumArrays, BlockArrays, InfiniteArrays, StaticArrays, Test
-import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain
+using ContinuumArrays, BlockArrays, InfiniteArrays, FillArrays, LazyArrays, Test
+using StaticArrays
+import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain,
+                        Basis, basis, coefficients, ExpansionLayout, uplus_size
+import ArrayLayouts: MemoryLayout
+import InfiniteArrays: OneToInf, InfiniteCardinal
+
+struct InfPolynomial{T,D} <: Basis{T}
+    domain::D
+end
+
+InfPolynomial(d) = InfPolynomial{Float64,typeof(d)}(d)
+Base.axes(P::InfPolynomial) = (Inclusion(P.domain), Base.oneto(∞))
+Base.:(==)(P::InfPolynomial, Q::InfPolynomial) = P.domain == Q.domain
+Base.getindex(P::InfPolynomial, x::Number, k::Int) = x^(k-1)
+
+# ClassicalOrthogonalPolynomials.jl overloads this to use PiecewiseInterlace
+uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error("Not implemented")
 
 @testset "ConcatBasis" begin
     @testset "hcat" begin
@@ -52,6 +68,52 @@ import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyL
 
         @testset "UnionDomain with point checkpoints" begin
             @test 0 ∈ checkpoints(UnionDomain(0, 1..2))
+        end
+    end
+
+    @testset "⊎" begin
+        S1 = LinearSpline(0:1)
+        S2 = LinearSpline(2:3)
+        f = S1 * [1.,2.]
+        g = S2 * [3.,4.]
+        h = f ⊎ g
+
+        @test MemoryLayout(h) isa ExpansionLayout
+        @test basis(h) == PiecewiseBasis(S1, S2)
+        @test coefficients(h) == [1,2,3,4]
+        @test blockisequal(axes(coefficients(h),1), axes(basis(h),2))
+        @test h[0.5] == f[0.5]
+        @test h[2.5] == g[2.5]
+        @test (h .+ h)[0.5] == 2f[0.5]
+        @test basis(h) \ h == coefficients(h)
+
+        S3 = LinearSpline(4:5)
+        u = S3 * [5.,6.]
+        h3 = ⊎(f, g, u)
+        @test basis(h3) == PiecewiseBasis(S1, S2, S3)
+        @test h3[4.5] == 5.5
+
+        @testset "associativity" begin
+            @test basis((f ⊎ g) ⊎ u) == basis(f ⊎ (g ⊎ u)) == basis(h3)
+            @test coefficients((f ⊎ g) ⊎ u) == coefficients(f ⊎ (g ⊎ u)) == coefficients(h3)
+            for x in (0.5, 2.5, 4.5)
+                @test ((f ⊎ g) ⊎ u)[x] == (f ⊎ (g ⊎ u))[x] == h3[x]
+            end
+
+            # coefficients that are not blocked can still be split back into pieces
+            m = PiecewiseBasis(S1, S2) * [1.,2.,3.,4.]
+            @test basis(m ⊎ u) == basis(h3)
+            @test coefficients(m ⊎ u) == coefficients(h3)
+        end
+
+        @testset "infinite axes" begin
+            P1 = InfPolynomial(0..1)
+            P2 = InfPolynomial(2..3)
+            u = P1 * Vcat([1.,2.], Zeros(∞))
+            v = P2 * Vcat([3.,4.], Zeros(∞))
+            @test MemoryLayout(u) isa ExpansionLayout
+
+            @test_throws ErrorException u ⊎ v
         end
     end
 
