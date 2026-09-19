@@ -1,8 +1,9 @@
-using ContinuumArrays, BlockArrays, InfiniteArrays, StaticArrays, FillArrays, LazyArrays, Test
+using ContinuumArrays, BlockArrays, InfiniteArrays, FillArrays, LazyArrays, Test
+using StaticArrays
 import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain,
                         Basis, basis, coefficients, ExpansionLayout, uplus_size
 import ArrayLayouts: MemoryLayout
-import InfiniteArrays: OneToInf
+import InfiniteArrays: OneToInf, InfiniteCardinal
 
 struct InfPolynomial{T,D} <: Basis{T}
     domain::D
@@ -14,7 +15,7 @@ Base.:(==)(P::InfPolynomial, Q::InfPolynomial) = P.domain == Q.domain
 Base.getindex(P::InfPolynomial, x::Number, k::Int) = x^(k-1)
 
 # ClassicalOrthogonalPolynomials.jl overloads this to use PiecewiseInterlace
-uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = (ax, Ps, cs)
+uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error("Not implemented")
 
 @testset "ConcatBasis" begin
     @testset "hcat" begin
@@ -112,10 +113,7 @@ uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = (ax, 
             v = P2 * Vcat([3.,4.], Zeros(∞))
             @test MemoryLayout(u) isa ExpansionLayout
 
-            ax,Ps,cs = u ⊎ v
-            @test ax == (Base.oneto(∞), Base.oneto(∞))
-            @test Ps == (P1, P2)
-            @test cs === (coefficients(u), coefficients(v))
+            @test_throws ErrorException u ⊎ v
         end
     end
 
