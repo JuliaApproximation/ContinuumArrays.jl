@@ -83,6 +83,17 @@ end
 uplus_flatten(::Tuple{}) = ()
 uplus_flatten(fs::Tuple) = (uplus_components(first(fs))..., uplus_flatten(tail(fs))...)
 
+
+uplus_basis_size(::NTuple{N,Int}, b) where N = PiecewiseBasis(b...)
+uplus_basis(b...) = uplus_basis_size(size.(b, 2), b)
+
+basis_axes(ax::Inclusion{<:Any,<:UnionDomain}, v) = uplus_basis(map(basis, components(ax.domain))...)
+coefficient_vcat(P::PiecewiseBasis, cs) = BlockedVector(vcat(cs...), (axes(P,2),))
+
+components_axes(::Inclusion{<:Any,<:UnionDomain}, f) = uplus_components(f)
+components_layout(_, f) = components_axes(axes(f,1), f)
+DomainSets.components(f::AbstractQuasiVector) = components_layout(MemoryLayout(f), f)
+
 """
     uplus_axes(ax, Ps, cs)
 
@@ -91,8 +102,8 @@ of column axes `ax` so that, for example, infinite bases can interlace the coeff
 instead of concatenating them.
 """
 function uplus_size(_, Ps::Tuple, cs::Tuple)
-    P = PiecewiseBasis(Ps...)
-    P * BlockedVector(vcat(cs...), (axes(P,2),))
+    P = uplus_basis(Ps...)
+    P * uplus_axes_vcat(P, cs)
 end
 
 """

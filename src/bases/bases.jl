@@ -461,6 +461,10 @@ gives a basis for expanding given quasi-vector.
 """
 basis(v) = basis_layout(MemoryLayout(v), v)
 
+basis(d::Domain) = basis(Inclusion(d))
+DomainSets.domain(d::Inclusion) = d.domain
+DomainSets.domain(d::AbstractQuasiArray) = domain(axes(d,1))
+
 basis_layout(::ExpansionLayout, v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
 basis_layout(lay::ApplyLayout{typeof(*)}, v) = basis(first(arguments(lay, v)))
 basis_layout(lay::AbstractBasisLayout, v) = v

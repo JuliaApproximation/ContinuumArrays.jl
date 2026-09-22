@@ -115,18 +115,18 @@ struct AffineMap{T,D,R} <: AbstractAffineQuasiVector{T,T,D,T}
 end
 
 AffineMap(domain::AbstractQuasiVector{T}, range::AbstractQuasiVector{V}) where {T,V} =
-    AffineMap{promote_type(T,V), typeof(domain),typeof(range)}(domain,range)
+    AffineMap{V, typeof(domain),typeof(range)}(domain,range)
 
 union(d::AffineMap) = d.range
-measure(x::Inclusion{<:Any,<:AbstractInterval}) = last(x)-first(x)
+endpointdiff(x) = last(x) - first(x)
 
 function affinemap_A(m::AffineMap{<:Number,<:Inclusion{<:Number},<:Inclusion{<:Number}})
     domain, range = getfield(m, :domain), getfield(m, :range)
-    measure(range)/measure(domain)
+    endpointdiff(range)/endpointdiff(domain)
 end
 function affinemap_b(m::AffineMap{<:Number,<:Inclusion{<:Number},<:Inclusion{<:Number}})
     domain, range = getfield(m, :domain), getfield(m, :range)
-    (last(domain)*first(range) - first(domain)*last(range))/measure(domain)
+    (last(domain)*first(range) - first(domain)*last(range))/endpointdiff(domain)
 end
 
 function getproperty(m::AffineMap, d::Symbol)
