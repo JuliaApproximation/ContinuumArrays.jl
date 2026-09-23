@@ -35,7 +35,7 @@ const BlockIndexRange1{R<:AbstractUnitRange{Int}} = BlockIndexRange{1,Tuple{R}}
 
 
 export Spline, LinearSpline, HeavisideSpline, DiracDelta, Derivative, ℵ₁, Inclusion, Basis, grid, plotgrid, affine, .., transform, expand, plan_transform, basis, coefficients,
-        weaklaplacian, laplacian, Laplacian, AbsLaplacian, abslaplacian
+        weaklaplacian, laplacian, Laplacian, AbsLaplacian, abslaplacian, ⊎
 
 
 
@@ -46,6 +46,8 @@ cardinality(::AbstractInterval) = ℵ₁
 cardinality(::Union{FullSpace{<:AbstractFloat},EuclideanDomain,DomainSets.RealNumbers,DomainSets.ComplexNumbers}) = ℵ₁
 cardinality(::Union{DomainSets.Integers,DomainSets.Rationals,DomainSets.NaturalNumbers}) = ℵ₀
 
+# TODO: following two are a bit hacky since one could take unions or products of int-valued domains
+Inclusion(d::UnionDomain{T}) where T = Inclusion{float(T)}(d)
 Inclusion(d::ProductDomain{T}) where T = Inclusion{float(T)}(d)
 Inclusion(d::AbstractInterval{T}) where T = Inclusion{float(T)}(d)
 first(S::Inclusion{<:Any,<:AbstractInterval}) = leftendpoint(S.domain)
@@ -107,6 +109,7 @@ end
     (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
 
 
+checkpoints(d) = choice(d)
 checkpoints(x::Number) = x
 checkpoints(d::AbstractInterval{T}) where T = width(d) .* SVector{3,float(T)}(0.823972,0.01,0.3273484) .+ leftendpoint(d)
 checkpoints(d::UnionDomain) = mapreduce(checkpoints,union,d.domains)

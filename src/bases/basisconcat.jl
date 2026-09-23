@@ -49,6 +49,64 @@ function QuasiArrays._getindex(::Type{IND}, A::PiecewiseBasis{T}, (x,j)::IND) wh
 end
 
 """
+    f ⊎ g
+
+is the function equal to `f` on `axes(f,1)` and `g` on `axes(g,1)`, where the two
+domains are assumed disjoint. Expansions are combined into a single expansion in a
+`PiecewiseBasis`.
+"""
+function ⊎(f, g, h...)
+    fs = uplus_flatten((f, g, h...))
+    uplus_layout(map(MemoryLayout, fs), fs)
+end
+
+function uplus_layout(::Tuple{Vararg{ExpansionLayout}}, fs::Tuple)
+    Ps = map(basis, fs)
+    uplus_size(map(P -> size(P,2), Ps), Ps, map(coefficients, fs))
+end
+
+"""
+    uplus_components(f)
+
+returns the pieces `f` is made of, so that `⊎` is associative: `(f ⊎ g) ⊎ h` and
+`f ⊎ (g ⊎ h)` both flatten to `⊎(f, g, h)`.
+"""
+uplus_components(f) = uplus_components_layout(MemoryLayout(f), f)
+uplus_components_layout(::ExpansionLayout, f) = uplus_components_basis(basis(f), coefficients(f))
+
+uplus_components_basis(P, c) = (P*c,)
+function uplus_components_basis(P::PiecewiseBasis, c)
+    ax = axes(P,2)
+    map(k -> P.args[k] * c[ax[Block(k)]], ntuple(identity, length(P.args)))
+end
+
+uplus_flatten(::Tuple{}) = ()
+uplus_flatten(fs::Tuple) = (uplus_components(first(fs))..., uplus_flatten(tail(fs))...)
+
+
+uplus_basis_size(::NTuple{N,Int}, b) where N = PiecewiseBasis(b...)
+uplus_basis(b...) = uplus_basis_size(size.(b, 2), b)
+
+basis_axes(ax::Inclusion{<:Any,<:UnionDomain}, v) = uplus_basis(map(basis, components(ax.domain))...)
+coefficient_vcat(P::PiecewiseBasis, cs) = BlockedVector(vcat(cs...), (axes(P,2),))
+
+components_axes(::Inclusion{<:Any,<:UnionDomain}, f) = uplus_components(f)
+components_layout(_, f) = components_axes(axes(f,1), f)
+DomainSets.components(f::AbstractQuasiVector) = components_layout(MemoryLayout(f), f)
+
+"""
+    uplus_size(sz, Ps, cs)
+
+combines the expansions `Ps .* cs` into a single expansion, dispatching on the tuple
+of column sizes `sz` so that, for example, infinite bases can interlace the coefficients
+instead of concatenating them.
+"""
+function uplus_size(_, Ps::Tuple, cs::Tuple)
+    P = uplus_basis(Ps...)
+    P * coefficient_vcat(P, cs)
+end
+
+"""
     VcatBasis
 
 is an analogue of `Basis` that vcats the values.
