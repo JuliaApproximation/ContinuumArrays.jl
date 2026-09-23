@@ -3,6 +3,7 @@ using StaticArrays
 import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain,
                         Basis, basis, coefficients, ExpansionLayout, uplus_size
 import ArrayLayouts: MemoryLayout
+import ContinuumArrays.DomainSets: Domain, UnitDisk, components, domain
 import InfiniteArrays: OneToInf, InfiniteCardinal
 
 struct InfPolynomial{T,D} <: Basis{T}
@@ -13,6 +14,12 @@ InfPolynomial(d) = InfPolynomial{Float64,typeof(d)}(d)
 Base.axes(P::InfPolynomial) = (Inclusion(P.domain), Base.oneto(∞))
 Base.:(==)(P::InfPolynomial, Q::InfPolynomial) = P.domain == Q.domain
 Base.getindex(P::InfPolynomial, x::Number, k::Int) = x^(k-1)
+
+struct SplineInterval{R} <: Domain{Float64}
+    r::R
+end
+Base.in(x, d::SplineInterval) = first(d.r) ≤ x ≤ last(d.r)
+ContinuumArrays.basis_axes(ax::Inclusion{<:Any,<:SplineInterval}, v) = LinearSpline(ax.domain.r)
 
 # ClassicalOrthogonalPolynomials.jl overloads this to use PiecewiseInterlace
 uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error("Not implemented")
@@ -68,6 +75,7 @@ uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error
 
         @testset "UnionDomain with point checkpoints" begin
             @test 0 ∈ checkpoints(UnionDomain(0, 1..2))
+            @test checkpoints(UnitDisk()) ∈ UnitDisk()
         end
     end
 
@@ -114,6 +122,19 @@ uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error
             @test MemoryLayout(u) isa ExpansionLayout
 
             @test_throws ErrorException u ⊎ v
+        end
+
+        @testset "components" begin
+            @test components(h) == (f, g)
+            @test components(h .+ h) == (2f, 2g)
+            @test domain(S1) == domain(f) == 0..1
+            @test axes(h,1) == Inclusion(UnionDomain(0..1, 2..3))
+            @test eltype(Inclusion(UnionDomain(0..1, 2..3))) == Float64
+        end
+
+        @testset "basis on UnionDomain" begin
+            d = UnionDomain(SplineInterval(0:1), SplineInterval(2:3))
+            @test basis(d) == basis(Inclusion(d)) == PiecewiseBasis(LinearSpline(0:1), LinearSpline(2:3))
         end
     end
 
