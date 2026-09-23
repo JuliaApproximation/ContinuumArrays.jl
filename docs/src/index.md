@@ -67,6 +67,9 @@ grid
 ```@docs 
 plotgrid
 ```
+```@docs
+⊎
+```
 
 
 ## Interal Routines
@@ -103,6 +106,12 @@ ContinuumArrays.PiecewiseBasis
 ```
 ```@docs
 ContinuumArrays.ProjectionFactorization
+```
+```@docs
+ContinuumArrays.uplus_components
+```
+```@docs
+ContinuumArrays.uplus_size
 ```
 ```@docs
 ContinuumArrays.VcatBasis

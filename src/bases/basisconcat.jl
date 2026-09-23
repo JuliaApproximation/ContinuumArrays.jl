@@ -95,10 +95,10 @@ components_layout(_, f) = components_axes(axes(f,1), f)
 DomainSets.components(f::AbstractQuasiVector) = components_layout(MemoryLayout(f), f)
 
 """
-    uplus_axes(ax, Ps, cs)
+    uplus_size(sz, Ps, cs)
 
 combines the expansions `Ps .* cs` into a single expansion, dispatching on the tuple
-of column axes `ax` so that, for example, infinite bases can interlace the coefficients
+of column sizes `sz` so that, for example, infinite bases can interlace the coefficients
 instead of concatenating them.
 """
 function uplus_size(_, Ps::Tuple, cs::Tuple)
