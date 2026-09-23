@@ -103,7 +103,7 @@ instead of concatenating them.
 """
 function uplus_size(_, Ps::Tuple, cs::Tuple)
     P = uplus_basis(Ps...)
-    P * uplus_axes_vcat(P, cs)
+    P * coefficient_vcat(P, cs)
 end
 
 """
