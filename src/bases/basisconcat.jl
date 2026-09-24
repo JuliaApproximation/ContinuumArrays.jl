@@ -87,7 +87,7 @@ uplus_flatten(fs::Tuple) = (uplus_components(first(fs))..., uplus_flatten(tail(f
 uplus_basis_size(::NTuple{N,Int}, b) where N = PiecewiseBasis(b...)
 uplus_basis(b...) = uplus_basis_size(size.(b, 2), b)
 
-basis_axes(ax::Inclusion{<:Any,<:UnionDomain}, v) = uplus_basis(map(basis, components(ax.domain))...)
+basis_axes(ax::Inclusion{<:Any,<:UnionDomain}, v) = uplus_basis(map(d -> basis(view(v, Inclusion(d))), components(ax.domain))...) # use v so, e.g., its eltype is respected
 coefficient_vcat(P::PiecewiseBasis, cs) = BlockedVector(vcat(cs...), (axes(P,2),))
 
 components_axes(::Inclusion{<:Any,<:UnionDomain}, f) = uplus_components(f)

@@ -135,6 +135,9 @@ uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error
         @testset "basis on UnionDomain" begin
             d = UnionDomain(SplineInterval(0:1), SplineInterval(2:3))
             @test basis(d) == basis(Inclusion(d)) == PiecewiseBasis(LinearSpline(0:1), LinearSpline(2:3))
+            # the basis of each piece is chosen from the restriction of the function
+            v = broadcast(x -> 2x, Inclusion(d))
+            @test basis(v) == PiecewiseBasis(LinearSpline(0:1), LinearSpline(2:3))
         end
     end
 
