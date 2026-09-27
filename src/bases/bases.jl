@@ -545,6 +545,62 @@ function layout_broadcasted(::Tuple{Any,ExpansionLayout}, ::typeof(*), a, f)
     (a .* P) * c
 end
 
+layout_broadcasted(lays::NTuple{2,ExpansionLayout}, ::typeof(*), f, g) = invoke(layout_broadcasted, Tuple{Tuple{Any,ExpansionLayout},typeof(*),Any,Any}, lays, *, f, g)
+
+_commutes(_, f, a) = false
+_commutes(::typeof(*), f::AbstractQuasiVector{<:Number}, a::Union{Number,AbstractQuasiVector{<:Number}}) = true
+# multiplying by a function commutes unless both are array-valued (a may also be, e.g., a basis)
+function layout_broadcasted(lays::Tuple{ExpansionLayout,Any}, ::typeof(*), f, a)
+    _commutes(*, f, a) || return invoke(layout_broadcasted, Tuple{Any,Any,Vararg{Any}}, lays, *, f, a)
+    a .* f
+end
+
+layout_broadcasted(::Tuple{ExpansionLayout}, ::typeof(+), f) = f
+layout_broadcasted(::Tuple{ExpansionLayout}, ::typeof(-), f) = (-1) .* f
+
+"""
+    expandsexactly(P, a)
+
+returns whether `a`, e.g. a number or `x`, lies exactly in the span of the basis `P`, so that
+broadcasting `a` with an expansion in `P` can return an expansion. This is decided by the layouts,
+defaulting to `false`.
+"""
+expandsexactly(P, a) = expandsexactly_layout(MemoryLayout(P), MemoryLayout(a), P, a)
+expandsexactly_layout(_, _, _, _) = false
+expandsexactly_layout(::SubBasisLayout, _, P, a) = expandsexactly(parent(P), a)
+
+"""
+    exactexpansion(P, a)
+
+returns the expansion of `a` in the basis `P` (or its parent for a subset of its columns), assuming `expandsexactly(P, a)`.
+"""
+exactexpansion(P, a) = exactexpansion_layout(MemoryLayout(P), P, a)
+exactexpansion_layout(_, P, a) = P * (P \ a)
+exactexpansion_layout(_, P, a::Number) = exactexpansion(P, QuasiFill(a, axes(P,1)))
+exactexpansion_layout(::SubBasisLayout, P, a) = exactexpansion(parent(P), a)
+exactexpansion_layout(::SubBasisLayout, P, a::Number) = exactexpansion(parent(P), a) # disambiguate
+
+_isexpansion(a) = MemoryLayout(a) isa ExpansionLayout
+_firstexpansion(a, b...) = _isexpansion(a) ? a : _firstexpansion(b...)
+
+# broadcasting expansions with numbers or polynomials, e.g. f .+ 1 or x .- f, gives an expansion
+# if the latter lie exactly in the span of the basis
+function layout_broadcasted(lays::Tuple{Vararg{Union{ExpansionLayout,ScalarLayout,PolynomialLayout}}}, op::Union{typeof(+),typeof(-)}, args...)
+    any(_isexpansion, args) || return invoke(layout_broadcasted, Tuple{Any,Any,Vararg{Any}}, lays, op, args...)
+    P = basis(_firstexpansion(args...))
+    all(a -> _isexpansion(a) || expandsexactly(P, a), args) || return invoke(layout_broadcasted, Tuple{Any,Any,Vararg{Any}}, lays, op, args...)
+    broadcast(op, map(a -> _isexpansion(a) ? a : exactexpansion(P, a), args)...)
+end
+
+# integer powers of expansions, when multiplication gives an expansion
+# (broadcasting wraps ^ and Val(k) in a Ref)
+function layout_broadcasted(lays::Tuple{Any,ExpansionLayout,Any}, ::typeof(Base.literal_pow), p::Base.RefValue{typeof(^)}, f, v::Base.RefValue{Val{k}}) where k
+    k isa Integer && k ≥ 1 || return invoke(layout_broadcasted, Tuple{Any,Any,Vararg{Any}}, lays, Base.literal_pow, p, f, v)
+    k == 1 && return f
+    g = f .* broadcast(Base.literal_pow, ^, f, Val(k-1))
+    _isexpansion(g) ? g : invoke(layout_broadcasted, Tuple{Any,Any,Vararg{Any}}, lays, Base.literal_pow, p, f, v)
+end
+
 function layout_broadcasted(::Tuple{ExpansionLayout{<:AbstractWeightedBasisLayout},AbstractBasisLayout}, ::typeof(*), a, P)
     axes(a,1) == axes(P,1) || throw(DimensionMismatch())
     wQ,c = arguments(a)

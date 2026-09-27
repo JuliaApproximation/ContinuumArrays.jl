@@ -362,3 +362,37 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         @test factorize(T∞block) isa ContinuumArrays.TransformFactorization
     end
 end
+
+# constants and x lie in the span of Chebyshev, which is not known by default
+@test !ContinuumArrays.expandsexactly(Chebyshev(5), 1)
+@test MemoryLayout(Chebyshev(5) * [1,2,3,0,0.] .+ 1) isa LazyArrays.BroadcastLayout
+ContinuumArrays.expandsexactly(::Chebyshev, ::Union{Number,Inclusion}) = true
+
+@testset "broadcasting expansions with numbers and polynomials" begin
+    T = Chebyshev(5)
+    x = axes(T,1)
+    f = T * [1,2,3,0,0.]
+    t = 0.3
+    ft = f[t]
+    for (g, v) in ((f .+ 1, ft + 1), (1 .+ f, 1 + ft), (f .- 1, ft - 1), (1 .- f, 1 - ft), (x .+ f, t + ft),
+                   (f .- x, ft - t), (f .+ f .+ 2, 2ft + 2))
+        @test MemoryLayout(g) isa ExpansionLayout
+        @test basis(g) == T
+        @test g[t] ≈ v
+    end
+    @test coefficients(f .+ 1) ≈ [2,2,3,0,0]
+
+    # linear operations are always expansions
+    @test MemoryLayout(-f) isa ExpansionLayout
+    @test (-f)[t] ≈ -ft
+    @test MemoryLayout(+f) isa ExpansionLayout
+    @test MemoryLayout(f .* 2) isa ExpansionLayout
+    @test (f .* 2)[t] ≈ 2ft
+
+    H = HeavisideSpline(0:0.5:1)
+    h = H * [1.0, 2.0]
+    @test MemoryLayout(h .+ 1) isa LazyArrays.BroadcastLayout
+    @test (h .+ 1)[0.3] ≈ 2
+    @test MemoryLayout(-h) isa ExpansionLayout
+    @test (-h)[0.3] ≈ -1
+end
