@@ -386,8 +386,28 @@ ContinuumArrays.expandsexactly(::Chebyshev, ::Union{Number,Inclusion}) = true
     @test MemoryLayout(-f) isa ExpansionLayout
     @test (-f)[t] ≈ -ft
     @test MemoryLayout(+f) isa ExpansionLayout
+    @test broadcast(+, f) === f
     @test MemoryLayout(f .* 2) isa ExpansionLayout
     @test (f .* 2)[t] ≈ 2ft
+
+    # multiplying by a function commutes
+    @test MemoryLayout(f .* x) == MemoryLayout(x .* f)
+    @test (f .* x)[t] ≈ t * ft
+
+    # powers use multiplication, which is faked above for Chebyshev
+    @test (f .^ 1) === f
+    @test MemoryLayout(f .^ 2) isa ExpansionLayout
+    @test coefficients(f .^ 2) == coefficients(f .* f)
+    @test MemoryLayout(f .^ 0) isa LazyArrays.BroadcastLayout
+    @test (f .^ 0)[t] ≈ 1
+
+    # a subset of the columns uses the parent basis
+    fs = T[:,1:3] * [1,2,3.]
+    @test ContinuumArrays.expandsexactly(basis(fs), 1)
+    for (g, v) in ((fs .+ 1, fs[t] + 1), (x .+ fs, t + fs[t]))
+        @test MemoryLayout(g) isa ExpansionLayout
+        @test g[t] ≈ v
+    end
 
     H = HeavisideSpline(0:0.5:1)
     h = H * [1.0, 2.0]
