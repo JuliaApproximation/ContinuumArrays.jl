@@ -84,6 +84,12 @@ ContinuumArrays.AbstractConcatBasis
 ContinuumArrays.basis
 ```
 ```@docs
+ContinuumArrays.expandsexactly
+```
+```@docs
+ContinuumArrays.exactexpansion
+```
+```@docs
 ContinuumArrays.HvcatBasis
 ```
 ```@docs
