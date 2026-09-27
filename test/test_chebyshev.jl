@@ -402,7 +402,8 @@ ContinuumArrays.expandsexactly(::Chebyshev, ::Union{Number,Inclusion}) = true
     @test (f .^ 0)[t] ≈ 1
 
     # a subset of the columns uses the parent basis
-    fs = T[:,1:3] * [1,2,3.]
+    fs = ApplyQuasiArray(*, T[:,1:3], [1,2,3.]) # T[:,1:3] * c would simplify to an expansion in T
+    @test MemoryLayout(basis(fs)) isa ContinuumArrays.SubBasisLayout
     @test ContinuumArrays.expandsexactly(basis(fs), 1)
     for (g, v) in ((fs .+ 1, fs[t] + 1), (x .+ fs, t + fs[t]))
         @test MemoryLayout(g) isa ExpansionLayout
