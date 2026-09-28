@@ -48,6 +48,13 @@ function QuasiArrays._getindex(::Type{IND}, A::PiecewiseBasis{T}, (x,j)::IND) wh
     zero(T)
 end
 
+# each column belongs to one piece, so the integrals of the columns are those of each piece in turn,
+# and the sum of an expansion adds the sums of its components
+function _sum(P::PiecewiseBasis, dims::Int)
+    dims == 1 || error("not implemented")
+    BlockedMatrix(hcat(map(a -> sum(a; dims=1), P.args)...), (Base.OneTo(1), axes(P,2)))
+end
+
 """
     f ⊎ g
 
@@ -72,6 +79,7 @@ returns the pieces `f` is made of, so that `⊎` is associative: `(f ⊎ g) ⊎ 
 `f ⊎ (g ⊎ h)` both flatten to `⊎(f, g, h)`.
 """
 uplus_components(f) = uplus_components_layout(MemoryLayout(f), f)
+uplus_components_layout(_, f) = uplus_components(expand(f))
 uplus_components_layout(::ExpansionLayout, f) = uplus_components_basis(basis(f), coefficients(f))
 
 uplus_components_basis(P, c) = (P*c,)

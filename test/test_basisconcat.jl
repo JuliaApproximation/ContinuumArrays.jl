@@ -1,4 +1,4 @@
-using ContinuumArrays, BlockArrays, InfiniteArrays, FillArrays, LazyArrays, Test
+using ContinuumArrays, BlockArrays, InfiniteArrays, FillArrays, LazyArrays, DomainSets, Test
 using StaticArrays
 import ContinuumArrays: PiecewiseBasis, VcatBasis, HvcatBasis, arguments, ApplyLayout, checkpoints, UnionDomain,
                         Basis, basis, coefficients, ExpansionLayout, uplus_size
@@ -19,7 +19,10 @@ struct SplineInterval{R} <: Domain{Float64}
     r::R
 end
 Base.in(x, d::SplineInterval) = first(d.r) ≤ x ≤ last(d.r)
+Base.:(==)(a::SplineInterval, b::Interval) = first(a.r)..last(a.r) == b
+Base.:(==)(b::Interval, a::SplineInterval) = a == b
 ContinuumArrays.basis_axes(ax::Inclusion{<:Any,<:SplineInterval}, v) = LinearSpline(ax.domain.r)
+DomainSets.choice(d::SplineInterval) = (last(d.r) - first(d.r))/2
 
 # ClassicalOrthogonalPolynomials.jl overloads this to use PiecewiseInterlace
 uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error("Not implemented")
@@ -76,6 +79,18 @@ uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error
         @testset "UnionDomain with point checkpoints" begin
             @test 0 ∈ checkpoints(UnionDomain(0, 1..2))
             @test checkpoints(UnitDisk()) ∈ UnitDisk()
+        end
+
+        @testset "sum" begin
+            L1, L2 = LinearSpline(0:1), LinearSpline(2:0.5:3)
+            P = PiecewiseBasis(L1, L2)
+            s = sum(P; dims=1)
+            @test s == [sum(L1; dims=1) sum(L2; dims=1)] == [0.5 0.5 0.25 0.5 0.25]
+            @test blockisequal(axes(s,2), axes(P,2))
+            f = L1*[1,2] ⊎ L2*[1,2,3]
+            @test sum(f) ≈ sum(L1*[1,2]) + sum(L2*[1,2,3]) ≈ 3.5
+            @test sum(PiecewiseBasis(HeavisideSpline(0:1), L1); dims=1) == [1 0.5 0.5]
+            @test_throws ErrorException sum(P; dims=2)
         end
     end
 
@@ -138,6 +153,11 @@ uplus_size(ax::Tuple{Vararg{InfiniteCardinal{0}}}, Ps::Tuple, cs::Tuple) = error
             # the basis of each piece is chosen from the restriction of the function
             v = broadcast(x -> 2x, Inclusion(d))
             @test basis(v) == PiecewiseBasis(LinearSpline(0:1), LinearSpline(2:3))
+        end
+
+        @testset "auto-expand" begin
+            f = [exp(x) for x in SplineInterval(0:1)] ⊎ [cos(x) for x in SplineInterval(2:3)]
+            @test sum(f) ≈ (exp(1)+1 + cos(3)+cos(2))/2
         end
     end
 
