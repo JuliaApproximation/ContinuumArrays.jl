@@ -317,6 +317,14 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         @test_throws ErrorException minimum(exp.(x))
     end
 
+    @testset "findall/findfirst/findlast" begin
+        x = axes(Chebyshev(5),1)
+        # lazy functions are expanded, and the test Chebyshev basis has no root finding
+        @test_throws "Overload findall_layout" findall(iszero, exp.(x))
+        @test_throws "Overload findall_layout" findfirst(iszero, exp.(x))
+        @test_throws "Overload findall_layout" findlast(iszero, exp.(x))
+    end
+
     @testset "generator" begin
         @test expand(exp(t) for t in -1..1)[0.1] ≈ [exp(t) for t in -1..1][0.1] ≈ exp(0.1)
         @test [exp(x*cos(y)) for x in Inclusion(0:0.5:1), y in Inclusion(1:0.5:2)][0.5,1.5] ≈ exp(0.5*cos(1.5))

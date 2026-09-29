@@ -21,7 +21,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     AbstractQuasiFill, UnionDomain, sum_size, maximum_size, minimum_size, sum_layout, _cumsum, cumsum_layout,
                     applylayout, equals_layout, layout_broadcasted, PolynomialLayout, dot_size,
                     diff_layout, diff_size, AbstractQuasiVecOrMat, vec_layout, searchsortedfirst_layout,
-                    maximum_layout, minimum_layout
+                    maximum_layout, minimum_layout, findall_layout, findfirst_layout, findlast_layout
 import InfiniteArrays: Infinity, InfAxes
 import AbstractFFTs: Plan
 
