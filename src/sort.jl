@@ -26,7 +26,7 @@ end
 # other quasi-vectors, e.g. broadcasted functions, are expanded in their natural basis
 for find in (:findall, :findfirst, :findlast)
     find_layout = Symbol(find, "_layout")
-    @eval $find_layout(_, f, v; kwds...) = $find(f, expand(v); kwds...)
+    @eval $find_layout(::Any, f, v; kwds...) = $find(f, expand(v); kwds...)
 end
 
 findall_layout(::ExpansionLayout, f, v; kwds...) = error("Overload findall_layout(::$(typeof(MemoryLayout(v))), ::$(typeof(f)), v)")
