@@ -37,6 +37,12 @@ Base.diff(T::Chebyshev; dims=1) = T # not correct but just checks expansion work
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
 
+# Not real root finding: a predicate whose "roots" are prescribed, for testing findfirst/findlast via findall_layout
+struct PrescribedRoots <: Function
+    roots::Vector{Float64}
+end
+ContinuumArrays.findall_layout(::ExpansionLayout, f::PrescribedRoots, v; kwds...) = f.roots
+
 function ContinuumArrays.grammatrix(A::Chebyshev)
     m = size(A,2)
     T = eltype(A)
@@ -323,6 +329,12 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         @test_throws "Overload findall_layout" findall(iszero, exp.(x))
         @test_throws "Overload findall_layout" findfirst(iszero, exp.(x))
         @test_throws "Overload findall_layout" findlast(iszero, exp.(x))
+
+        @test findall(PrescribedRoots([-0.5,0.5]), exp.(x)) == [-0.5,0.5]
+        @test findfirst(PrescribedRoots([-0.5,0.5]), exp.(x)) == -0.5
+        @test findlast(PrescribedRoots([-0.5,0.5]), exp.(x)) == 0.5
+        @test findfirst(PrescribedRoots(Float64[]), exp.(x)) === nothing
+        @test findlast(PrescribedRoots(Float64[]), exp.(x)) === nothing
     end
 
     @testset "generator" begin
