@@ -47,6 +47,7 @@ import LazyArrays: MemoryLayout, ApplyStyle, Applied, colsupport, arguments, App
 end
 
 include("test_maps.jl")
+include("test_simplify.jl")
 
 @testset "DiracDelta" begin
     δ = DiracDelta()
