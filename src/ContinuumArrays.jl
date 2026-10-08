@@ -136,6 +136,12 @@ minimum_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = _minimum(
 sum_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, dims) = _sum(expand(a), dims)
 dot_size(::InfiniteCardinal{1}, a, b) = dot(expand(a), expand(b))
 diff_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, order...; dims...) = diff(expand(a), order...; dims...)
+# disambiguate with the methods for each type of order in QuasiArrays
+diff_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, order::Integer; dims...) = diff(expand(a), order; dims...)
+diff_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, order::Val; dims...) = diff(expand(a), order; dims...)
+diff_size(::Tuple{InfiniteCardinal{1}, Vararg{Integer}}, a, order::NTuple{N,Int}; dims...) where N = diff(expand(a), order; dims...)
+laplacian_size(::Tuple{InfiniteCardinal{1}}, a, order...; dims...) = laplacian(expand(a), order...; dims...)
+abslaplacian_size(::Tuple{InfiniteCardinal{1}}, a, order...; dims...) = abslaplacian(expand(a), order...; dims...)
 function copy(d::Dot{<:ExpansionLayout,<:ExpansionLayout,<:AbstractQuasiArray,<:AbstractQuasiArray})
     a,b = d.A,d.B
     P,c = basis(a),coefficients(a)

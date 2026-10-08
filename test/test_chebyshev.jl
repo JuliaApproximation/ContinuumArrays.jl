@@ -32,7 +32,7 @@ function ContinuumArrays._sum(T::Chebyshev, dims)
     [2; 0; @. ((1/(n+1) - 1/(n-1)) - ((-1)^(n+1)/(n+1) - (-1)^(n-1)/(n-1)))/2]'
 end
 
-Base.diff(T::Chebyshev; dims=1) = T # not correct but just checks expansion works
+Base.diff(T::Chebyshev, order...; dims=1) = T # not correct but just checks expansion works
 
 # This is wrong but just for tests
 QuasiArrays.layout_broadcasted(::Tuple{ExpansionLayout,Any}, ::typeof(*), a::ApplyQuasiVector{<:Any,typeof(*),<:Tuple{Chebyshev,Any}}, b::Chebyshev) = b * Matrix(I, 5, 5)
@@ -292,6 +292,8 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         @test dot(x, x) ≈ 2/3
         @test dot(exp.(x), x) ≈ 2/ℯ
         @test diff(exp.(x))[0.1] ≈ exp(0.1)
+        @test diff(exp.(x), 1)[0.1] ≈ diff(exp.(x), (1,))[0.1] ≈ diff(exp.(x), Val((1,)))[0.1] ≈ exp(0.1)
+        @test laplacian(exp.(x))[0.1] ≈ laplacian(exp.(x), 1)[0.1] ≈ -abslaplacian(exp.(x))[0.1] ≈ exp(0.1)
 
         @test sum(exp.(x .* (1:2)'); dims=1) ≈ [ℯ - 1/ℯ (ℯ^2 - 1/ℯ^2)/2]
         @test diff(exp.(x .* (1:2)'); dims=1)[0.1,:] ≈ [exp(0.1), exp(0.2)]
