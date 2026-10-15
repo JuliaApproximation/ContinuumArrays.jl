@@ -2,7 +2,7 @@ using ContinuumArrays, LinearAlgebra, QuasiArrays, ArrayLayouts, Base64, LazyArr
 using FastTransforms
 import ContinuumArrays: Basis, Weight, Map, LazyQuasiArrayStyle, TransformFactorization,
                         ExpansionLayout, checkpoints, MappedBasisLayout, MappedWeightedBasisLayout,
-                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis, grammatrix
+                        SubWeightedBasisLayout, WeightedBasisLayout, WeightLayout, basis, grammatrix, plotgrid
 
 using IntervalSets: AbstractInterval
 """
@@ -14,6 +14,8 @@ struct Chebyshev <: Basis{Float64}
 end
 
 struct ChebyshevWeight <: Weight{Float64} end
+
+struct NoIsRealBasis <: Basis{ComplexF64} end # does not overload isreal
 
 Base.:(==)(::Chebyshev, ::Chebyshev) = true
 Base.:(==)(::ChebyshevWeight, ::ChebyshevWeight) = true
@@ -355,6 +357,11 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         T = Chebyshev(5)
         @test isreal(T)
         @test !iszero(T)
+        @test_throws ErrorException isreal(NoIsRealBasis())
+    end
+
+    @testset "plotgrid of function" begin
+        @test plotgrid(exp.(x)) == plotgrid(expand(exp.(x)))
     end
 
     @testset "sub_factorize with infinite parent" begin
