@@ -299,7 +299,7 @@ Random.seed!(24543)
         @test MemoryLayout(typeof(L[:,2:3])) isa SubBasisLayout
         @test L\L[:,2:3] isa BandedMatrix
         @test L\L[:,2:3] == [0 0; 1 0; 0 1.0; 0 0]
-        @test L[:,2:3]\L isa BandedMatrix
+        @test bandwidths(L[:,2:3]\L) == (-1,1)
         @test L[:,2:3]\L == [0 1 0 0; 0 0 1 0]
 
         @testset "Subindex of splines" begin

@@ -1,5 +1,7 @@
 using ContinuumArrays, Test
-import ContinuumArrays: AffineQuasiVector
+import ContinuumArrays: AffineQuasiVector, Map, invmap
+
+struct NoInvMap <: Map{Float64} end
 
 @testset "AffineQuasiVector" begin
     x = Inclusion(0..1)
@@ -71,6 +73,11 @@ import ContinuumArrays: AffineQuasiVector
         @test union(a) == Inclusion(-1..1)
 
         @test affine(0..1, -1..1) == y
+        @test affine(x, -1..1) == y
+    end
+
+    @testset "invmap not overloaded" begin
+        @test_throws ErrorException invmap(NoInvMap())
     end
 
     @testset "show" begin

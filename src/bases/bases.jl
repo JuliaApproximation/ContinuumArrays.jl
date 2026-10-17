@@ -876,7 +876,8 @@ end
 computes ``|Δ|^α * A``. 
 """
 abslaplacian(A, order...; dims...) = abslaplacian_layout(MemoryLayout(A), A, order...; dims...)
-abslaplacian_layout(layout, A, order...; dims...) = abslaplacian_axis(axes(A,1), A, order...; dims...)
+abslaplacian_layout(layout, A, order...; dims...) = abslaplacian_size(size(A), A, order...; dims...)
+abslaplacian_size(sz, A, order...; dims...) = abslaplacian_axis(axes(A,1), A, order...; dims...)
 abslaplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = -diff(A, 2order; dims...)
 
 """
@@ -885,7 +886,8 @@ abslaplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = -diff(A, 2order;
 computes ``Δ^k * A``. 
 """
 laplacian(A, order...; dims...) = laplacian_layout(MemoryLayout(A), A, order...; dims...)
-laplacian_layout(layout, A, order...; dims...) = laplacian_axis(axes(A,1), A, order...; dims...)
+laplacian_layout(layout, A, order...; dims...) = laplacian_size(size(A), A, order...; dims...)
+laplacian_size(sz, A, order...; dims...) = laplacian_axis(axes(A,1), A, order...; dims...)
 laplacian_axis(::Inclusion{<:Number}, A, order=1; dims...) = diff(A, 2order; dims...)
 
 
