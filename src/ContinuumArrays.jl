@@ -83,6 +83,13 @@ sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
 sub_materialize(::ApplyLayout{typeof(hcat)}, V::AbstractQuasiArray, ::Tuple{QInfAxes,Any}) = V
 sub_materialize(::ApplyLayout{typeof(hcat)}, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
 
+# Rows of a product such as diff(P)[x,:] are infinite so we multiply lazily via mul as * may try to materialise
+sub_materialize(lay::ApplyLayout{typeof(*)}, V::SubArray{<:Any,N,<:AbstractQuasiArray}) where N =
+    _mul_sub_materialize(axes(V), map(sub_materialize, arguments(lay, V)))
+_mul_sub_materialize(_, args) = *(args...)
+_mul_sub_materialize(::Tuple{InfAxes}, args) = foldr(mul, args)
+_mul_sub_materialize(::Tuple{Any,InfAxes}, args) = foldr(mul, args)
+
 #
 # BlockQuasiArrays
 
