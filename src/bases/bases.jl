@@ -398,10 +398,9 @@ in that basis.
 """
 expand(v) = expand_layout(MemoryLayout(v), v)
 
-function expand_layout(_, v)
-    P = basis(v)
-    ApplyQuasiArray(*, P, tocoefficients(P \ v))
-end
+expand_layout(_, v) = basis_expand(basis(v), v)
+basis_expand(P, v) = ApplyQuasiArray(*, P, tocoefficients(P \ v))
+basis_expand((P,Q)::Tuple{Any,Any}, v) = ApplyQuasiArray(*, P, tocoefficients(P \ v / Q'), Q')
 
 
 expand(g::Base.Generator{<:Inclusion}) = expand(g.f.(g.iter))
@@ -475,7 +474,9 @@ DomainSets.domain(d::AbstractQuasiArray) = domain(axes(d,1))
 basis_layout(::ExpansionLayout, v::ApplyQuasiArray{<:Any,N,typeof(*)}) where N = v.args[1]
 basis_layout(lay::ApplyLayout{typeof(*)}, v) = basis(first(arguments(lay, v)))
 basis_layout(lay::AbstractBasisLayout, v) = v
-basis_layout(lay, v) = basis_axes(axes(v,1), v) # allow choosing a basis based on axes
+basis_layout(lay, v) = basis_axes(axes(v), v) # allow choosing a basis based on axes
+basis_axes(ax::Tuple{Any}, v) = basis_axes(only(ax), v)
+basis_axes(ax::Tuple, v) = basis_axes.(ax, Ref(v))
 basis_axes(ax, v) = error("Overload for $ax")
 
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
