@@ -24,7 +24,16 @@ end
     @test (P \ G)[2, -0.3] ≈ f(grid(P)[2], -0.3)
     C = P \ G / Q'
     @test C ≈ P \ (G / Q') ≈ f.(grid(P), grid(Q)')
-    @test (P*C*Q')[0.1, -0.3] ≈ f(0.1, -0.3)
+    E = P*C*Q'
+    @test basis(E) === (P, Q)
+    @test coefficients(E) === C
+    @test E[0.1, -0.3] ≈ f(0.1, -0.3)
+
+    V = view(E, Inclusion(0..0.5), Inclusion(-1..0))
+    A, B = basis(V)
+    @test (axes(A, 1), axes(B, 1)) == axes(V)
+    @test expand(V) === V
+    @test (A*coefficients(V)*B')[0.1, -0.3] ≈ f(0.1, -0.3)
 
     for fillfun in (zeros, ones)
         K = fillfun(axes(G)...)

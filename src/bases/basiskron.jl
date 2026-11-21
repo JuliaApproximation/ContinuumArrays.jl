@@ -18,10 +18,23 @@ struct KronExpansionLayout{LayA, LayB} <: AbstractLazyLayout end
 applylayout(::Type{typeof(*)}, ::LayA, ::CoefficientLayouts, ::AdjointBasisLayout{LayB}) where {LayA <: AbstractBasisLayout, LayB <: AbstractBasisLayout} = KronExpansionLayout{LayA,LayB}()
 
 sublayout(::KronExpansionLayout, inds) = sublayout(ApplyLayout{typeof(*)}(), inds)
+sublayout(lay::KronExpansionLayout, ::Type{<:Tuple{Inclusion,Inclusion}}) = lay
 sublayout(::KronExpansionLayout{LayA, LayB}, inds::Type{<:Tuple{Inclusion,AbstractVector}}) where {LayA,LayB} = ExpansionLayout{LayA}()
 
+function arguments(::KronExpansionLayout, V::SubQuasiArray)
+    P, C, Qt = arguments(parent(V))
+    x, y = parentindices(V)
+    view(P, x, :), C, view(Qt', y, :)'
+end
 expand_layout(::KronExpansionLayout, v) = v
-sub_basis_layout(::KronExpansionLayout, P, j) = first(arguments(P))
+function basis_layout(::KronExpansionLayout, v)
+    P, _, Qt = arguments(v)
+    P, Qt'
+end
+coefficients_layout(::KronExpansionLayout, v) = arguments(v)[2]
+sub_basis_layout(::KronExpansionLayout, V) = first(arguments(parent(V)))
+sub_basis_layout(lay::KronExpansionLayout, V::SubQuasiArray{<:Any,2,<:Any,<:Tuple{Inclusion,Inclusion}}) = basis_layout(lay, V)
+sub_coefficients_layout(::KronExpansionLayout, P, j::Inclusion) = coefficients(P)
 
 
 function sub_coefficients_layout(::KronExpansionLayout, P, j)

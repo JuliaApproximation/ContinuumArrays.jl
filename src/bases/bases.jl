@@ -393,8 +393,8 @@ expand(A, f) = A * transform(A, f)
 """
     expand(v)
 
-finds a natural basis for a quasi-vector and expands
-in that basis.
+Expand a quasi-vector in its natural basis. For a quasi-matrix with bases
+`(P, Q) = basis(v)`, the expansion has the form `P * C * Q'`.
 """
 expand(v) = expand_layout(MemoryLayout(v), v)
 
@@ -449,7 +449,7 @@ _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(
 ##
 
 struct ExpansionLayout{Lay} <: AbstractLazyLayout end
-const CoefficientLayouts = Union{AbstractPaddedLayout,AbstractStridedLayout,ZerosLayout}
+const CoefficientLayouts = Union{AbstractPaddedLayout,AbstractStridedLayout,ConjLayout{<:AbstractStridedLayout},ZerosLayout}
 applylayout(::Type{typeof(*)}, ::Lay, ::CoefficientLayouts) where Lay <: AbstractBasisLayout = ExpansionLayout{Lay}()
 
 tocoefficients(v) = tocoefficients_layout(MemoryLayout(v), v)
@@ -463,7 +463,8 @@ expand_layout(::ExpansionLayout, v) = v
 """
     basis(v)
 
-gives a basis for expanding given quasi-vector.
+Return a basis for expanding `v`. For a quasi-matrix with two continuous
+axes, return the pair of bases in row and column order.
 """
 basis(v) = basis_layout(MemoryLayout(v), v)
 
@@ -476,11 +477,13 @@ basis_layout(lay::ApplyLayout{typeof(*)}, v) = basis(first(arguments(lay, v)))
 basis_layout(lay::AbstractBasisLayout, v) = v
 basis_layout(lay, v) = basis_axes(axes(v), v) # allow choosing a basis based on axes
 basis_axes(ax::Tuple{Any}, v) = basis_axes(only(ax), v)
+basis_axes(ax::Tuple{Any,AbstractVector}, v) = basis_axes(first(ax), v)
 basis_axes(ax::Tuple, v) = basis_axes.(ax, Ref(v))
 basis_axes(ax, v) = error("Overload for $ax")
 
 coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any}}) where N = v.args[2]
-coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any,Vararg{Any}}}) where N = ApplyArray(*, tail(v.args)...)
+coefficients(v::ApplyQuasiArray{<:Any,N,typeof(*),<:Tuple{Any,Any,Vararg{Any}}}) where N = coefficients_layout(MemoryLayout(v), v)
+coefficients_layout(_, v) = ApplyArray(*, tail(v.args)...)
 
 coefficients(B::Basis{T}) where T = SquareEye{T}((axes(B,2),))
 
@@ -716,12 +719,9 @@ sublayout(lay::ExpansionLayout, ::Type{<:Tuple{Inclusion,Integer}}) = lay
 sublayout(lay::ExpansionLayout, ::Type{<:Tuple{Inclusion,AbstractVector}}) = lay
 
 
-sub_basis_layout(_, P, j) = basis(P) # TODO: restrict to ExpansionLayout?
-function basis(V::SubQuasiArray{<:Any, N, <:Any, <:Tuple{Inclusion,Any}}) where N
-    P = parent(V)
-    _,j = parentindices(V)
-    sub_basis_layout(MemoryLayout(P), P, j)
-end
+sub_basis_layout(_, V) = basis_layout(MemoryLayout(V), V)
+sub_basis_layout(::Union{AbstractBasisLayout,ExpansionLayout}, V) = basis(parent(V))
+basis(V::SubQuasiArray{<:Any,N,<:Any,<:Tuple{Inclusion,Any}}) where N = sub_basis_layout(MemoryLayout(parent(V)), V)
 
 
 sub_coefficients_layout(_, P, j) = coefficients(P)[:,j] # TODO: restrict to ExpansionLayout?

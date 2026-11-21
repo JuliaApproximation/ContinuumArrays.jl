@@ -352,6 +352,27 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         @test [exp(x*cos(y)) for x in Inclusion(0:0.5:1), y in Inclusion(1:0.5:2)][0.5,1.5] ≈ exp(0.5*cos(1.5))
     end
 
+    @testset "Automatic two-dimensional expansion" begin
+        F = [1+x+y+x*y for x in -1..1, y in -1..1]
+        E = expand(F)
+        @test basis(F) === basis(E) === (Chebyshev(100), Chebyshev(100))
+        @test axes(E) == axes(F)
+        @test E[0.1, 0.2] ≈ 1.32
+        @test expand(E) === E
+
+        C = zeros(100, 100)
+        C[1:2, 1:2] .= 1
+        @test coefficients(E) ≈ C
+
+        column = view(F, :, 0.2)
+        @test basis(column) === Chebyshev(100)
+        @test expand(column)[0.1] ≈ E[0.1, 0.2]
+
+        columns = view(F, :, [-0.3, 0.2])
+        @test basis(columns) === Chebyshev(100)
+        @test expand(columns)[0.1,:] ≈ F[0.1, [-0.3, 0.2]]
+    end
+
     @testset "broadcast + with maps" begin
         T = Chebyshev(5)
         P = LinearSpline(range(0,1,10))[affine(-1..1,0..1),:]
