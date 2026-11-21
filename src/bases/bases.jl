@@ -63,6 +63,7 @@ for op in (:+, :-)
         @inline copy(L::Ldiv{<:AbstractBasisLayout,BroadcastLayout{typeof($op)}}) = basis_broadcast_ldiv_size($op, size(L), L.A, L.B)
         @inline copy(L::Ldiv{<:MappedBasisLayouts,BroadcastLayout{typeof($op)}}) = copy(Ldiv{BasisLayout,BroadcastLayout{typeof($op)}}(L.A, L.B))
         basis_broadcast_ldiv_size(::typeof($op), ::Tuple{Integer}, A, B) = transform_ldiv(A, B)
+        basis_broadcast_ldiv_size(::typeof($op), sz::Tuple{Int,InfiniteCardinal{1}}, A, B) = basis_ldiv_size(sz, A, B)
     end
 end
 
@@ -128,6 +129,8 @@ end
     A, B = P.A, P.B
     (B' \ A')'
 end
+
+copy(L::Rdiv{<:AbstractFillLayout,<:AdjointBasisLayout}) = (L.B' \ L.A')'
 
 
 # multiplication operators, reexpand in basis A
@@ -412,11 +415,15 @@ expand(g::Base.Generator{<:Base.Iterators.ProductIterator{<:Tuple{Vararg{Domain}
     simplifiable(\, L.A, first(arguments(*, L.B))) isa Val{true} && return copy(Ldiv{UnknownLayout,ApplyLayout{typeof(*)}}(L.A, L.B))
     basis_ldiv_size(size(L), L.A, L.B)
 end
-@inline copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = Zeros{eltype(L)}(axes(L)...)
+@inline copy(L::Ldiv{<:AbstractBasisLayout,ZerosLayout}) = QuasiArrays.fillsimilar(QuasiZeros{eltype(L)}(), axes(L)...)
 
 @inline basis_ldiv_size(_, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
 @inline basis_ldiv_size(::Tuple{Integer}, A, B) = transform_ldiv(A, B)
 @inline basis_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
+@inline basis_ldiv_size(::Tuple{Int,InfiniteCardinal{1}}, A, B) = ApplyQuasiMatrix(\, A, B)
+
+getindex(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiMatrix}, k::Integer, y::Number) =
+    (L.A \ view(L.B, :, y))[k]
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout,ApplyLayout{typeof(hcat)}}) = basis_hcat_ldiv_size(size(L), L.A, L.B)
 @inline basis_hcat_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
@@ -436,7 +443,7 @@ end
 _factorize(::WeightedBasisLayouts, wS, dims...; kws...) = WeightedFactorization(weight(wS), factorize(unweighted(wS), dims...; kws...))
 
 
-\(F::WeightedFactorization, b::AbstractQuasiVector) = F.F \ (b ./ F.w)
+\(F::WeightedFactorization, b::AbstractQuasiVecOrMat) = F.F \ (b ./ F.w)
 
 ##
 # Algebra

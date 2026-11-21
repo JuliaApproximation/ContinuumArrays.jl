@@ -24,7 +24,8 @@ end
 
 
 \(a::TransformFactorization, b::AbstractQuasiVector) = a.plan * convert(Array, b[a.grid])
-\(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, b[a.grid,:])
+\(a::TransformFactorization, b::AbstractQuasiMatrix) = a.plan * convert(Array, transform_rows(b, a.grid))
+transform_rows(b, g) = b[g, :]
 
 """
     InvPlan(factorization, dims)

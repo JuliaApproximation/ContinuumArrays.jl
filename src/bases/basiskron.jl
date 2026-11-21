@@ -2,6 +2,13 @@ struct KronBasisLayout <: AbstractBasisLayout end
 
 QuasiArrays.kronlayout(::AbstractBasisLayout...) = KronBasisLayout()
 
+function transform_rows(B::QuasiAdjoint{<:Any,<:ApplyQuasiMatrix{<:Any,typeof(\)}}, g)
+    P, F = arguments(parent(B))
+    MemoryLayout(P) isa AbstractBasisLayout || return B[g, :]
+    # The rows of (P \ F)' are adjoints of column transforms at the selected points.
+    transform_ldiv(P, view(F, :, g))'
+end
+
 """
     KronExpansionLayout
 

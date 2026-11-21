@@ -78,7 +78,8 @@ end
     @test_throws BoundsError K[Inclusion(0..0.5), Inclusion(0..0.5)][1,1]
 
     L = LinearSpline(0:0.1:1)
-    @test_broken L\K isa ApplyQuasiArray # broken since it assumes non-broadcasting
+    @test L\K isa ApplyQuasiArray
+    @test L\K/L' ≈ grid(L) .- grid(L)'
     @test L \ exp.(K) isa ApplyQuasiArray
 end
 

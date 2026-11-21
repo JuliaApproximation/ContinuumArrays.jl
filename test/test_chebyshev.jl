@@ -138,6 +138,10 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         @test all(checkpoints(T) .∈ Ref(axes(T,1)))
 
         @test T \ [exp.(x) cos.(x)] ≈ [F \ exp.(x) F \ cos.(x)]
+
+        Q = Chebyshev(3)
+        K = [1 + 2x - y + 3x*y for x in -1..1, y in -1..1]
+        @test T \ K / Q' ≈ [1 -1 0; 2 3 0; zeros(3,3)]
     end
 
     @testset "Weighted" begin
@@ -162,6 +166,8 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         @test wT \ @.(exp(x) / sqrt(1-x^2)) ≈ T \ exp.(x)
 
         @test wT \ w ≈ [1; zeros(4)]
+        K = [(1 + x*y)/sqrt(1-x^2) for x in -1..1, y in -1..1]
+        @test wT \ K / T' ≈ Diagonal([1, 1, 0, 0, 0])
 
         @test (x .* wT)[0.1,:] ≈ 0.1 * wT[0.1,:]
 
