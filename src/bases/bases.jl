@@ -418,7 +418,10 @@ end
 
 @inline basis_ldiv_size(_, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
 @inline basis_ldiv_size(::Tuple{Integer}, A, B) = transform_ldiv(A, B)
-@inline basis_ldiv_size(::Tuple{Integer,Integer}, A, B) = transform_ldiv(A, B)
+@inline basis_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
+# Q \ (P \ F)' from P \ F / Q' with infinite bases. Other right-hand sides with infinitely
+# many columns, such as operators P * C, are not transformed.
+@inline basis_ldiv_size(::Tuple{Integer,InfiniteCardinal{0}}, A, B::QuasiAdjoint{<:Any,<:ApplyQuasiMatrix{<:Any,typeof(\)}}) = transform_ldiv(A, B)
 @inline basis_ldiv_size(::Tuple{Integer,InfiniteCardinal{1}}, A, B) = ApplyQuasiMatrix(\, A, B)
 
 getindex(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiMatrix}, k::Integer, y::Number) =
