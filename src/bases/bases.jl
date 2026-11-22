@@ -418,8 +418,8 @@ end
 
 @inline basis_ldiv_size(_, A, B) = copy(Ldiv{UnknownLayout,typeof(MemoryLayout(B))}(A, B))
 @inline basis_ldiv_size(::Tuple{Integer}, A, B) = transform_ldiv(A, B)
-@inline basis_ldiv_size(::Tuple{Integer,Int}, A, B) = transform_ldiv(A, B)
-@inline basis_ldiv_size(::Tuple{Int,InfiniteCardinal{1}}, A, B) = ApplyQuasiMatrix(\, A, B)
+@inline basis_ldiv_size(::Tuple{Integer,Integer}, A, B) = transform_ldiv(A, B)
+@inline basis_ldiv_size(::Tuple{Integer,InfiniteCardinal{1}}, A, B) = ApplyQuasiMatrix(\, A, B)
 
 getindex(L::Ldiv{<:AbstractBasisLayout,<:Any,<:Any,<:AbstractQuasiMatrix}, k::Integer, y::Number) =
     (L.A \ view(L.B, :, y))[k]
