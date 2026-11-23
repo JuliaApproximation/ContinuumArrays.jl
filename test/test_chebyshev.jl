@@ -113,6 +113,15 @@ Base.getindex(::InfChebyshev, x::Float64, n::Int) = cos((n-1)*acos(x))
 ContinuumArrays.grid(::InfChebyshev, n::Integer) = chebyshevpoints(Float64, n, Val(1))
 ContinuumArrays.plan_transform(::InfChebyshev, szs::NTuple{N,Int}, dims=1:N) where N = plan_chebyshevtransform(Array{Float64}(undef, szs...), dims)
 
+# Stand-in for an adaptive transform (as in ClassicalOrthogonalPolynomials.jl): Q \ (P \ F)',
+# which arises from P \ F / Q', is computed by truncating to 5 coefficients in each variable.
+# The inference barrier stops other tests from inferring this body, which otherwise takes minutes.
+function ContinuumArrays.transform_ldiv_size(::Tuple{Any,ContinuumArrays.InfiniteCardinal{0}}, ::InfChebyshev,
+        L::QuasiArrays.QuasiAdjoint{<:Any,<:ApplyQuasiMatrix{<:Any,typeof(\),<:Tuple{InfChebyshev,Any}}})
+    _, F = LazyArrays.arguments(parent(L))
+    LazyArrays.pad((Base.inferencebarrier(Chebyshev(5)) \ F / Chebyshev(5)')', ∞, ∞)
+end
+
 
 """
 Blocked Infinite-dimensional Chebyshev for testing _sub_factorize with blocks.
@@ -417,6 +426,19 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         T∞block = T∞[:,BlockRange((Base.OneTo(5),))]
         @test factorize(T∞block) isa ContinuumArrays.TransformFactorization
     end
+
+    @testset "two-dimensional transforms with infinite bases" begin
+        T∞, T5 = InfChebyshev(), Chebyshev(5)
+        F = [1 + 2x - y + 3x*y for x in -1..1, y in -1..1]
+        C = T∞ \ F / T∞'
+        @test axes(C) == (axes(T∞,2), axes(T∞,2))
+        @test C[1:3,1:3] ≈ [1 -1 0; 2 3 0; 0 0 0]
+        @test iszero(C[6:10,1:10])
+
+        # other right-hand sides with infinitely many columns, such as operators, are not transformed
+        M = Hcat(Diagonal(1:5), Zeros(5, ∞))
+        @test axes(T∞ \ (T5 * M)) == (axes(T∞,2), axes(M,2))
+    end
 end
 
 # constants and x lie in the span of Chebyshev, which is not known by default
@@ -441,6 +463,13 @@ ContinuumArrays.expandsexactly(::Chebyshev, ::Union{Number,Inclusion}) = true
     # linear operations are always expansions
     @test MemoryLayout(-f) isa ExpansionLayout
     @test (-f)[t] ≈ -ft
+    # a column of a matrix expansion is an expansion that is not a MulQuasiArray
+    g = view(T * [1 2; 2 3; 3 4; 0 0; 0 0.], :, 1)
+    @test MemoryLayout(g) isa ExpansionLayout
+    @test MemoryLayout((-).(g)) isa ExpansionLayout
+    @test (-).(g)[t] ≈ -ft
+    @test (2 .* g)[t] ≈ 2ft
+    @test (x .* g)[t] ≈ t * ft
     @test MemoryLayout(+f) isa ExpansionLayout
     @test broadcast(+, f) === f
     @test MemoryLayout(f .* 2) isa ExpansionLayout

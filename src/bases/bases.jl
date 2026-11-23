@@ -555,9 +555,10 @@ end
 
 function layout_broadcasted(::Tuple{Any,ExpansionLayout}, ::typeof(*), a, f)
     axes(a)[1] == axes(f)[1] || throw(DimensionMismatch())
-    P,c = arguments(f)
+    P,c = basis(f), coefficients(f) # f may be a view such as a column of a matrix expansion
     (a .* P) * c
 end
+layout_broadcasted(::Tuple{ScalarLayout,ExpansionLayout}, ::typeof(*), a, f) = basis(f) * (a .* coefficients(f))
 
 layout_broadcasted(lays::NTuple{2,ExpansionLayout}, ::typeof(*), f, g) = invoke(layout_broadcasted, Tuple{Tuple{Any,ExpansionLayout},typeof(*),Any,Any}, lays, *, f, g)
 
