@@ -804,7 +804,7 @@ sum_layout(::AdjointBasisLayout, Vm::AbstractQuasiMatrix, dims) = permutedims(su
 function sum_layout(::MappedBasisLayouts, V, dims)
     kr = basismap(V)
     @assert kr isa AbstractAffineQuasiVector
-    sum(demap(V); dims=dims)/kr.A
+    sum(demap(V); dims=dims)/det(kr.A) # we assume integrals are oriented
 end
 
 maximum_layout(::ExpansionLayout, A, dims) = error("Overload")
