@@ -47,4 +47,19 @@ import RecipesBase
         rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), F)
         @test rep[1].args == (0:5, 0:5, F.args[2])
     end
+
+    @testset "DiracDelta" begin
+        δ = DiracDelta(0.5, 0..1)
+        rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), δ)
+        @test rep[1].args == ([0.5, 0.5], [0.0, 1.0])
+        @test rep[1].plotattributes[:arrow] == true
+    end
+
+    @testset "Spline{-1}" begin
+        u = Spline{-1}(0:5) * [1,-2,3,4]
+        rep = RecipesBase.apply_recipe(Dict{Symbol, Any}(), u)
+        @test rep[1].args[1] == [1,1,1,2,2,2,3,3,3,4,4,4]
+        @test isequal(rep[1].args[2], [0,1,NaN,0,-2,NaN,0,3,NaN,0,4,NaN])
+        @test rep[1].plotattributes[:arrow] == true
+    end
 end

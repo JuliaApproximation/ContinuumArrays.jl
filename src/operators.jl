@@ -118,6 +118,9 @@ dot(δ::DiracDelta, B::AbstractQuasiVector) = B[δ.x]
 show(io::IO, δ::DiracDelta) = print(io, "δ at $(δ.x) over $(axes(δ,1))")
 show(io::IO, ::MIME"text/plain", δ::DiracDelta) = show(io, δ)
 
+# plot as a unit-height spike at δ.x
+plotgridvalues(δ::DiracDelta{T}) where T = [δ.x, δ.x], [zero(T), one(T)]
+
 #########
 # Differentiation
 #########

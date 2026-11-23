@@ -47,10 +47,28 @@ end
 
 plotvalues(g::AbstractQuasiArray, x...) = plotvalues_layout(MemoryLayout(g), g, x...)
 
+"""
+    splitdiracs(g)
+
+returns `(r, δ)` where `g == r + δ`, `r` is regular and `δ` consists of Dirac deltas
+(e.g. an expansion in `Spline{-1}`), or `nothing` if `g` has no Dirac deltas.
+This is used to plot the deltas separately from the regular part.
+"""
+splitdiracs(g) = nothing
+
 function plotgridvalues(g_in)
+    rδ = splitdiracs(g_in)
+    rδ === nothing || return _plotgridvalues_diracs(rδ...)
     g = expand(g_in)
     x = plotgrid(g)
     x, plotvalues(g,x)
+end
+
+# plot the regular part followed by the deltas, separated by NaN
+function _plotgridvalues_diracs(r, δ)
+    x,v = plotgridvalues(r)
+    xδ,vδ = plotgridvalues(δ)
+    [x; NaN; xδ], [v; NaN; vδ]
 end
 
 _split_svec(x) = (x,)
