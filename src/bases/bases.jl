@@ -403,10 +403,7 @@ basis_expand(P, v) = ApplyQuasiArray(*, P, tocoefficients(P \ v))
 basis_expand((P,Q)::Tuple{Any,Any}, v) = ApplyQuasiArray(*, P, tocoefficients(P \ v / Q'), Q')
 
 
-expand(g::Base.Generator{<:Inclusion}) = expand(g.f.(g.iter))
-expand(g::Base.Generator{<:Domain}) = expand(Base.Generator(g.f, Inclusion(g.iter)))
-expand(g::Base.Generator{<:Base.Iterators.ProductIterator{<:Tuple{Vararg{Domain}}}}) = expand(Base.Generator(g.f, ×(g.iter.iterators...)))
-
+expand(g::Base.Generator) = expand(collect(g)) # collect will make a BroadcastQuasiArray
 
 @inline copy(L::Ldiv{<:AbstractBasisLayout}) = basis_ldiv_size(size(L), L.A, L.B)
 @inline copy(L::Ldiv{<:AbstractBasisLayout,<:AbstractLazyLayout}) = basis_ldiv_size(size(L), L.A, L.B)
