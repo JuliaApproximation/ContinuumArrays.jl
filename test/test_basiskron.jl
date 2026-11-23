@@ -10,6 +10,37 @@ using ContinuumArrays: KronExpansionLayout
     @test_broken K \ f.(xy)
 end
 
+@testset "Two-dimensional transforms" begin
+    P = LinearSpline(range(0, 1, 5))
+    F = [1+x+y+x*y for x in 0..1, y in 0..1]
+    C = P \ F / P'
+    @test C isa AbstractMatrix
+    @test C ≈ [1+x+y+x*y for x in grid(P), y in grid(P)]
+    @test (P*C*P')[0.1, 0.2] ≈ 1.32
+
+    Q = LinearSpline([-1.0, -0.2, 1.0])
+    f(x, y) = x + 2y + im*x*y
+    G = [f(x, y) for x in 0..1, y in -1..1]
+    @test (P \ G)[2, -0.3] ≈ f(grid(P)[2], -0.3)
+    C = P \ G / Q'
+    @test C ≈ P \ (G / Q') ≈ f.(grid(P), grid(Q)')
+    E = P*C*Q'
+    @test basis(E) === (P, Q)
+    @test coefficients(E) === C
+    @test E[0.1, -0.3] ≈ f(0.1, -0.3)
+
+    V = view(E, Inclusion(0..0.5), Inclusion(-1..0))
+    A, B = basis(V)
+    @test (axes(A, 1), axes(B, 1)) == axes(V)
+    @test expand(V) === V
+    @test (A*coefficients(V)*B')[0.1, -0.3] ≈ f(0.1, -0.3)
+
+    for fillfun in (zeros, ones)
+        K = fillfun(axes(G)...)
+        @test P \ K / Q' == P \ (K / Q') == fillfun(5, 3)
+    end
+end
+
 @testset "KronExpansion" begin
     L = LinearSpline(range(0,1; length=4))
     C = reshape(Vector(1:16), 4, 4)

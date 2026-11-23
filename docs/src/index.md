@@ -20,6 +20,19 @@ product of the specified sizes, similar to `plan_fft`.
 5. `plotgrid(::MyBasis, n...)`: return `n` grid points suitable for plotting the basis. The default value for `n` is 10,000. 
 
 
+## Two-dimensional transforms
+
+For a function of two variables, `P \ F / Q'` gives the coefficient matrix in the bases
+`P` and `Q`. Its rows correspond to basis functions in the first variable and its columns
+to basis functions in the second.
+
+```julia
+P = LinearSpline(range(0, 1, 5))
+F = [1+x+y+x*y for x in 0..1, y in 0..1]
+C = P \ F / P'
+(P*C*P')[0.1, 0.2] ≈ 1.32
+```
+
 ## Differential Operators
 
 
