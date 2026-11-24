@@ -527,19 +527,22 @@ Random.seed!(24543)
         g = grid(L)
         v = cos.(g)
         P = plan_transform(L, v)
-        @test P * v == transform(L, cos)
+        @test P * v == transform(L, cos) == transform(L, v)
+        @test expand(L, v) == expand(L, cos)
 
         X = cos.(g .+ (1:3)')
         P = plan_transform(L, X, 1)
-        @test P * X == L \ cos.(x .+ (1:3)')
+        @test P * X == L \ cos.(x .+ (1:3)') == transform(L, X, 1)
 
         X = cos.((1:3) .+ g')
         P = plan_transform(L, X, 2)
-        @test P * X == (L \ cos.(x .+ (1:3)'))'
+        @test P * X == (L \ cos.(x .+ (1:3)'))' == transform(L, X, 2)
 
         X = cos.(g .^2 .+ g')
         P = plan_transform(L, X)
         @test P * X ≈ L[g,:] \ X / L[g,:]'
+        @test transform(L, X) == P * X
+        @test transform(L, X, (1,2)) == plan_transform(L, X, (1,2)) * X
 
         n = size(L,2)
         X = randn(n, n, n)
