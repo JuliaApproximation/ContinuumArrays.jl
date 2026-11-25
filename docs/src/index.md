@@ -14,10 +14,12 @@ Optional overloads are:
 
 1. `plan_transform(::MyBasis, sizes::NTuple{N,Int}, region)` to plan a transform, for a tensor
 product of the specified sizes, similar to `plan_fft`.
-2. `diff(::MyBasis, dims=1)` to support differentiation and `Derivative`. 
-3. `grammatrix(::MyBasis)` to support `Q'Q`. 
-4. `ContinuumArrays._sum(::MyBasis, dims)` and `ContinuumArrays._cumsum(::MyBasis, dims)` to support definite and indefinite integeration.
-5. `plotgrid(::MyBasis, n...)`: return `n` grid points suitable for plotting the basis. The default value for `n` is 10,000. 
+2. `plan_itransform(::MyBasis, sizes::NTuple{N,Int}, region)` to plan an inverse transform, similar to `plan_ifft`.
+The default multiplies by the basis evaluated on the grid.
+3. `diff(::MyBasis, dims=1)` to support differentiation and `Derivative`. 
+4. `grammatrix(::MyBasis)` to support `Q'Q`. 
+5. `ContinuumArrays._sum(::MyBasis, dims)` and `ContinuumArrays._cumsum(::MyBasis, dims)` to support definite and indefinite integeration.
+6. `plotgrid(::MyBasis, n...)`: return `n` grid points suitable for plotting the basis. The default value for `n` is 10,000. 
 
 
 ## Two-dimensional transforms
@@ -70,6 +72,12 @@ transform
 ```
 ```@docs
 plan_transform
+```
+```@docs
+itransform
+```
+```@docs
+plan_itransform
 ```
 ```@docs
 expand

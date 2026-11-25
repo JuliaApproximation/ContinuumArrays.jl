@@ -156,6 +156,14 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
         @test transform(T, exp.(g)) ≈ transform(T, exp) ≈ T \ exp.(x)
         @test transform(T, [exp.(g) cos.(g)], 1) ≈ T \ [exp.(x) cos.(x)]
         @test transform(T, exp.(g .+ 2g')) ≈ T \ [exp(x + 2y) for x in -1..1, y in -1..1] / T'
+
+        # values on the grid from coefficients
+        c = transform(T, exp)
+        @test itransform(T, c) ≈ T[g,:] * c ≈ exp.(g)
+        @test plan_itransform(T, c) \ exp.(g) ≈ c
+        @test itransform(T, [c 2c], 1) ≈ [exp.(g) 2exp.(g)]
+        X = randn(5, 2, 5)
+        @test transform(T, itransform(T, X, (1,3)), (1,3)) ≈ X
     end
 
     @testset "Weighted" begin
@@ -202,6 +210,8 @@ ContinuumArrays.grid(::InfBlockedChebyshev, n::Integer) = chebyshevpoints(Float6
 
         @test T[y,:]'T[y,:] ≈ grammatrix(T[y,:]) ≈ (T'T)/2
         @test transform(T[y,:], exp.(grid(T[y,:]))) ≈ transform(T[y,:], exp)
+        @test itransform(T[y,:], transform(T[y,:], exp)) ≈ exp.(grid(T[y,:]))
+        @test plan_itransform(T[y,:], (5,5)) * Matrix(I,5,5) ≈ T[grid(T),:] * T[grid(T),:]'
 
         @testset "QuadraticMap" begin
             m = QuadraticMap()
