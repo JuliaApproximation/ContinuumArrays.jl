@@ -582,6 +582,58 @@ Random.seed!(24543)
         @test_throws ErrorException P * X
     end
 
+    @testset "plan_itransform" begin
+        L = LinearSpline(0:5)
+        g = grid(L)
+        V = L[g,:]
+        n = size(L,2)
+
+        c = randn(n)
+        Pi = plan_itransform(L, c)
+        @test Pi * c ≈ V * c ≈ (L * c)[g] == itransform(L, c)
+        @test plan_itransform(L) * c == plan_itransform(L, n) * c == plan_itransform(L, Block(1)) * c == Pi * c
+        @test transform(L, itransform(L, c)) ≈ c
+        @test itransform(L, transform(L, cos.(g))) ≈ cos.(g)
+        @test Pi \ (Pi * c) ≈ inv(Pi) * (Pi * c) ≈ c
+        @test inv(plan_transform(L, c)) * c ≈ Pi * c
+
+        C = randn(n, 3)
+        Pi = plan_itransform(L, C, 1)
+        @test Pi * C ≈ V * C == itransform(L, C, 1)
+        @test transform(L, itransform(L, C, 1), 1) ≈ C
+        @test itransform(L, C', 2) ≈ (V * C)'
+
+        C = randn(n, n)
+        Pi = plan_itransform(L, C)
+        @test Pi * C ≈ V * C * V' == itransform(L, C) == itransform(L, C, (1,2))
+        @test plan_itransform(L, Block(1,1)) * C ≈ Pi * C
+        @test transform(L, itransform(L, C)) ≈ C
+
+        X = randn(n, n, n)
+        @test itransform(L, X, 2) ≈ mapslices(c -> V * c, X; dims=2)
+        @test itransform(L, X, (1,3)) ≈ mapslices(C -> V * C * V', X; dims=(1,3))
+        @test transform(L, itransform(L, X)) ≈ X
+        @test itransform(L, transform(L, X)) ≈ X
+
+        X = randn(n, n, n, n)
+        @test transform(L, itransform(L, X)) ≈ X
+
+        X = randn(n, n, n, n, n)
+        @test_throws ErrorException itransform(L, X)
+
+        @testset "eltype" begin
+            c = randn(ComplexF64, n)
+            @test itransform(L, c) ≈ V * c
+            # the output can have a larger eltype than the input
+            Lc = LinearSpline{ComplexF64}(0:5)
+            for X in (randn(n), randn(n, n), randn(n, n, n), randn(n, n, n, n))
+                @test itransform(Lc, X) isa Array{ComplexF64}
+                @test transform(Lc, X) isa Array{ComplexF64}
+                @test transform(Lc, itransform(Lc, X)) ≈ X
+            end
+        end
+    end
+
     @testset "ApplyPlan" begin
         L = LinearSpline(0:5)
         x = axes(L, 1)

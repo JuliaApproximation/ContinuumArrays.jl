@@ -244,11 +244,14 @@ grid_layout(::SubBasisLayout, P::AbstractQuasiMatrix, n) = grid(parent(P), paren
 grid_layout(::WeightedBasisLayouts, P, n) = grid(unweighted(P), n)
 
 
+# The basis evaluated on the grid, which maps coefficients to values
+gridevaluate(L, n::Integer) = L[grid(L,n),OneTo(n)]
+gridevaluate(L, n::Block{1}) = L[grid(L,n),Block.(OneTo(Int(n)))]
+gridevaluate(L, ns) = map(n -> gridevaluate(L,n), ns)
+
 # Default transform is just solve least squares on a grid
 # note this computes the grid an extra time.
-mapfactorize(L, n::Integer) = factorize(L[grid(L,n),OneTo(n)])
-mapfactorize(L, n::Block{1}) = factorize(L[grid(L,n),Block.(OneTo(Int(n)))])
-
+mapfactorize(L, n::Union{Integer,Block{1}}) = factorize(gridevaluate(L,n))
 mapfactorize(L, ns) = map(n -> mapfactorize(L,n), ns)
 function plan_transform_layout(lay, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N
     dimsz = getindex.(Ref(szs), dims) # get the sizes of transformed dimensions
@@ -279,7 +282,42 @@ plan_transform(L, lng::Union{Integer,Block{1}}, dims...) = plan_transform(L, (ln
 plan_transform(L) = plan_transform(L, size(L,2))
 
 plan_transform(L, B::Block, dims...) = plan_transform(L, Block.(B.n), dims...) # grid(L, Block(2,3)) == grid(L, (Block(2), Block(3))
-    
+
+
+# Default inverse transform is multiplication by the basis evaluated on the grid
+function plan_itransform_layout(lay, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N
+    dimsz = getindex.(Ref(szs), dims) # get the sizes of transformed dimensions
+    MulPlan(gridevaluate(L, dimsz), dims)
+end
+plan_itransform_layout(::MappedBasisLayout, L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_itransform(demap(L), szs, dims)
+
+"""
+    plan_itransform(basis, (n₁,…,nₘ), [dims])
+
+plans an inverse transform, mapping an array of coefficients specified by the
+sizes `(n₁,…,nₘ)` to values on the points specified by `grid(basis, (n₁,…,nₘ))`.
+That is, it is the inverse of `plan_transform(basis, (n₁,…,nₘ), [dims])`.
+If `nₖ` is an integer then this gives the size in that dimension.
+If `nₖ` is a `Block` then the array in that dimension is specified by `axes(basis,2)[Block.(Base.oneto(nₖ))]`.
+
+If `dims` is an integer or tuple of integers then the inverse transform is only applied to that dimension.
+If `dims` is omitted then every dimension is transformed.
+
+By default this multiplies by the basis evaluated on the grid.
+"""
+plan_itransform(L, szs::NTuple{N,Union{Int,Block{1}}}, dims=ntuple(identity,Val(N))) where N = plan_itransform_layout(MemoryLayout(L), L, szs, dims)
+
+"""
+    plan_itransform(basis, A::AbstractArray, [dims])
+
+is equivalent to `plan_itransform(basis, size(A), [dims])`.
+"""
+plan_itransform(L, arr::AbstractArray, dims...) = plan_itransform(L, size(arr), dims...)
+plan_itransform(L, lng::Union{Integer,Block{1}}, dims...) = plan_itransform(L, (lng,), dims...)
+plan_itransform(L) = plan_itransform(L, size(L,2))
+
+plan_itransform(L, B::Block, dims...) = plan_itransform(L, Block.(B.n), dims...)
+
 
 
 plan_grid_transform(P, szs::NTuple{N,Union{Integer,Block{1}}}, dims=ntuple(identity,Val(N))) where N = grid(P, getindex.(Ref(szs), dims)), plan_transform(P, szs, dims)
@@ -391,6 +429,19 @@ plan_transform(A, F, [dims]) * F
 so to transform several arrays of the same size it is faster to call `plan_transform` once.
 """
 transform(A, F::AbstractArray, dims...) = plan_transform(A, F, dims...) * F
+
+"""
+    itransform(A, C::AbstractArray, [dims])
+
+finds the values on the points specified by `grid(A, size(C))` of the expansion with coefficients `C`,
+transforming only the dimensions `dims` if they are specified, as for `plan_itransform`.
+It is the inverse of `transform(A, F, [dims])` and is equivalent to
+```
+plan_itransform(A, C, [dims]) * C
+```
+so to transform several arrays of the same size it is faster to call `plan_itransform` once.
+"""
+itransform(A, C::AbstractArray, dims...) = plan_itransform(A, C, dims...) * C
 
 """
     expand(A, f)

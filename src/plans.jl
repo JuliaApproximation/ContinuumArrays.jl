@@ -81,7 +81,7 @@ for (Pln,op,fld) in ((:MulPlan, :*, :(:matrices)), (:InvPlan, :\, :(:factorizati
         
         function *(P::$Pln{<:Any,<:Tuple,<:Any,Int}, Xin::AbstractArray{<:Any,3})
             X = _transformifnotnothing(P.plan, Xin)
-            Y = similar(X)
+            Y = similar(X, promote_type(eltype(P), eltype(X)))
             if P.dims == 1
                 for j in axes(X,3)
                     Y[:,:,j] = $op(only(getfield(P, $fld)), X[:,:,j])
@@ -101,7 +101,7 @@ for (Pln,op,fld) in ((:MulPlan, :*, :(:matrices)), (:InvPlan, :\, :(:factorizati
         
         function *(P::$Pln{<:Any,<:Tuple,<:Any,Int}, Xin::AbstractArray{<:Any,4})
             X = _transformifnotnothing(P.plan, Xin)
-            Y = similar(X)
+            Y = similar(X, promote_type(eltype(P), eltype(X)))
             if P.dims == 1
                 for j in axes(X,3), l in axes(X,4)
                     Y[:,:,j,l] = $op(only(getfield(P, $fld)), X[:,:,j,l])
