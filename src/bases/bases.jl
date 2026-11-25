@@ -380,6 +380,19 @@ A \\ f.(axes(A,1))
 transform(A, f) = A \ f.(axes(A,1))
 
 """
+    transform(A, F::AbstractArray, [dims])
+
+finds the coefficients from the values `F` on the points specified by `grid(A, size(F))`,
+transforming only the dimensions `dims` if they are specified, as for `plan_transform`.
+It is equivalent to
+```
+plan_transform(A, F, [dims]) * F
+```
+so to transform several arrays of the same size it is faster to call `plan_transform` once.
+"""
+transform(A, F::AbstractArray, dims...) = plan_transform(A, F, dims...) * F
+
+"""
     expand(A, f)
 
 expands a function `f` im a basis defined as the columns of a quasi matrix `A`.
